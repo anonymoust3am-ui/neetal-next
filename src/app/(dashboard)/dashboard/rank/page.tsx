@@ -69,25 +69,20 @@ function getAIInsight(safe: number, target: number, dream: number): string {
   return 'Very few matches. Try relaxing filters or explore state quota seats for your domicile.';
 }
 
-const BUCKET_STATUS: Record<Bucket, { label: string; cls: string }> = {
-  safe: { label: 'Safe', cls: 'bg-success-light text-success' },
-  target: { label: 'Target', cls: 'bg-warning-light text-warning' },
-  dream: { label: 'Dream', cls: 'bg-secondary-light text-secondary' },
-  out: { label: 'Not possible', cls: 'bg-error-light text-error' },
-  unknown: { label: '—', cls: 'bg-muted text-foreground-subtle' },
-};
-
 const BUCKET_DOT: Record<Bucket, string> = {
   safe: 'bg-success', target: 'bg-warning', dream: 'bg-secondary',
   out: 'bg-error', unknown: 'bg-border',
 };
 
+const BUCKET_LABEL: Record<Bucket, string> = {
+  safe: 'Safe', target: 'Target', dream: 'Dream', out: 'Not possible', unknown: '—',
+};
+
 function StatusBadge({ bucket }: { bucket: Bucket }) {
-  const { label, cls } = BUCKET_STATUS[bucket];
   return (
-    <span className={cn('inline-flex items-center gap-1 text-sm font-semibold px-2 py-0.5 rounded-full', cls)}>
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground-muted">
       <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', BUCKET_DOT[bucket])} />
-      {label}
+      {BUCKET_LABEL[bucket]}
     </span>
   );
 }
@@ -105,7 +100,7 @@ function TrendBars({ trend }: { trend: [number, number, number] }) {
             title={v.toLocaleString('en-IN')}
             style={{ height: h }}
             className={cn('w-2 rounded-sm',
-              dir === 'up' ? 'bg-error/60' : dir === 'dn' ? 'bg-primary/60' : 'bg-border'
+              dir === 'up' ? 'bg-error/50' : dir === 'dn' ? 'bg-primary/50' : 'bg-border'
             )}
           />
         );
@@ -122,9 +117,9 @@ function FSelect({ value, onChange, children }: {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="h-9 pl-3 pr-7 border border-border rounded-lg bg-muted text-base
+        className="h-9 pl-3 pr-7 border border-border rounded-xl bg-surface text-xs
           font-medium text-foreground-muted appearance-none outline-none
-          focus:border-primary focus:bg-card cursor-pointer transition-colors"
+          focus:border-primary focus:bg-muted cursor-pointer transition-colors"
       >
         {children}
       </select>
@@ -175,30 +170,18 @@ export default function RankExplorerPage() {
     ...c, bucket: getBucket(effectiveRank, c.cutoff),
   }));
 
-  const BUCKET_BTNS: { key: BucketFilter; label: string; activeCls: string }[] = [
-    { key: 'all', label: 'All', activeCls: 'bg-foreground text-background' },
-    { key: 'safe', label: 'Safe', activeCls: 'bg-success-light text-success border-success/30' },
-    { key: 'target', label: 'Target', activeCls: 'bg-warning-light text-warning border-warning/30' },
-    { key: 'dream', label: 'Dream', activeCls: 'bg-secondary-light text-secondary border-secondary/30' },
+  const BUCKET_BTNS: { key: BucketFilter; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'safe', label: 'Safe' },
+    { key: 'target', label: 'Target' },
+    { key: 'dream', label: 'Dream' },
   ];
 
   return (
     <div className="min-h-screen bg-background">
 
-      <div className="sticky top-[56px] z-sticky bg-navbar border-b border-border
-        shadow-[0_1px_0_0_var(--color-border),0_3px_10px_-2px_rgba(0,0,0,.06)]">
-        {/* <div className="max-w-[1200px] mx-auto px-6 pt-7 pb-3">
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Search size={20} className="text-primary" />
-            Rank explorer
-            <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full bg-primary-light text-primary">
-              2024 data
-            </span>
-          </h1>
-          <p className="text-md text-foreground-muted mt-1">
-            Explore cutoffs across all colleges based on your rank, category, and preferences
-          </p>
-        </div> */}
+      {/* ── filter bar ── */}
+      <div className="sticky top-[56px] z-sticky bg-surface border-b border-border shadow-sm">
         <div className="max-w-[1400px] mx-auto px-6 py-3 flex items-center gap-2 flex-nowrap overflow-x-auto no-scrollbar">
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -207,20 +190,20 @@ export default function RankExplorerPage() {
               value={rank}
               onChange={e => { setRank(e.target.value); setVisibleCount(PAGE_SIZE); }}
               placeholder="Your rank"
-              className="w-28 h-9 px-3 border border-border rounded-lg bg-muted text-base
+              className="w-28 h-9 px-3 border border-border rounded-xl bg-surface text-xs
                 text-foreground placeholder:text-foreground-subtle outline-none
-                focus:border-primary focus:bg-card transition-colors"
+                focus:border-primary transition-colors"
             />
             <button
               onClick={() => { setRank('50000'); setSliderRank(50000); }}
-              className="h-9 px-3 bg-primary-light border border-primary/20 rounded-lg
-                text-md font-semibold text-primary hover:bg-primary/20 transition-colors whitespace-nowrap"
+              className="h-9 px-3 bg-primary-light border border-primary/20 rounded-xl
+                text-xs font-semibold text-primary hover:bg-primary/20 transition-colors whitespace-nowrap"
             >
               Use my rank
             </button>
           </div>
 
-          <div className="w-px h-6 bg-border flex-shrink-0" />
+          <div className="w-px h-5 bg-border flex-shrink-0" />
 
           <FSelect value={category} onChange={setCategory}>
             <option value="">Category</option>
@@ -242,31 +225,32 @@ export default function RankExplorerPage() {
             <option>Government</option><option>Private</option>
           </FSelect>
 
-          <div className="w-px h-6 bg-border flex-shrink-0" />
+          <div className="w-px h-5 bg-border flex-shrink-0" />
 
           <div className="relative flex-1 min-w-[160px]">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-subtle pointer-events-none" />
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-subtle pointer-events-none" />
             <input
               type="text" value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search college…"
-              className="w-full h-9 pl-8 pr-3 border border-border rounded-lg bg-muted text-base
+              className="w-full h-9 pl-7 pr-3 border border-border rounded-xl bg-surface text-xs
                 text-foreground placeholder:text-foreground-subtle outline-none
-                focus:border-primary focus:bg-card transition-colors"
+                focus:border-primary transition-colors"
             />
           </div>
 
-          <div className="w-px h-6 bg-border flex-shrink-0" />
+          <div className="w-px h-5 bg-border flex-shrink-0" />
 
-          <div className="flex border border-border rounded-lg overflow-hidden flex-shrink-0">
-            {BUCKET_BTNS.map(({ key, label, activeCls }) => (
+          <div className="flex border border-border rounded-xl overflow-hidden flex-shrink-0">
+            {BUCKET_BTNS.map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setBucketFilter(key)}
                 className={cn(
-                  'h-9 px-3 text-md font-semibold border-r border-border last:border-r-0',
-                  'transition-colors duration-150',
-                  bucketFilter === key ? activeCls : 'bg-muted text-foreground-muted hover:bg-hover',
+                  'h-9 px-3 text-xs font-semibold border-r border-border last:border-r-0 transition-colors',
+                  bucketFilter === key
+                    ? 'bg-primary text-white'
+                    : 'bg-surface text-foreground-muted hover:bg-muted',
                 )}
               >
                 {label}
@@ -276,13 +260,13 @@ export default function RankExplorerPage() {
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-6 py-4 grid grid-cols-[1fr_260px] gap-5">
+      <div className="max-w-[1200px] mx-auto px-6 py-5 grid grid-cols-[1fr_260px] gap-5">
 
         <div>
-          <div className="flex items-center gap-3 bg-card border border-border rounded-xl
-            px-4 py-3 mb-3">
-            <span className="text-s font-semibold uppercase tracking-wide text-foreground-subtle whitespace-nowrap">
-              Rank range
+          {/* rank slider */}
+          <div className="flex items-center gap-3 bg-surface border border-border rounded-2xl px-4 py-3 mb-3 shadow-sm">
+            <span className="text-xs font-semibold uppercase tracking-wide text-foreground-subtle whitespace-nowrap">
+              Rank
             </span>
             <input
               type="range" min={1000} max={200000} step={1000}
@@ -299,44 +283,45 @@ export default function RankExplorerPage() {
             </span>
           </div>
 
+          {/* bucket summary */}
           {effectiveRank > 0 && (
-            <div className="flex items-center gap-4 bg-card border border-border rounded-xl
-              px-4 py-3 mb-3 flex-wrap">
+            <div className="flex items-center gap-4 bg-surface border border-border rounded-2xl px-4 py-3 mb-3 shadow-sm flex-wrap">
               <span className="text-xs text-foreground-muted flex-shrink-0">
-                Rank <strong className="text-foreground">{effectiveRank.toLocaleString('en-IN')}</strong>
+                Rank <strong className="text-foreground tabular-nums">{effectiveRank.toLocaleString('en-IN')}</strong>
               </span>
-              <div className="w-px h-5 bg-border" />
+              <div className="w-px h-4 bg-border" />
               {[
-                { label: 'Safe', count: counts.safe, dotCls: 'bg-success', valCls: 'text-success' },
-                { label: 'Target', count: counts.target, dotCls: 'bg-warning', valCls: 'text-warning' },
-                { label: 'Dream', count: counts.dream, dotCls: 'bg-secondary', valCls: 'text-secondary' },
-                { label: 'Not possible', count: counts.out, dotCls: 'bg-error', valCls: 'text-error' },
+                { label: 'Safe', count: counts.safe, dot: 'bg-success' },
+                { label: 'Target', count: counts.target, dot: 'bg-warning' },
+                { label: 'Dream', count: counts.dream, dot: 'bg-secondary' },
+                { label: 'Out', count: counts.out, dot: 'bg-error' },
               ].map(s => (
                 <div key={s.label} className="flex items-center gap-1.5 flex-shrink-0">
-                  <span className={cn('w-2 h-2 rounded-full', s.dotCls)} />
-                  <span className={cn('text-lg font-bold tabular-nums', s.valCls)}>{s.count}</span>
-                  <span className="text-md text-foreground-muted">{s.label}</span>
+                  <span className={cn('w-1.5 h-1.5 rounded-full', s.dot)} />
+                  <span className="text-xs font-bold text-foreground tabular-nums">{s.count}</span>
+                  <span className="text-xs text-foreground-muted">{s.label}</span>
                 </div>
               ))}
-              <button className="ml-auto text-md font-medium text-foreground-muted border border-border
-                rounded-lg px-3 h-8 hover:bg-hover transition-colors">
+              <button className="ml-auto text-xs font-medium text-foreground-muted border border-border
+                rounded-xl px-3 h-8 hover:bg-muted transition-colors">
                 Save preset
               </button>
             </div>
           )}
 
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
+          {/* table */}
+          <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
             <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: '30%' }} /><col style={{ width: '13%' }} />
                 <col style={{ width: '8%' }} /><col style={{ width: '13%' }} />
                 <col style={{ width: '12%' }} /><col style={{ width: '11%' }} />
-                <col style={{ width: '10%' }} /><col style={{ width: '8%' }} />
+                <col style={{ width: '9%' }} /><col style={{ width: '8%' }} />
               </colgroup>
               <thead>
                 <tr className="border-b border-border bg-muted">
                   {['College', 'State', 'Quota', 'Closing rank', '3-yr trend', 'Fees / yr', 'Status', ''].map(h => (
-                    <th key={h} className="px-3 py-2.5 text-left text-s font-700 uppercase
+                    <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase
                       tracking-wider text-foreground-subtle whitespace-nowrap">
                       {h}
                     </th>
@@ -348,48 +333,49 @@ export default function RankExplorerPage() {
                   <tr>
                     <td colSpan={8} className="py-16 text-center">
                       <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center">
                           <GraduationCap size={20} className="text-foreground-subtle" />
                         </div>
-                        <p className="text-lg font-semibold text-foreground">No colleges found</p>
-                        <p className="text-md text-foreground-muted">
-                          Try changing category, state, or bucket filter
-                        </p>
+                        <p className="text-sm font-bold text-foreground">No colleges found</p>
+                        <p className="text-xs text-foreground-muted">Try changing category, state, or bucket filter</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  bucketed.slice(0, visibleCount).map(c => (
+                  bucketed.slice(0, visibleCount).map((c, i) => (
                     <tr key={c.id}
-                      className="border-b border-border/50 last:border-0 hover:bg-muted/50 transition-colors">
-                      <td className="px-3 py-2.5">
+                      className={cn(
+                        'hover:bg-hover transition-colors',
+                        i < bucketed.slice(0, visibleCount).length - 1 ? 'border-b border-border' : '',
+                      )}>
+                      <td className="px-3 py-3">
                         <p className="text-xs font-semibold text-foreground truncate">{c.name}</p>
-                        <div className="flex items-center gap-1 mt-0.5">
+                        <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                           {c.tags.map(t => (
-                            <span key={t} className="text-xs px-1.5 py-px rounded-full
-                              bg-muted border border-border text-foreground-muted">{t}</span>
+                            <span key={t} className="text-[10px] px-1.5 py-px rounded-full
+                              bg-muted border border-border text-foreground-subtle">{t}</span>
                           ))}
                           {c.bond && (
-                            <span className="text-xs px-1.5 py-px rounded-full
-                              bg-warning-light text-warning border border-warning/20">Bond</span>
+                            <span className="text-[10px] px-1.5 py-px rounded-full
+                              bg-muted border border-border text-foreground-subtle">Bond</span>
                           )}
-                          <span className="text-xs text-warning ml-1">★ {c.rating}</span>
+                          <span className="text-[10px] text-foreground-subtle ml-0.5">★ {c.rating}</span>
                         </div>
                       </td>
-                      <td className="px-3 py-2.5 text-md text-foreground-muted">{c.state}</td>
-                      <td className="px-3 py-2.5 text-md text-foreground-muted">{c.quota}</td>
-                      <td className="px-3 py-2.5 text-xs font-semibold tabular-nums">
+                      <td className="px-3 py-3 text-xs text-foreground-muted">{c.state}</td>
+                      <td className="px-3 py-3 text-xs text-foreground-muted">{c.quota}</td>
+                      <td className="px-3 py-3 text-xs font-semibold tabular-nums text-foreground">
                         {c.cutoff.toLocaleString('en-IN')}
                       </td>
-                      <td className="px-3 py-2.5"><TrendBars trend={c.trend} /></td>
-                      <td className="px-3 py-2.5 text-md text-foreground-muted">{formatFees(c.fees)}</td>
-                      <td className="px-3 py-2.5"><StatusBadge bucket={c.bucket} /></td>
-                      <td className="px-3 py-2.5">
+                      <td className="px-3 py-3"><TrendBars trend={c.trend} /></td>
+                      <td className="px-3 py-3 text-xs text-foreground-muted">{formatFees(c.fees)}</td>
+                      <td className="px-3 py-3"><StatusBadge bucket={c.bucket} /></td>
+                      <td className="px-3 py-3">
                         <div className="flex gap-1">
                           <button
                             onClick={() => toggleSave(c.id)}
                             className={cn(
-                              'w-7 h-7 rounded-lg border flex items-center justify-center transition-colors',
+                              'w-7 h-7 rounded-xl border flex items-center justify-center transition-colors',
                               saved.has(c.id)
                                 ? 'border-primary/30 text-primary bg-primary-light'
                                 : 'border-border text-foreground-subtle hover:border-primary/30 hover:text-primary',
@@ -397,7 +383,7 @@ export default function RankExplorerPage() {
                           >
                             <BookmarkIcon size={12} fill={saved.has(c.id) ? 'currentColor' : 'none'} />
                           </button>
-                          <button className="w-7 h-7 rounded-lg border border-border flex items-center
+                          <button className="w-7 h-7 rounded-xl border border-border flex items-center
                             justify-center text-foreground-subtle hover:border-primary/30
                             hover:text-primary transition-colors">
                             <GitCompare size={12} />
@@ -414,18 +400,20 @@ export default function RankExplorerPage() {
           {bucketed.length > visibleCount && (
             <button
               onClick={() => setVisibleCount(v => v + PAGE_SIZE)}
-              className="w-full mt-3 h-10 border border-border rounded-xl bg-card text-xs
-                font-medium text-foreground-muted hover:bg-hover transition-colors"
+              className="w-full mt-3 h-10 border border-border rounded-2xl bg-surface text-xs
+                font-medium text-foreground-muted hover:bg-muted transition-colors shadow-sm"
             >
               Load more colleges
             </button>
           )}
         </div>
 
-        <div className="flex flex-col gap-3 pt-0">
+        {/* ── sidebar ── */}
+        <div className="flex flex-col gap-3">
 
-          <div className="bg-card border border-border rounded-xl p-4">
-            <p className="text-sm font-semibold uppercase tracking-widest text-foreground-subtle mb-3">
+          {/* profile card */}
+          <div className="bg-surface border border-border rounded-2xl p-4 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle mb-3">
               Your profile
             </p>
             {[
@@ -435,50 +423,55 @@ export default function RankExplorerPage() {
               { label: 'Quota', value: quota || 'AIQ' },
             ].map(r => (
               <div key={r.label} className="flex justify-between items-center py-1.5
-                border-b border-border/50 last:border-0">
-                <span className="text-md text-foreground-muted">{r.label}</span>
-                <span className="text-md font-semibold text-foreground">{r.value}</span>
+                border-b border-border last:border-0">
+                <span className="text-xs text-foreground-muted">{r.label}</span>
+                <span className="text-xs font-semibold text-foreground">{r.value}</span>
               </div>
             ))}
-            <div className="mt-3 bg-success-light border border-success/20 rounded-lg p-2.5">
-              <p className="text-sm font-semibold text-success uppercase tracking-wide mb-1 flex items-center gap-1">
-                <Sparkles size={10} /> AI insight
+
+            {/* AI insight */}
+            <div className="mt-3 bg-muted border border-border rounded-xl p-3">
+              <p className="text-[10px] font-bold text-foreground-subtle uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                <Sparkles size={10} className="text-primary" /> AI insight
               </p>
-              <p className="text-md text-success leading-relaxed">
+              <p className="text-xs text-foreground-muted leading-relaxed">
                 {getAIInsight(counts.safe, counts.target, counts.dream)}
               </p>
             </div>
-            <button className="w-full mt-3 h-9 bg-primary text-primary-foreground rounded-lg
-              text-md font-semibold hover:bg-primary-hover transition-colors">
+
+            <button className="w-full mt-3 h-9 bg-primary text-white rounded-xl
+              text-xs font-semibold hover:bg-primary-hover transition-colors">
               Open college predictor
             </button>
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-4">
-            <p className="text-sm font-semibold uppercase tracking-widest text-foreground-subtle mb-3">
+          {/* shortlist card */}
+          <div className="bg-surface border border-border rounded-2xl p-4 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle mb-3">
               Shortlisted ({shortlistedColleges.length})
             </p>
             {shortlistedColleges.length === 0 ? (
-              <p className="text-md text-foreground-subtle">No colleges shortlisted yet.</p>
+              <p className="text-xs text-foreground-subtle">No colleges shortlisted yet.</p>
             ) : (
               shortlistedColleges.map(c => (
-                <div key={c.id} className="flex items-center gap-2 py-1.5 border-b border-border/50 last:border-0">
-                  <span className="text-md font-medium text-foreground flex-1 truncate">{c.name}</span>
+                <div key={c.id} className="flex items-center gap-2 py-1.5 border-b border-border last:border-0">
+                  <span className="text-xs font-medium text-foreground flex-1 truncate">{c.name}</span>
                   <StatusBadge bucket={c.bucket} />
                 </div>
               ))
             )}
           </div>
 
-          <div className="bg-success-light border border-success/20 rounded-xl p-4">
-            <p className="text-sm font-semibold uppercase tracking-widest text-success mb-2">Did you know?</p>
-            <p className="text-md text-success leading-relaxed">
-              AIIMS New Delhi has had a <strong>consistent closing rank</strong> near 42,000 for 3 years —
+          {/* did you know */}
+          <div className="bg-surface border border-border rounded-2xl p-4 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle mb-2">Did you know?</p>
+            <p className="text-xs text-foreground-muted leading-relaxed">
+              AIIMS New Delhi has had a <strong className="text-foreground">consistent closing rank</strong> near 42,000 for 3 years —
               one of the most stable cutoffs across all government medical colleges.
             </p>
           </div>
-        </div>
 
+        </div>
       </div>
     </div>
   );

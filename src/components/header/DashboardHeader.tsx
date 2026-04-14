@@ -107,7 +107,7 @@ function ProfileMenu() {
               key={href}
               href={href}
               onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-dropdown-hover)] hover:text-[var(--color-text-primary)] transition-colors"
+              className="flex z-[1500] items-center gap-3 px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-dropdown-hover)] hover:text-[var(--color-text-primary)] transition-colors"
             >
               <Icon size={14} className="text-[var(--color-icon-secondary)] shrink-0" />
               {label}

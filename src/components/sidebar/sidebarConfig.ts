@@ -93,15 +93,15 @@ export const sidebarItems: NavItem[] = [
       { label: 'Allotment Results',   href: '/dashboard/allotment',  icon: ClipboardCheck },
     ],
   },
-  {
-    key: 'guidance',
-    label: 'Guidance',
-    icon: LifeBuoy,
-    dividerBefore: true,
-    children: [
-      { label: 'AI Assistant', href: '/dashboard/ai',     icon: Bot          },
-      { label: 'Guides',       href: '/dashboard/guides', icon: Map          },
-      { label: 'Book Expert',  href: '/dashboard/expert', icon: CalendarCheck },
-    ],
-  },
+  // {
+  //   key: 'guidance',
+  //   label: 'Guidance',
+  //   icon: LifeBuoy,
+  //   dividerBefore: true,
+  //   children: [
+  //     { label: 'AI Assistant', href: '/dashboard/ai',     icon: Bot          },
+  //     { label: 'Guides',       href: '/dashboard/guides', icon: Map          },
+  //     { label: 'Book Expert',  href: '/dashboard/expert', icon: CalendarCheck },
+  //   ],
+  // },
 ];

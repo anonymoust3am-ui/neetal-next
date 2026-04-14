@@ -36,7 +36,7 @@ export function DashboardTabs() {
     }, [pathname]);
 
     return (
-        <div className="sticky top-[56px] z-[1500]">
+        <div className="sticky top-[56px] z-[1000]">
             <div
                 ref={navRef}
                 className="
