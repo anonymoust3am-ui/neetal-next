@@ -1,26 +1,1059 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Enable class-based dark mode for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
 
+/* ================================================================
+   @theme inline — maps design tokens → Tailwind utility classes
+   Uses `inline` so Tailwind references var() directly in utilities
+   instead of adding another CSS variable layer.
+
+   Utility cheatsheet (each color maps to bg-* / text-* / border-* / ring-*):
+
+   BRAND
+     bg-primary          text-primary         border-primary
+     bg-secondary        text-secondary       border-secondary
+     bg-accent           text-accent          border-accent
+
+   LAYOUT / SURFACE
+     bg-background       (page canvas, var --color-bg-primary)
+     bg-surface          (cards / panels, var --color-bg-secondary)
+     bg-muted            (subtle areas,   var --color-bg-muted)
+     bg-elevated         (popovers etc,   var --color-bg-elevated)
+     bg-hover            (hover rows,     var --color-bg-hover)
+     bg-card             text-card        border-card
+
+   TEXT
+     text-foreground     (primary body text)
+     text-foreground-muted   (secondary / subdued)
+     text-foreground-subtle  (placeholder / disabled)
+     text-foreground-inverse (on dark surfaces)
+     text-link           text-link-hover
+
+   BORDER
+     border-border       border-border-strong   border-border-focus
+
+   STATE
+     bg-success   bg-success-light   text-success
+     bg-error     bg-error-light     text-error
+     bg-warning   bg-warning-light   text-warning
+     bg-info      bg-info-light      text-info
+
+   INTERACTION
+     bg-overlay   bg-skeleton   bg-disabled   bg-selection
+
+   CHARTS
+     bg-chart-1 … bg-chart-5
+
+   TYPOGRAPHY
+     font-sans    font-mono
+     font-light   font-normal  font-medium  font-semibold  font-bold
+
+   RADIUS  (overrides Tailwind defaults)
+     rounded-sm  rounded-md  rounded-lg  rounded-xl  rounded-full
+
+   SHADOW  (overrides Tailwind defaults)
+     shadow-sm   shadow-md   shadow-lg
+
+   Z-INDEX
+     z-dropdown  z-sticky  z-fixed  z-modal-backdrop  z-modal  z-tooltip
+   ================================================================ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* ── BRAND ─────────────────────────────────────────────────────── */
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-light: var(--color-primary-light);
+  --color-primary-foreground: var(--color-primary-foreground);
+
+  --color-secondary: var(--color-secondary);
+  --color-secondary-hover: var(--color-secondary-hover);
+  --color-secondary-light: var(--color-secondary-light);
+
+  --color-accent: var(--color-accent);
+  --color-accent-light: var(--color-accent-light);
+
+  /* ── SURFACE / BACKGROUND ──────────────────────────────────────── */
+  --color-background: var(--color-bg-primary);
+  /* bg-background  */
+  --color-surface: var(--color-bg-secondary);
+  /* bg-surface     */
+  --color-muted: var(--color-bg-muted);
+  /* bg-muted       */
+  --color-elevated: var(--color-bg-elevated);
+  /* bg-elevated    */
+  --color-hover: var(--color-bg-hover);
+  /* bg-hover       */
+  --color-card: var(--color-card);
+  /* bg-card        */
+  --color-card-hover: var(--color-card-hover);
+  /* bg-card-hover  */
+
+  /* ── TEXT / FOREGROUND ─────────────────────────────────────────── */
+  --color-foreground: var(--color-text-primary);
+  /* text-foreground         */
+  --color-foreground-muted: var(--color-text-secondary);
+  /* text-foreground-muted   */
+  --color-foreground-subtle: var(--color-text-muted);
+  /* text-foreground-subtle  */
+  --color-foreground-inverse: var(--color-text-inverse);
+  /* text-foreground-inverse */
+  --color-link: var(--color-text-link);
+  /* text-link               */
+  --color-link-hover: var(--color-text-link-hover);
+  /* text-link-hover         */
+
+  /* ── BORDER ────────────────────────────────────────────────────── */
+  --color-border: var(--color-border);
+  /* border-border        */
+  --color-border-strong: var(--color-border-strong);
+  /* border-border-strong */
+  --color-border-focus: var(--color-border-focus);
+  /* border-border-focus  */
+
+  /* ── STATE ─────────────────────────────────────────────────────── */
+  --color-success: var(--color-success);
+  --color-success-light: var(--color-success-light);
+  --color-error: var(--color-error);
+  --color-error-light: var(--color-error-light);
+  --color-warning: var(--color-warning);
+  --color-warning-light: var(--color-warning-light);
+  --color-info: var(--color-info);
+  --color-info-light: var(--color-info-light);
+
+  /* ── INPUT ─────────────────────────────────────────────────────── */
+  --color-input: var(--color-input-bg);
+  --color-input-border: var(--color-input-border);
+  --color-input-placeholder: var(--color-input-placeholder);
+
+  /* ── NAVIGATION ────────────────────────────────────────────────── */
+  --color-navbar: var(--color-navbar-bg);
+  --color-sidebar: var(--color-sidebar-bg);
+  --color-sidebar-active: var(--color-sidebar-active);
+
+  /* ── INTERACTION / MISC ────────────────────────────────────────── */
+  --color-overlay: var(--color-overlay);
+  --color-skeleton: var(--color-skeleton);
+  --color-disabled: var(--color-disabled-bg);
+  --color-selection: var(--color-selection);
+  --color-focus-ring: var(--color-focus-ring);
+
+  /* ── TOOLTIP / MODAL / DROPDOWN ────────────────────────────────── */
+  --color-tooltip: var(--color-tooltip-bg);
+  --color-modal: var(--color-modal-bg);
+  --color-dropdown: var(--color-dropdown-bg);
+
+  /* ── CHART ─────────────────────────────────────────────────────── */
+  --color-chart-1: var(--color-chart-1);
+  --color-chart-2: var(--color-chart-2);
+  --color-chart-3: var(--color-chart-3);
+  --color-chart-4: var(--color-chart-4);
+  --color-chart-5: var(--color-chart-5);
+
+  /* ── ICON ──────────────────────────────────────────────────────── */
+  --color-icon: var(--color-icon-primary);
+  --color-icon-muted: var(--color-icon-muted);
+  --color-icon-inverse: var(--color-icon-inverse);
+
+  /* ── DIVIDER / SCROLLBAR ───────────────────────────────────────── */
+  --color-divider: var(--color-divider);
+  --color-scrollbar: var(--color-scrollbar-thumb);
+
+  /* ── FONT FAMILY ───────────────────────────────────────────────── */
+  --font-sans: var(--font-sans);
+  /* font-sans */
+  --font-mono: var(--font-mono);
+  /* font-mono */
+
+  /* ── FONT WEIGHT (maps to font-light, font-medium, etc.) ───────── */
+  --font-weight-light: var(--font-light);
+  --font-weight-normal: var(--font-normal);
+  --font-weight-medium: var(--font-medium);
+  --font-weight-semibold: var(--font-semibold);
+  --font-weight-bold: var(--font-bold);
+
+  /* ── BORDER RADIUS (overrides Tailwind defaults) ───────────────── */
+  --radius-sm: var(--radius-sm);
+  /* rounded-sm   */
+  --radius-md: var(--radius-md);
+  /* rounded-md   */
+  --radius-lg: var(--radius-lg);
+  /* rounded-lg   */
+  --radius-xl: var(--radius-xl);
+  /* rounded-xl   */
+  --radius-full: var(--radius-full);
+  /* rounded-full */
+
+  /* ── SHADOW (overrides Tailwind defaults) ──────────────────────── */
+  --shadow-sm: var(--shadow-sm);
+  /* shadow-sm */
+  --shadow-md: var(--shadow-md);
+  /* shadow-md */
+  --shadow-lg: var(--shadow-lg);
+  /* shadow-lg */
+
+  /* ── Z-INDEX ───────────────────────────────────────────────────── */
+  --z-dropdown: var(--z-dropdown);
+  /* z-dropdown       */
+  --z-sticky: var(--z-sticky);
+  /* z-sticky         */
+  --z-fixed: var(--z-fixed);
+  /* z-fixed          */
+  --z-modal-backdrop: var(--z-modal-backdrop);
+  /* z-modal-backdrop */
+  --z-modal: var(--z-modal);
+  /* z-modal          */
+  --z-tooltip: var(--z-tooltip);
+  /* z-tooltip        */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ================================================================
+   LIGHT THEME — Tailwind Blue Scale
+   Primary ramp : blue-50 → blue-950
+   Secondary    : sky-400/500 (accent contrast)
+   Neutral      : slate-* (text, borders, backgrounds)
+   ================================================================ */
+:root {
+  /* ================= BRAND ================= */
+  --color-primary: #2563eb;
+  /* blue-600  */
+  --color-primary-hover: #1d4ed8;
+  /* blue-700  */
+  --color-primary-active: #1e40af;
+  /* blue-800  */
+  --color-primary-light: #dbeafe;
+  /* blue-100  */
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: #0ea5e9;
+  /* sky-500   */
+  --color-secondary-hover: #0284c7;
+  /* sky-600   */
+  --color-secondary-light: #e0f2fe;
+  /* sky-100   */
+
+  --color-accent: #38bdf8;
+  /* sky-400   */
+  --color-accent-light: #f0f9ff;
+  /* sky-50    */
+
+  /* ================= BACKGROUND ================= */
+  --color-bg-primary: #f8fafc;
+  /* slate-50  */
+  --color-bg-secondary: #ffffff;
+  --color-bg-muted: #f1f5f9;
+  /* slate-100 */
+  --color-bg-elevated: #ffffff;
+  --color-bg-hover: #eff6ff;
+  /* blue-50   */
+  --color-bg-subtle: #f8fafc;
+  /* slate-50  */
+
+  /* ================= TEXT ================= */
+  --color-text-primary: #0f172a;
+  /* slate-900 */
+  --color-text-secondary: #475569;
+  /* slate-600 */
+  --color-text-muted: #94a3b8;
+  /* slate-400 */
+  --color-text-placeholder: #94a3b8;
+  /* slate-400 */
+  --color-text-inverse: #ffffff;
+  --color-text-link: #2563eb;
+  /* blue-600  */
+  --color-text-link-hover: #1d4ed8;
+  /* blue-700  */
+  --color-text-on-primary: #ffffff;
+
+  /* ================= BORDER ================= */
+  --color-border: #e2e8f0;
+  /* slate-200 */
+  --color-border-strong: #cbd5e1;
+  /* slate-300 */
+  --color-border-focus: #2563eb;
+  /* blue-600  */
+  --color-border-muted: #f1f5f9;
+  /* slate-100 */
+
+  /* ================= STATE ================= */
+  --color-success: #22c55e;
+  /* green-500 */
+  --color-success-hover: #16a34a;
+  /* green-600 */
+  --color-success-light: #dcfce7;
+  /* green-100 */
+  --color-success-text: #15803d;
+  /* green-700 */
+
+  --color-error: #ef4444;
+  /* red-500   */
+  --color-error-hover: #dc2626;
+  /* red-600   */
+  --color-error-light: #fee2e2;
+  /* red-100   */
+  --color-error-text: #b91c1c;
+  /* red-700   */
+
+  --color-warning: #f59e0b;
+  /* amber-500 */
+  --color-warning-hover: #d97706;
+  /* amber-600 */
+  --color-warning-light: #fef3c7;
+  /* amber-100 */
+  --color-warning-text: #b45309;
+  /* amber-700 */
+
+  --color-info: #2563eb;
+  /* blue-600  */
+  --color-info-hover: #1d4ed8;
+  /* blue-700  */
+  --color-info-light: #dbeafe;
+  /* blue-100  */
+  --color-info-text: #1d4ed8;
+  /* blue-700  */
+
+  /* ================= INPUT ================= */
+  --color-input-bg: #ffffff;
+  --color-input-border: #cbd5e1;
+  /* slate-300 */
+  --color-input-border-hover: #93c5fd;
+  /* blue-300  */
+  --color-input-focus: #2563eb;
+  /* blue-600  */
+  --color-input-placeholder: #94a3b8;
+  /* slate-400 */
+  --color-input-text: #0f172a;
+  /* slate-900 */
+
+  /* ================= NAVIGATION ================= */
+  --color-navbar-bg: #ffffff;
+  --color-navbar-border: #e2e8f0;
+  /* slate-200 */
+  --color-navbar-text: #0f172a;
+  /* slate-900 */
+  --color-navbar-text-muted: #64748b;
+  /* slate-500 */
+
+  --color-sidebar-bg: #f8fafc;
+  /* slate-50  */
+  --color-sidebar-border: #e2e8f0;
+  /* slate-200 */
+  --color-sidebar-active: #dbeafe;
+  /* blue-100  */
+  --color-sidebar-active-text: #1d4ed8;
+  /* blue-700  */
+  --color-sidebar-hover: #eff6ff;
+  /* blue-50   */
+  --color-sidebar-text: #475569;
+  /* slate-600 */
+  --color-sidebar-text-active: #1e40af;
+  /* blue-800  */
+
+  /* ================= UI ================= */
+  --color-card: #ffffff;
+  --color-card-hover: #f8fafc;
+  /* slate-50  */
+  --color-card-border: #e2e8f0;
+  /* slate-200 */
+
+  --color-overlay: rgba(15, 23, 42, 0.5);
+  --color-skeleton: #e2e8f0;
+  /* slate-200 */
+  --color-loader: #2563eb;
+  /* blue-600  */
+  --color-selection: #bfdbfe;
+  /* blue-200  */
+  --color-focus-ring: #2563eb;
+  /* blue-600  */
+
+  --color-disabled-bg: #f1f5f9;
+  /* slate-100 */
+  --color-disabled-text: #94a3b8;
+  /* slate-400 */
+  --color-disabled-border: #e2e8f0;
+  /* slate-200 */
+
+  /* ================= GRADIENTS ================= */
+  --gradient-primary: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  /* blue-500→700 */
+  --gradient-accent: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  /* sky-400→500  */
+  --gradient-hero: linear-gradient(135deg, #2563eb, #0ea5e9);
+  /* blue-600→sky */
+  --gradient-subtle: linear-gradient(180deg, #eff6ff, #dbeafe);
+  /* blue-50→100  */
+
+  /* ================= SHADOW ================= */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 6px 12px rgba(15, 23, 42, 0.10);
+  --shadow-lg: 0 14px 24px rgba(15, 23, 42, 0.14);
+  --shadow-xl: 0 24px 40px rgba(15, 23, 42, 0.18);
+  --shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.30);
+  /* blue-600 @ 30% */
+
+  /* ================= TYPOGRAPHY ================= */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Poppins", "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+  /* ================= TYPOGRAPHY SCALE (ENHANCED) ================= */
+
+  --text-xs: 17px;
+  --text-sm: 19px;
+  --text-base: 20px;
+  --text-md: 22px;
+  --text-lg: 22px;
+  --text-xl: 24px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+  --text-4xl: 46px;
+  --text-5xl: 60px;
+
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+
+  --font-light: 300;
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* ================= INTERACTION ================= */
+  --color-hover-overlay: rgba(37, 99, 235, 0.05);
+  /* blue tint */
+  --color-active-overlay: rgba(37, 99, 235, 0.10);
+  --color-pressed-overlay: rgba(37, 99, 235, 0.15);
+
+  /* ================= BUTTON ================= */
+  --color-btn-primary-bg: #2563eb;
+  /* blue-600 */
+  --color-btn-primary-hover: #1d4ed8;
+  /* blue-700 */
+  --color-btn-primary-active: #1e40af;
+  /* blue-800 */
+  --color-btn-primary-text: #ffffff;
+  --color-btn-primary-border: transparent;
+
+  --color-btn-secondary-bg: #eff6ff;
+  /* blue-50  */
+  --color-btn-secondary-hover: #dbeafe;
+  /* blue-100 */
+  --color-btn-secondary-active: #bfdbfe;
+  /* blue-200 */
+  --color-btn-secondary-text: #1d4ed8;
+  /* blue-700 */
+  --color-btn-secondary-border: #93c5fd;
+  /* blue-300 */
+
+  --color-btn-outline-bg: transparent;
+  --color-btn-outline-hover: #eff6ff;
+  /* blue-50  */
+  --color-btn-outline-text: #2563eb;
+  /* blue-600 */
+  --color-btn-outline-border: #93c5fd;
+  /* blue-300 */
+
+  --color-btn-ghost-bg: transparent;
+  --color-btn-ghost-hover: #f1f5f9;
+  /* slate-100 */
+  --color-btn-ghost-text: #475569;
+  /* slate-600 */
+  --color-btn-ghost-border: transparent;
+
+  --color-btn-danger-bg: #ef4444;
+  /* red-500  */
+  --color-btn-danger-hover: #dc2626;
+  /* red-600  */
+  --color-btn-danger-text: #ffffff;
+
+  --color-btn-disabled-bg: #f1f5f9;
+  /* slate-100 */
+  --color-btn-disabled-text: #94a3b8;
+  /* slate-400 */
+  --color-btn-disabled-border: #e2e8f0;
+  /* slate-200 */
+
+  /* ================= TABLE ================= */
+  --color-table-header-bg: #f8fafc;
+  /* slate-50  */
+  --color-table-header-text: #475569;
+  /* slate-600 */
+  --color-table-row-hover: #eff6ff;
+  /* blue-50   */
+  --color-table-row-selected: #dbeafe;
+  /* blue-100  */
+  --color-table-border: #e2e8f0;
+  /* slate-200 */
+
+  /* ================= TOOLTIP ================= */
+  --color-tooltip-bg: #0f172a;
+  /* slate-900 */
+  --color-tooltip-text: #f8fafc;
+  /* slate-50  */
+  --color-tooltip-border: #1e293b;
+  /* slate-800 */
+
+  /* ================= BADGE ================= */
+  --color-badge-bg: #dbeafe;
+  /* blue-100  */
+  --color-badge-text: #1d4ed8;
+  /* blue-700  */
+  --color-badge-border: #bfdbfe;
+  /* blue-200  */
+
+  --color-badge-success-bg: #dcfce7;
+  /* green-100 */
+  --color-badge-success-text: #15803d;
+  /* green-700 */
+
+  --color-badge-error-bg: #fee2e2;
+  /* red-100   */
+  --color-badge-error-text: #b91c1c;
+  /* red-700   */
+
+  --color-badge-warning-bg: #fef3c7;
+  /* amber-100 */
+  --color-badge-warning-text: #b45309;
+  /* amber-700 */
+
+  --color-badge-info-bg: #dbeafe;
+  /* blue-100  */
+  --color-badge-info-text: #1d4ed8;
+  /* blue-700  */
+
+  --color-badge-neutral-bg: #f1f5f9;
+  /* slate-100 */
+  --color-badge-neutral-text: #475569;
+  /* slate-600 */
+
+  /* ================= PROGRESS ================= */
+  --color-progress-bg: #e2e8f0;
+  /* slate-200 */
+  --color-progress-fill: #2563eb;
+  /* blue-600  */
+  --color-progress-fill-success: #22c55e;
+  /* green-500 */
+  --color-progress-fill-warning: #f59e0b;
+  /* amber-500 */
+  --color-progress-fill-error: #ef4444;
+  /* red-500   */
+
+  /* ================= CHART ================= */
+  --color-chart-1: #2563eb;
+  /* blue-600  */
+  --color-chart-2: #0ea5e9;
+  /* sky-500   */
+  --color-chart-3: #38bdf8;
+  /* sky-400   */
+  --color-chart-4: #93c5fd;
+  /* blue-300  */
+  --color-chart-5: #bfdbfe;
+  /* blue-200  */
+  --color-chart-accent: #1d4ed8;
+  /* blue-700  */
+  --color-chart-grid: #e2e8f0;
+  /* slate-200 */
+  --color-chart-axis: #94a3b8;
+  /* slate-400 */
+  --color-chart-tooltip-bg: #ffffff;
+  --color-chart-tooltip-text: #0f172a;
+  /* slate-900 */
+  --color-chart-tooltip-border: #e2e8f0;
+  /* slate-200 */
+
+  /* ================= MODAL ================= */
+  --color-modal-bg: #ffffff;
+  --color-modal-overlay: rgba(15, 23, 42, 0.60);
+  --color-modal-border: #e2e8f0;
+  /* slate-200 */
+
+  /* ================= DROPDOWN ================= */
+  --color-dropdown-bg: #ffffff;
+  --color-dropdown-hover: #eff6ff;
+  /* blue-50   */
+  --color-dropdown-active: #dbeafe;
+  /* blue-100  */
+  --color-dropdown-border: #e2e8f0;
+  /* slate-200 */
+  --color-dropdown-text: #0f172a;
+  /* slate-900 */
+  --color-dropdown-text-muted: #64748b;
+  /* slate-500 */
+
+  /* ================= SCROLLBAR ================= */
+  --color-scrollbar-track: #f1f5f9;
+  /* slate-100 */
+  --color-scrollbar-thumb: #cbd5e1;
+  /* slate-300 */
+  --color-scrollbar-thumb-hover: #94a3b8;
+  /* slate-400 */
+
+  /* ================= DIVIDER ================= */
+  --color-divider: #e2e8f0;
+  /* slate-200 */
+  --color-divider-strong: #cbd5e1;
+  /* slate-300 */
+
+  /* ================= ICON ================= */
+  --color-icon-primary: #1e293b;
+  /* slate-800 */
+  --color-icon-secondary: #64748b;
+  /* slate-500 */
+  --color-icon-muted: #94a3b8;
+  /* slate-400 */
+  --color-icon-inverse: #ffffff;
+  --color-icon-brand: #2563eb;
+  /* blue-600  */
+
+  /* ================= SPACING ================= */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ================= RADIUS ================= */
+  --radius-none: 0px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* ================= Z-INDEX ================= */
+  --z-base: 0;
+  --z-raised: 100;
+  --z-dropdown: 1000;
+  --z-sticky: 1100;
+  --z-fixed: 1200;
+  --z-modal-backdrop: 1300;
+  --z-modal: 1400;
+  --z-popover: 1500;
+  --z-tooltip: 1600;
+  --z-toast: 1700;
+
+  /* ================= TRANSITIONS ================= */
+  --transition-fast: 100ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 350ms ease;
+  --transition-spring: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* ================================================================
+   DARK THEME — Tailwind Blue Scale (dark mode)
+   ================================================================ */
+.dark {
+  /* ================= BRAND ================= */
+  --color-primary: #3b82f6;
+  /* blue-500  — brighter for dark bg */
+  --color-primary-hover: #60a5fa;
+  /* blue-400  */
+  --color-primary-active: #93c5fd;
+  /* blue-300  */
+  --color-primary-light: #1e3a8a;
+  /* blue-900  */
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: #38bdf8;
+  /* sky-400   */
+  --color-secondary-hover: #7dd3fc;
+  /* sky-300   */
+  --color-secondary-light: #0c4a6e;
+  /* sky-900   */
+
+  --color-accent: #7dd3fc;
+  /* sky-300   */
+  --color-accent-light: #082f49;
+  /* sky-950   */
+
+  /* ================= BACKGROUND ================= */
+  --color-bg-primary: #0f172a;
+  /* slate-900 */
+  --color-bg-secondary: #1e293b;
+  /* slate-800 */
+  --color-bg-muted: #1e293b;
+  /* slate-800 */
+  --color-bg-elevated: #1e293b;
+  /* slate-800 */
+  --color-bg-hover: #172554;
+  /* blue-950  */
+  --color-bg-subtle: #0f172a;
+  /* slate-900 */
+
+  /* ================= TEXT ================= */
+  --color-text-primary: #f1f5f9;
+  /* slate-100 */
+  --color-text-secondary: #94a3b8;
+  /* slate-400 */
+  --color-text-muted: #64748b;
+  /* slate-500 */
+  --color-text-placeholder: #475569;
+  /* slate-600 */
+  --color-text-inverse: #0f172a;
+  /* slate-900 */
+  --color-text-link: #60a5fa;
+  /* blue-400  */
+  --color-text-link-hover: #93c5fd;
+  /* blue-300  */
+  --color-text-on-primary: #ffffff;
+
+  /* ================= BORDER ================= */
+  --color-border: #1e293b;
+  /* slate-800 */
+  --color-border-strong: #334155;
+  /* slate-700 */
+  --color-border-focus: #3b82f6;
+  /* blue-500  */
+  --color-border-muted: #0f172a;
+  /* slate-900 */
+
+  /* ================= STATE ================= */
+  --color-success-light: #052e16;
+  /* green-950 */
+  --color-success-text: #4ade80;
+  /* green-400 */
+
+  --color-error-light: #450a0a;
+  /* red-950   */
+  --color-error-text: #f87171;
+  /* red-400   */
+
+  --color-warning-light: #451a03;
+  /* amber-950 */
+  --color-warning-text: #fbbf24;
+  /* amber-400 */
+
+  --color-info-light: #172554;
+  /* blue-950  */
+  --color-info-text: #60a5fa;
+  /* blue-400  */
+
+  /* ================= INPUT ================= */
+  --color-input-bg: #1e293b;
+  /* slate-800 */
+  --color-input-border: #334155;
+  /* slate-700 */
+  --color-input-border-hover: #1d4ed8;
+  /* blue-700  */
+  --color-input-focus: #3b82f6;
+  /* blue-500  */
+  --color-input-placeholder: #475569;
+  /* slate-600 */
+  --color-input-text: #f1f5f9;
+  /* slate-100 */
+
+  /* ================= NAVIGATION ================= */
+  --color-navbar-bg: #0f172a;
+  /* slate-900 */
+  --color-navbar-border: #1e293b;
+  /* slate-800 */
+  --color-navbar-text: #f1f5f9;
+  /* slate-100 */
+  --color-navbar-text-muted: #64748b;
+  /* slate-500 */
+
+  --color-sidebar-bg: #0f172a;
+  /* slate-900 */
+  --color-sidebar-border: #1e293b;
+  /* slate-800 */
+  --color-sidebar-active: #172554;
+  /* blue-950  */
+  --color-sidebar-active-text: #60a5fa;
+  /* blue-400  */
+  --color-sidebar-hover: #1e293b;
+  /* slate-800 */
+  --color-sidebar-text: #94a3b8;
+  /* slate-400 */
+  --color-sidebar-text-active: #bfdbfe;
+  /* blue-200  */
+
+  /* ================= UI ================= */
+  --color-card: #1e293b;
+  /* slate-800 */
+  --color-card-hover: #334155;
+  /* slate-700 */
+  --color-card-border: #334155;
+  /* slate-700 */
+
+  --color-overlay: rgba(0, 0, 0, 0.70);
+  --color-skeleton: #1e293b;
+  /* slate-800 */
+  --color-selection: #1e3a8a;
+  /* blue-900  */
+
+  --color-disabled-bg: #1e293b;
+  /* slate-800 */
+  --color-disabled-text: #475569;
+  /* slate-600 */
+  --color-disabled-border: #334155;
+  /* slate-700 */
+
+  /* ================= GRADIENTS ================= */
+  --gradient-primary: linear-gradient(135deg, #3b82f6, #2563eb);
+  --gradient-accent: linear-gradient(135deg, #7dd3fc, #38bdf8);
+  --gradient-hero: linear-gradient(135deg, #3b82f6, #38bdf8);
+  --gradient-subtle: linear-gradient(180deg, #172554, #1e3a8a);
+
+  /* ================= SHADOW ================= */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 14px 24px rgba(0, 0, 0, 0.55);
+  --shadow-xl: 0 24px 40px rgba(0, 0, 0, 0.65);
+  --shadow-focus: 0 0 0 3px rgba(59, 130, 246, 0.40);
+  /* blue-500 @ 40% */
+
+  /* ================= BUTTON ================= */
+  --color-btn-primary-bg: #2563eb;
+  /* blue-600 */
+  --color-btn-primary-hover: #3b82f6;
+  /* blue-500 */
+  --color-btn-primary-active: #60a5fa;
+  /* blue-400 */
+  --color-btn-primary-text: #ffffff;
+  --color-btn-primary-border: transparent;
+
+  --color-btn-secondary-bg: #172554;
+  /* blue-950 */
+  --color-btn-secondary-hover: #1e3a8a;
+  /* blue-900 */
+  --color-btn-secondary-active: #1d4ed8;
+  /* blue-700 */
+  --color-btn-secondary-text: #93c5fd;
+  /* blue-300 */
+  --color-btn-secondary-border: #1d4ed8;
+  /* blue-700 */
+
+  --color-btn-outline-bg: transparent;
+  --color-btn-outline-hover: #172554;
+  /* blue-950 */
+  --color-btn-outline-text: #60a5fa;
+  /* blue-400 */
+  --color-btn-outline-border: #1d4ed8;
+  /* blue-700 */
+
+  --color-btn-ghost-bg: transparent;
+  --color-btn-ghost-hover: #1e293b;
+  /* slate-800 */
+  --color-btn-ghost-text: #94a3b8;
+  /* slate-400 */
+  --color-btn-ghost-border: transparent;
+
+  --color-btn-danger-bg: #dc2626;
+  /* red-600   */
+  --color-btn-danger-hover: #ef4444;
+  /* red-500   */
+  --color-btn-danger-text: #ffffff;
+
+  --color-btn-disabled-bg: #1e293b;
+  /* slate-800 */
+  --color-btn-disabled-text: #475569;
+  /* slate-600 */
+  --color-btn-disabled-border: #334155;
+  /* slate-700 */
+
+  /* ================= TABLE ================= */
+  --color-table-header-bg: #1e293b;
+  /* slate-800 */
+  --color-table-header-text: #94a3b8;
+  /* slate-400 */
+  --color-table-row-hover: #172554;
+  /* blue-950  */
+  --color-table-row-selected: #1e3a8a;
+  /* blue-900  */
+  --color-table-border: #1e293b;
+  /* slate-800 */
+
+  /* ================= TOOLTIP ================= */
+  --color-tooltip-bg: #f1f5f9;
+  /* slate-100 */
+  --color-tooltip-text: #0f172a;
+  /* slate-900 */
+  --color-tooltip-border: #e2e8f0;
+  /* slate-200 */
+
+  /* ================= BADGE ================= */
+  --color-badge-bg: #1e3a8a;
+  /* blue-900  */
+  --color-badge-text: #93c5fd;
+  /* blue-300  */
+  --color-badge-border: #1d4ed8;
+  /* blue-700  */
+
+  --color-badge-success-bg: #052e16;
+  --color-badge-success-text: #4ade80;
+  /* green-400 */
+
+  --color-badge-error-bg: #450a0a;
+  --color-badge-error-text: #f87171;
+  /* red-400   */
+
+  --color-badge-warning-bg: #451a03;
+  --color-badge-warning-text: #fbbf24;
+  /* amber-400 */
+
+  --color-badge-info-bg: #172554;
+  /* blue-950  */
+  --color-badge-info-text: #60a5fa;
+  /* blue-400  */
+
+  --color-badge-neutral-bg: #1e293b;
+  /* slate-800 */
+  --color-badge-neutral-text: #94a3b8;
+  /* slate-400 */
+
+  /* ================= PROGRESS ================= */
+  --color-progress-bg: #1e293b;
+  /* slate-800 */
+  --color-progress-fill: #3b82f6;
+  /* blue-500  */
+  --color-progress-fill-success: #22c55e;
+  /* green-500 */
+  --color-progress-fill-warning: #f59e0b;
+  /* amber-500 */
+  --color-progress-fill-error: #ef4444;
+  /* red-500   */
+
+  /* ================= CHART ================= */
+  --color-chart-1: #60a5fa;
+  /* blue-400  */
+  --color-chart-2: #38bdf8;
+  /* sky-400   */
+  --color-chart-3: #7dd3fc;
+  /* sky-300   */
+  --color-chart-4: #93c5fd;
+  /* blue-300  */
+  --color-chart-5: #bfdbfe;
+  /* blue-200  */
+  --color-chart-accent: #3b82f6;
+  /* blue-500  */
+  --color-chart-grid: #1e293b;
+  /* slate-800 */
+  --color-chart-axis: #475569;
+  /* slate-600 */
+  --color-chart-tooltip-bg: #1e293b;
+  /* slate-800 */
+  --color-chart-tooltip-text: #f1f5f9;
+  /* slate-100 */
+  --color-chart-tooltip-border: #334155;
+  /* slate-700 */
+
+  /* ================= MODAL ================= */
+  --color-modal-bg: #1e293b;
+  /* slate-800 */
+  --color-modal-overlay: rgba(0, 0, 0, 0.80);
+  --color-modal-border: #334155;
+  /* slate-700 */
+
+  /* ================= DROPDOWN ================= */
+  --color-dropdown-bg: #1e293b;
+  /* slate-800 */
+  --color-dropdown-hover: #172554;
+  /* blue-950  */
+  --color-dropdown-active: #1e3a8a;
+  /* blue-900  */
+  --color-dropdown-border: #334155;
+  /* slate-700 */
+  --color-dropdown-text: #f1f5f9;
+  /* slate-100 */
+  --color-dropdown-text-muted: #64748b;
+  /* slate-500 */
+
+  /* ================= SCROLLBAR ================= */
+  --color-scrollbar-track: #0f172a;
+  /* slate-900 */
+  --color-scrollbar-thumb: #334155;
+  /* slate-700 */
+  --color-scrollbar-thumb-hover: #475569;
+  /* slate-600 */
+
+  /* ================= DIVIDER ================= */
+  --color-divider: #1e293b;
+  /* slate-800 */
+  --color-divider-strong: #334155;
+  /* slate-700 */
+
+  /* ================= ICON ================= */
+  --color-icon-primary: #f1f5f9;
+  /* slate-100 */
+  --color-icon-secondary: #94a3b8;
+  /* slate-400 */
+  --color-icon-muted: #64748b;
+  /* slate-500 */
+  --color-icon-inverse: #0f172a;
+  /* slate-900 */
+  --color-icon-brand: #60a5fa;
+  /* blue-400  */
+
+  /* ================= INTERACTION ================= */
+  --color-hover-overlay: rgba(59, 130, 246, 0.08);
+  /* blue tint */
+  --color-active-overlay: rgba(59, 130, 246, 0.14);
+  --color-pressed-overlay: rgba(59, 130, 246, 0.20);
+}
+
+
+/* Hide scrollbar globally */
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  -ms-overflow-style: none;
+  /* IE & Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari */
+}
+
+/* ================================================================
+   BASE STYLES
+   ================================================================ */
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+::selection {
+  background-color: var(--color-selection);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar-thumb);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-thumb-hover);
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }

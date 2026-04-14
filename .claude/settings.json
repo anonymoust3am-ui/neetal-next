@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "c:\\Users\\T3amA\\Downloads\\neetall\\neetal-next\\src\\app\\(dashboard)\\dashboard\\colleges"
+    ],
+    "allow": [
+      "Bash(node -e \"const l = require\\('lucide-react'\\); console.log\\(Object.keys\\(l\\).filter\\(k => /twitter|youtube|video|play|social/i.test\\(k\\)\\).join\\('\\\\n'\\)\\)\")"
+    ]
+  }
+}
