@@ -392,9 +392,9 @@
   /* blue-600 @ 30% */
 
   /* ================= TYPOGRAPHY ================= */
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: "Poppins", "Inter", sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+--font-sans: "Inter", system-ui, sans-serif;
+--font-display: "Clash Display", "Inter", sans-serif;
+--font-mono: "IBM Plex Mono", monospace;
 
   /* ================= TYPOGRAPHY SCALE (ENHANCED) ================= */
 
@@ -1056,4 +1056,24 @@ body {
 :focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus-ring);
   outline-offset: var(--focus-ring-offset);
+}
+
+/* 🔥 Infinite smooth scroll */
+@keyframes scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scroll {
+  animation: scroll linear infinite;
+}
+
+/* Pause on hover */
+.group:hover .animate-scroll {
+  animation-play-state: paused;
 }

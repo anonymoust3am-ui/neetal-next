@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { Search, ArrowRight, Shield, BarChart2, Clock, Zap, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ExamScroller from "./ExamScroller";
 
 const categories = ["General", "OBC-NCL", "SC", "ST", "EWS", "PH"];
 const quotas      = ["All India (AIQ)", "State Quota", "Management Quota", "NRI Quota"];
@@ -20,7 +21,8 @@ export function HeroSection() {
   const [quota, setQuota]       = useState("All India (AIQ)");
 
   return (
-    <section className="relative overflow-hidden bg-bg-primary min-h-[94vh] flex items-center">
+    <section className="relative overflow-hidden bg-bg-primary min-h-[94vh] flex flex-col items-center">
+       <ExamScroller exams={[{ name: "Exam 1", date: "2023-10-01" }, { name: "Exam 2", date: "2023-10-02" }, { name: "Exam 3", date: "2023-10-03" }, { name: "Exam 4", date: "2023-10-04" }, { name: "Exam 5", date: "2023-10-05" }, { name: "Exam 6", date: "2023-10-06" }]} speed={10} />
       {/* Background decoration */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Large blur blob top-right */}
@@ -35,7 +37,7 @@ export function HeroSection() {
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-20 md:py-28 lg:py-32">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-10 md:py-20 lg:py-25">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
 
           {/* ── Left: Content ─────────────────────────────────── */}

@@ -1,6 +1,7 @@
 "use client";
 import { motion } from "motion/react";
 import { Smartphone, Download, Bell, Shield, Zap } from "lucide-react";
+import { GooglePlayButton, AppStoreButton } from "@/components/ui/app-store-button";
 import AnimatedTitle from "./AnimatedTitle";
 
 export function AppPreview() {
@@ -60,21 +61,8 @@ export function AppPreview() {
             </div>
 
             <div className="flex flex-wrap gap-4">
-              <button className="group px-6 py-4 bg-primary text-primary-foreground rounded-xl font-semibold flex items-center gap-3 hover:shadow-lg transition-all duration-300 hover:scale-105">
-                <Download className="w-5 h-5" />
-                <div className="text-left">
-                  <div className="text-xs opacity-80">Download on the</div>
-                  <div className="text-sm font-bold">App Store</div>
-                </div>
-              </button>
-
-              <button className="group px-6 py-4 bg-card/50 backdrop-blur-md border border-border text-foreground rounded-xl font-semibold flex items-center gap-3 hover:bg-card transition-all duration-300">
-                <Download className="w-5 h-5" />
-                <div className="text-left">
-                  <div className="text-xs text-foreground-muted">Get it on</div>
-                  <div className="text-sm font-bold">Google Play</div>
-                </div>
-              </button>
+              <AppStoreButton size="lg" href="#" />
+              <GooglePlayButton size="lg" href="#" />
             </div>
 
             <div className="grid grid-cols-3 gap-6 mt-12 pt-8 border-t border-border">

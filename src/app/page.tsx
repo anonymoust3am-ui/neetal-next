@@ -14,6 +14,7 @@ import { DataIntelligence } from "@/components/DataInteligence";
 import { FeatureGrid } from "@/components/FeaturesGride";
 import { Hero } from "@/components/Hero";
 import { ScrollProgressBar } from "@/components/dashboard/ScrollProgressBar";
+import ExamScroller from "@/components/ExamScroller";
 
 export default function Home() {
   return (
