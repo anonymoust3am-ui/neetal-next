@@ -304,7 +304,7 @@ export function DashboardHeader() {
       <div className="flex items-center gap-1 px-3 shrink-0">
 
         {/* Nav links */}
-        <NavLink href="/dashboard/blogs" icon={Newspaper} label="Blogs & News" />
+        <NavLink href="/dashboard/news" icon={Newspaper} label="Blogs & News" />
 
         {/* Notification bell */}
         <button

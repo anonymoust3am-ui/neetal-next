@@ -58,6 +58,6 @@ export const bottomNavItems: BottomNavItem[] = [
     key: 'institutes',
     label: 'Institutes',
     icon: GraduationCap,
-    href: '/dashboard/institutes',
+    href: '/dashboard/colleges',
   }
 ];

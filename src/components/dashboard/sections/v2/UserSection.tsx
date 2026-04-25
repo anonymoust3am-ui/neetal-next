@@ -19,7 +19,7 @@ export function UserSection() {
   ];
 
   return (
-    <div className="grid lg:grid-cols-[1fr_340px] gap-4">
+    <div className="grid lg:grid-cols-[1fr_340px] gap-4 pt-8">
 
       {/* LEFT — greeting + rank + journey */}
       <div className="relative bg-surface border border-border rounded-2xl p-6 overflow-hidden shadow-sm">

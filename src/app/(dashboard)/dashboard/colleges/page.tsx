@@ -372,12 +372,12 @@ export default function CollegesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="px-6 lg:px-8 py-6 max-w-[1500px] mx-auto">
+      <div className="px-6 lg:px-8 py-6 max-w-[1500px] mx-auto pt-18">
 
         {/* ── header ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div>
-            <h1 className="text-2xl font-black text-foreground tracking-tight">Medical Colleges</h1>
+            {/* <h1 className="text-2xl font-black text-foreground tracking-tight">Medical Colleges</h1> */}
             <p className="text-sm text-foreground-muted mt-0.5">
               {loading ? 'Loading…' : `${total.toLocaleString()} institutes across India`}
             </p>

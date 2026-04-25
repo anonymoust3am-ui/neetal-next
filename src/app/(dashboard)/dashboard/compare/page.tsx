@@ -164,7 +164,7 @@ export default function ComparePage() {
     <div className="min-h-screen bg-background pb-16">
 
 
-      <div className="px-4 sm:px-6 lg:px-10 max-w-[1450px] mx-auto mt-6 space-y-5">
+      <div className="px-4 sm:px-6 lg:px-10 max-w-[1450px] mx-auto mt-6 space-y-5 pt-18">
 
         {/* Page title */}
         <div className="mb-5">
