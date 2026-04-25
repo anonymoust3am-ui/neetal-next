@@ -7,10 +7,16 @@ import {
   BarChart2, Bookmark, Bot,
 } from 'lucide-react';
 import { useCountUp } from '@/hooks/useCountUp';
-import ChoiceListPanel from './v2/ChoiceListPanel';
 
-export function HeroSection() {
+export function UserSection() {
   const rank = useCountUp(2341, 1200);
+
+  const TOP_PICKS = [
+    { name: 'AIIMS Bhopal', tag: 'Safe', tagCls: 'bg-success-light text-success', rank: 890 },
+    { name: 'JIPMER Puducherry', tag: 'Target', tagCls: 'bg-primary-light text-primary', rank: 512 },
+    { name: 'MAMC Delhi', tag: 'Target', tagCls: 'bg-primary-light text-primary', rank: 1240 },
+    { name: 'Kasturba Manipal', tag: 'Dream', tagCls: 'bg-secondary-light text-secondary', rank: 290 },
+  ];
 
   return (
     <div className="grid lg:grid-cols-[1fr_340px] gap-4">
@@ -88,102 +94,23 @@ export function HeroSection() {
       <div className="flex flex-col gap-3">
 
         {/* ================= ALERT CARD ================= */}
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-          <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
-          <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-secondary/10 blur-3xl" />
-          <div
-            className="absolute inset-0 opacity-[0.04] pointer-events-none"
-            style={{
-              backgroundImage:
-                'repeating-linear-gradient(0deg, var(--color-border), var(--color-border) 1px, transparent 1px, transparent 6px)',
-            }}
-          />
-
-          <div className="relative p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-foreground-subtle">
-                Live Update
-              </p>
+        <div className="flex flex-col gap-3">
+          <div className="bg-surface border border-border rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-foreground">Top Picks for You</h2>
+              <Link href="/dashboard/recommendations" className="text-xs text-primary font-semibold">View all</Link>
             </div>
-            <h3 className="text-lg font-bold text-foreground leading-tight">
-              Round 2 opens
-              <br />
-              in 5 days
-            </h3>
-            <p className="text-sm text-foreground-muted mt-1">
-              Review AI recommendations before locking choices.
-            </p>
-            <Link
-              href="/dashboard/choices"
-              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary/10 hover:bg-primary/15 text-primary px-3 py-2 text-xs font-semibold border border-primary/20 transition-colors"
-            >
-              Review Choice List
-              <ArrowUpRight size={12} />
-            </Link>
-          </div>
-        </div>
-
-        {/* <ChoiceListPanel /> */}
-
-        {/* ================= QUICK ACTIONS ================= */}
-        <div className="rounded-2xl border border-border bg-card shadow-sm p-4">
-
-          <p className="text-[11px] font-bold uppercase tracking-widest text-foreground-subtle mb-3">
-            Quick Actions
-          </p>
-
-          <div className="space-y-1">
-
-            {[
-              {
-                icon: Target,
-                label: 'Predict My College',
-                href: '/dashboard/predictor',
-                accent: 'bg-primary/10 text-primary',
-              },
-              {
-                icon: BarChart2,
-                label: 'View Cutoffs',
-                href: '/dashboard/cutoffs',
-                accent: 'bg-secondary/10 text-secondary',
-              },
-              {
-                icon: Bookmark,
-                label: 'My Shortlist',
-                href: '/dashboard/shortlist',
-                accent: 'bg-accent/10 text-accent',
-              },
-              {
-                icon: Bot,
-                label: 'Ask AI Assistant',
-                href: '/dashboard/ai',
-                accent: 'bg-warning/10 text-warning',
-              },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="group flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-muted transition-colors"
-              >
-                {/* icon */}
-                <div
-                  className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${item.accent}`}
-                >
-                  <item.icon size={14} />
+            {TOP_PICKS.map((c, i) => (
+              <div key={i} className="flex items-center gap-2.5 py-2.5 border-b border-border last:border-0">
+                <div className="w-6 h-6 rounded-lg bg-primary-light flex items-center justify-center text-[10px] font-black text-primary shrink-0">
+                  {i + 1}
                 </div>
-
-                {/* label */}
-                <span className="text-sm font-medium text-foreground-muted group-hover:text-foreground transition-colors flex-1">
-                  {item.label}
-                </span>
-
-                {/* arrow */}
-                <ChevronRight
-                  size={13}
-                  className="text-foreground-subtle group-hover:text-foreground-muted transition-colors"
-                />
-              </Link>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-foreground truncate">{c.name}</p>
+                  <p className="text-[10px] text-foreground-subtle">Closing rank {c.rank.toLocaleString()}</p>
+                </div>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${c.tagCls}`}>{c.tag}</span>
+              </div>
             ))}
           </div>
         </div>
