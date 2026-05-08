@@ -1,30 +1,52 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Plus, X, Search, BarChart2, CheckCircle2,
   AlertTriangle, Banknote, Users, Trophy,
   Home, ChevronRight, GraduationCap, MapPin,
-  Star, ArrowUpRight,
+  Star, ArrowUpRight, Loader2,
 } from 'lucide-react';
 
-// ─── static data ─────────────────────────────────────────────────────────────
-const ALL_COLLEGES = [
-  { id: 1509, name: 'AIIMS New Delhi', state: 'Delhi', type: 'INI (Institute of National Importance)', fees: 1628, cutoff: 42815, bond: false, bondYears: 0, bondAmt: 0, seats: 107, stipend: 17500, hostelFees: 35000 },
-  { id: 2, name: 'MAMC, New Delhi', state: 'Delhi', type: 'Government Institute', fees: 7200, cutoff: 58340, bond: true, bondYears: 1, bondAmt: 1000000, seats: 250, stipend: 0, hostelFees: 30000 },
-  { id: 3, name: 'VMMC & Safdarjung', state: 'Delhi', type: 'Government Institute', fees: 5000, cutoff: 89622, bond: true, bondYears: 2, bondAmt: 2000000, seats: 150, stipend: 0, hostelFees: 28000 },
-  { id: 4, name: 'Maulana Azad Medical College', state: 'Delhi', type: 'Government Institute', fees: 3200, cutoff: 49800, bond: true, bondYears: 1, bondAmt: 1000000, seats: 250, stipend: 0, hostelFees: 32000 },
-  { id: 5, name: 'B.J. Medical College', state: 'Gujarat', type: 'Government Institute', fees: 12000, cutoff: 78200, bond: true, bondYears: 2, bondAmt: 2000000, seats: 250, stipend: 0, hostelFees: 20000 },
-  { id: 6, name: 'AIIMS Jodhpur', state: 'Rajasthan', type: 'INI (Institute of National Importance)', fees: 1628, cutoff: 84300, bond: false, bondYears: 0, bondAmt: 0, seats: 100, stipend: 17500, hostelFees: 32000 },
-  { id: 7, name: 'JIPMER Puducherry', state: 'Puducherry', type: 'INI (Institute of National Importance)', fees: 4250, cutoff: 68100, bond: false, bondYears: 0, bondAmt: 0, seats: 150, stipend: 15000, hostelFees: 25000 },
-  { id: 8, name: 'Grant Medical College', state: 'Maharashtra', type: 'Government Institute', fees: 35000, cutoff: 95300, bond: true, bondYears: 2, bondAmt: 3000000, seats: 185, stipend: 0, hostelFees: 18000 },
-  { id: 9, name: 'AIIMS Bhopal', state: 'M.P.', type: 'INI (Institute of National Importance)', fees: 1628, cutoff: 72600, bond: false, bondYears: 0, bondAmt: 0, seats: 100, stipend: 17500, hostelFees: 28000 },
-  { id: 10, name: 'Seth GS Medical College', state: 'Maharashtra', type: 'Government Institute', fees: 31000, cutoff: 88600, bond: true, bondYears: 2, bondAmt: 3000000, seats: 200, stipend: 0, hostelFees: 22000 },
-];
+const INST_API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
-type College = (typeof ALL_COLLEGES)[0];
+interface College {
+  id: number;
+  name: string;
+  state: string;
+  type: string;
+  fees: number;
+  cutoff: number;
+  bond: boolean;
+  bondYears: number;
+  bondAmt: number;
+  seats: number;
+  stipend: number;
+  hostelFees: number;
+}
 type Slot = College | null;
+
+/* map API institute → College (missing fields default to 0/false) */
+function apiToCollege(i: {
+  id: number; name: string; state: string; institute_type: string;
+  fee?: { range?: { min?: number; max?: number } }; seats?: number;
+}): College {
+  return {
+    id: i.id,
+    name: i.name,
+    state: i.state,
+    type: i.institute_type,
+    fees: i.fee?.range?.min ?? 0,
+    cutoff: 0,
+    bond: false,
+    bondYears: 0,
+    bondAmt: 0,
+    seats: i.seats ?? 0,
+    stipend: 0,
+    hostelFees: 0,
+  };
+}
 
 // ─── TYPE STYLE map ───────────────────────────────────────────────────────────
 const TYPE_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
@@ -61,7 +83,7 @@ interface RowDef {
 const ROWS: RowDef[] = [
   { key: 'state', label: 'State', icon: MapPin, accent: '#0ea5e9', format: v => String(v) },
   { key: 'type', label: 'Institute Type', icon: GraduationCap, accent: '#7c3aed', format: v => String(v) },
-  { key: 'cutoff', label: 'AIQ Closing Rank', icon: Trophy, accent: '#d97706', format: v => (v as number).toLocaleString('en-IN'), numeric: true, lowerIsBetter: true },
+  { key: 'cutoff', label: 'AIQ Closing Rank', icon: Trophy, accent: '#d97706', format: v => (v as number) ? (v as number).toLocaleString('en-IN') : '—', numeric: true, lowerIsBetter: true },
   { key: 'fees', label: 'Annual Tuition Fee', icon: Banknote, accent: '#0d9488', format: v => fmtFee(v as number), numeric: true, lowerIsBetter: true },
   { key: 'bond', label: 'Bond Requirement', icon: AlertTriangle, accent: '#f59e0b', format: v => v ? 'Yes' : 'No', special: 'bond' },
   { key: 'bondYears', label: 'Bond Duration', icon: AlertTriangle, accent: '#f59e0b', format: v => v ? `${v} years` : '—', numeric: true, lowerIsBetter: true },
@@ -126,13 +148,35 @@ function SlotHeader({ slot, idx, onRemove, onAdd }: {
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 export default function ComparePage() {
-  const [slots, setSlots] = useState<Slot[]>([null, null, null, null]);
-  const [addingTo, setAddingTo] = useState<number | null>(null);
-  const [search, setSearch] = useState('');
+  const [slots, setSlots]           = useState<Slot[]>([null, null, null, null]);
+  const [addingTo, setAddingTo]     = useState<number | null>(null);
+  const [search, setSearch]         = useState('');
+  const [allColleges, setAllColleges] = useState<College[]>([]);
+  const [loadingModal, setLoadingModal] = useState(false);
+  const [loaded, setLoaded]         = useState(false);
 
   const activeCount = slots.filter(Boolean).length;
 
-  const filtered = ALL_COLLEGES.filter(
+  /* load institutes from API when modal first opens */
+  const loadInstitutes = useCallback(() => {
+    if (loaded) return;
+    setLoadingModal(true);
+    fetch(`${INST_API}/institutes?page=1`)
+      .then(r => r.json())
+      .then(j => {
+        const list = (j.data?.institutes ?? []) as Parameters<typeof apiToCollege>[0][];
+        setAllColleges(list.map(apiToCollege));
+        setLoaded(true);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingModal(false));
+  }, [loaded]);
+
+  useEffect(() => {
+    if (addingTo !== null) loadInstitutes();
+  }, [addingTo, loadInstitutes]);
+
+  const filtered = allColleges.filter(
     c => c.name.toLowerCase().includes(search.toLowerCase()) &&
       !slots.some(s => s?.id === c.id)
   );
@@ -298,7 +342,7 @@ export default function ComparePage() {
                 Bond obligation exists
               </span>
             </div>
-            <p className="text-[11px] text-foreground-subtle">Data from MCC / NMC · AIQ cutoffs are approximate</p>
+            <p className="text-[11px] text-foreground-subtle">Fees & seats from API · Cutoff, bond, stipend data coming soon</p>
           </div>
         </div>
 
@@ -439,7 +483,12 @@ export default function ComparePage() {
 
             {/* results list */}
             <div className="px-3 pb-4 flex flex-col gap-1 max-h-80 overflow-y-auto">
-              {filtered.length > 0 ? filtered.map(c => {
+              {loadingModal ? (
+                <div className="flex items-center justify-center py-10 gap-2 text-foreground-subtle">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span className="text-sm">Loading institutes…</span>
+                </div>
+              ) : filtered.length > 0 ? filtered.map(c => {
                 const style = ts(c.type);
                 return (
                   <button
@@ -453,7 +502,7 @@ export default function ComparePage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-foreground leading-snug">{c.name}</p>
-                      <p className="text-[10px] text-foreground-subtle mt-0.5">{c.state} · {fmtFee(c.fees)}/yr · Rank {c.cutoff.toLocaleString()}</p>
+                      <p className="text-[10px] text-foreground-subtle mt-0.5">{c.state} · {c.fees ? `${fmtFee(c.fees)}/yr` : 'Fee N/A'}{c.cutoff ? ` · Rank ${c.cutoff.toLocaleString()}` : ''}</p>
                     </div>
                     <Plus size={13} className="text-foreground-subtle group-hover:text-primary shrink-0 transition-colors" />
                   </button>

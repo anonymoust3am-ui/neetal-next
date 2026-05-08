@@ -2,6 +2,7 @@
 import { motion } from "motion/react";
 import { Check, Sparkles } from "lucide-react";
 import AnimatedTitle from "./AnimatedTitle";
+import { SectionHeader } from "./ui/SectionHeader";
 
 const plans = [
     {
@@ -83,14 +84,13 @@ export function PricingPlans() {
                     transition={{ duration: 0.6 }}
                     className="text-center max-w-3xl mx-auto mb-16"
                 >
-                    <AnimatedTitle
-                        text="Choose Your Success Package"
-                        className="text-3xl md:text-4xl font-bold text-foreground mb-3"
+                    <SectionHeader
+                        eyebrow="Pricing Plans"
+                        title="Simple, Transparent Pricing"
+                        description="Choose the plan that fits your NEET counselling needs. No hidden fees, cancel anytime."
+                        align="center"
+                        className="mb-14"
                     />
-                    <p className="text-base text-foreground-muted">
-                        Affordable plans with expert insights - No hidden charges, just
-                        transparent pricing
-                    </p>
                 </motion.div>
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
@@ -106,8 +106,8 @@ export function PricingPlans() {
                         >
                             <div
                                 className={`relative h-full p-6 rounded-xl border flex flex-col transition-all duration-300 overflow-hidden ${plan.popular
-                                        ? `border-${plan.color} bg-card shadow-xl shadow-${plan.color}/10`
-                                        : "border-border bg-card hover:border-primary/30"
+                                    ? `border-${plan.color} bg-card shadow-xl shadow-${plan.color}/10`
+                                    : "border-border bg-card hover:border-primary/30"
                                     }`}
                             >
                                 {plan.popular && (
@@ -152,8 +152,8 @@ export function PricingPlans() {
 
                                 <button
                                     className={`w-full py-2.5 rounded-lg font-medium text-sm transition-all duration-300 ${plan.popular
-                                            ? `bg-${plan.color} text-${plan.color}-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5`
-                                            : "bg-secondary text-secondary-foreground border border-border hover:bg-secondary-hover"
+                                        ? `bg-${plan.color} text-${plan.color}-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5`
+                                        : "bg-secondary text-secondary-foreground border border-border hover:bg-secondary-hover"
                                         }`}
                                 >
                                     Get Started

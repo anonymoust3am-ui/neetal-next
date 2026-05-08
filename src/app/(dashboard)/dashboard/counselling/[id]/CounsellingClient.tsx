@@ -8,7 +8,7 @@ import {
     HelpCircle, ExternalLink,
     ArrowLeft
 } from 'lucide-react';
-import { cn } from '../../choices/page';
+function cn(...cls: (string | false | null | undefined)[]) { return cls.filter(Boolean).join(' '); }
 import { AnnouncementsSection } from '@/components/dashboard/sections/AnnouncementsSection';
 import { useRouter } from 'next/navigation';
 

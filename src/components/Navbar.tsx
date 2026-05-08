@@ -10,27 +10,26 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/hooks/useTheme';
 import { ThemeToggle } from './ThemeToggle';
-
-// ─── Replace with your real auth hook ───────────────────────────────────────
-// e.g. const { user } = useSession() or useUser() from your auth provider
-const useMockAuth = () => {
-    const [isLoggedIn, setIsLoggedIn] = useState(true); // toggle to test
-    return {
-        user: isLoggedIn ? { name: 'Aryan Singh', email: 'aryan@example.com', avatar: null } : null,
-        logout: () => setIsLoggedIn(false),
-    };
-};
-// ─────────────────────────────────────────────────────────────────────────────
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [avatarOpen, setAvatarOpen] = useState(false);
     const { toggleTheme } = useTheme();
-    const { user, logout } = useMockAuth();
+    const { user, logout } = useAuth();
+    const router = useRouter();
+
+    const handleLogout = async () => {
+        setAvatarOpen(false);
+        setIsOpen(false);
+        await logout();
+        router.replace('/auth');
+    };
 
     const initials = user?.name
-        ? user.name.split(' ').map(n => n[0]).join('').toUpperCase()
-        : '';
+        ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+        : (user?.phone ?? '?').slice(-2);
 
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-navbar/80 backdrop-blur-xl border-b border-border">
@@ -39,30 +38,41 @@ export function Navbar() {
                 <div className="flex items-center justify-between h-16">
 
                     {/* ─── Logo ─── */}
-                    <Link href="/" className="flex items-center gap-2 shrink-0">
-                        <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
-                            <span className="text-primary-foreground font-bold text-lg">N</span>
-                        </div>
-                        <span className="text-lg font-bold text-primary">Neetell</span>
+                    <Link href="/" className="shrink-0">
+                        <img
+                            src="/logo-nobg.png"
+                            alt="Neetell Logo"
+                            className="h-35 w-auto"
+                        />
                     </Link>
 
                     {/* ─── Desktop Nav Links ─── */}
                     <div className="hidden lg:flex items-center gap-1">
 
                         {/* Explore */}
-                        <DropdownMenu label="Explore">
+                        {/* <DropdownMenu label="Explore">
                             <DropItem href="/explore/institutes">Institutes</DropItem>
                             <DropItem href="/explore/colleges">Colleges</DropItem>
-                        </DropdownMenu>
+                        </DropdownMenu> */}
 
                         {/* Counselling */}
                         <DropdownMenu label="Counselling">
-                            <DropItem href="/counselling/neet-ug">NEET UG</DropItem>
-                            <DropItem href="/counselling/neet-pg">NEET PG</DropItem>
-                            <DropItem href="/counselling/inicet">INICET</DropItem>
+                            <DropItem href="/dashboard">NEET UG</DropItem>
+                            {/* <DropItem href="/counselling/neet-pg">NEET PG</DropItem>
+                            <DropItem href="/counselling/inicet">INICET</DropItem> */}
                         </DropdownMenu>
 
-                        <NavLink href="/pricing">Pricing</NavLink>
+                        <button
+                            onClick={() => {
+                                const el = document.getElementById('pricing');
+                                if (el) {
+                                    el.scrollIntoView({ behavior: 'smooth' });
+                                }
+                            }}
+                            className="px-3 py-2 rounded-lg text-sm font-medium text-foreground hover:text-primary hover:bg-muted transition-colors"
+                        >
+                            Pricing
+                        </button>
                         <NavLink href="/news">Blogs & News</NavLink>
 
                         {/* Dashboard — only when logged in */}
@@ -92,7 +102,7 @@ export function Navbar() {
                                 >
                                     <Avatar initials={initials} />
                                     <span className="text-sm font-medium text-foreground max-w-[100px] truncate">
-                                        {user.name.split(' ')[0]}
+                                        {(user.name ?? user.phone ?? '').split(' ')[0]}
                                     </span>
                                     <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${avatarOpen ? 'rotate-180' : ''}`} />
                                 </button>
@@ -108,15 +118,15 @@ export function Navbar() {
                                         >
                                             {/* User info */}
                                             <div className="px-4 py-3 border-b border-border">
-                                                <p className="text-sm font-semibold text-foreground">{user.name}</p>
-                                                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                                                <p className="text-sm font-semibold text-foreground">{user.name ?? '—'}</p>
+                                                <p className="text-xs text-muted-foreground truncate">{user.email ?? user.phone}</p>
                                             </div>
 
                                             {/* Nav Items */}
                                             <DropItem href="/dashboard" icon={<LayoutDashboard className="w-4 h-4" />}>
                                                 Dashboard
                                             </DropItem>
-                                            <DropItem href="/profile" icon={<User className="w-4 h-4" />}>
+                                            <DropItem href="/dashboard/profile" icon={<User className="w-4 h-4" />}>
                                                 Profile
                                             </DropItem>
 
@@ -134,7 +144,7 @@ export function Navbar() {
                                             {/* Logout */}
                                             <div className="border-t border-border">
                                                 <button
-                                                    onClick={logout}
+                                                    onClick={handleLogout}
                                                     className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-500 hover:bg-dropdown-hover transition-colors"
                                                 >
                                                     <LogOut className="w-4 h-4" />
@@ -149,7 +159,7 @@ export function Navbar() {
                             /* ── Logged-out CTAs ── */
                             <>
                                 <Link
-                                    href="/login"
+                                    href="/auth"
                                     className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary border border-border rounded-full hover:border-primary transition-all"
                                 >
                                     Login
@@ -212,10 +222,10 @@ export function Navbar() {
                                     <>
                                         <div className="flex items-center gap-2 flex-1">
                                             <Avatar initials={initials} size="sm" />
-                                            <span className="text-sm font-medium truncate">{user.name}</span>
+                                            <span className="text-sm font-medium truncate">{user.name ?? user.phone}</span>
                                         </div>
                                         <button
-                                            onClick={logout}
+                                            onClick={handleLogout}
                                             className="flex items-center gap-1 px-3 py-2 text-sm text-red-500 border border-red-200 rounded-full"
                                         >
                                             <LogOut className="w-3.5 h-3.5" />
@@ -224,7 +234,7 @@ export function Navbar() {
                                     </>
                                 ) : (
                                     <>
-                                        <Link href="/login" className="flex-1 text-center border border-border rounded-full py-2 text-sm font-medium">
+                                        <Link href="/auth" className="flex-1 text-center border border-border rounded-full py-2 text-sm font-medium">
                                             Login
                                         </Link>
                                         <Link href="/app" className="flex-1 flex justify-center items-center gap-1.5 bg-primary text-primary-foreground rounded-full py-2 text-sm font-semibold">

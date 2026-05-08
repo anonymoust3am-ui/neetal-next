@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import {
   Search,
@@ -21,6 +22,8 @@ import {
 import { useSidebar, SIDEBAR_COLLAPSED_W, SIDEBAR_EXPANDED_W, HEADER_H } from '@/contexts/SidebarContext';
 import { useTheme } from '@/hooks/useTheme';
 import { CounsellingDropdown } from './CounsellingDropDown';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(' ');
@@ -28,10 +31,10 @@ function cn(...classes: (string | false | null | undefined)[]) {
 
 /* ── Counselling type options ───────────────────────────────────── */
 const COUNSELLING_OPTIONS = [
-  { value: 'neet-ug',   label: 'NEET UG',   icon: Stethoscope,  desc: 'MBBS / BDS / BAMS' },
-  { value: 'neet-pg',   label: 'NEET PG',   icon: Sparkles,     desc: 'MD / MS / Diploma' },
-  { value: 'neet-ss',   label: 'NEET SS',   icon: Microscope,   desc: 'Super Speciality' },
-  { value: 'aiapget',   label: 'AIAPGET',   icon: FlaskConical, desc: 'Ayush PG Entrance' },
+  { value: 'neet-ug', label: 'NEET UG', icon: Stethoscope, desc: 'MBBS / BDS / BAMS' },
+  { value: 'neet-pg', label: 'NEET PG', icon: Sparkles, desc: 'MD / MS / Diploma' },
+  { value: 'neet-ss', label: 'NEET SS', icon: Microscope, desc: 'Super Speciality' },
+  { value: 'aiapget', label: 'AIAPGET', icon: FlaskConical, desc: 'Ayush PG Entrance' },
 ] as const;
 
 type CounsellingValue = typeof COUNSELLING_OPTIONS[number]['value'];
@@ -123,8 +126,8 @@ function InlineThemeToggle() {
   const { theme, setTheme } = useTheme();
   const options = [
     { value: 'light', label: 'Light' },
-    { value: 'dark',  label: 'Dark'  },
-    { value: 'system',label: 'Auto'  },
+    { value: 'dark', label: 'Dark' },
+    { value: 'system', label: 'Auto' },
   ] as const;
 
   return (
@@ -149,15 +152,17 @@ function InlineThemeToggle() {
 
 /* ── Profile dropdown ───────────────────────────────────────────── */
 const profileLinks = [
-  { icon: User,       label: 'My Profile', href: '/dashboard/profile' },
-  { icon: CreditCard, label: 'My Plan',    href: '/dashboard/plan'    },
-  { icon: Settings,   label: 'Settings',  href: '/dashboard/settings' },
-  { icon: HelpCircle, label: 'Support',   href: '/dashboard/support'  },
+  { icon: User, label: 'My Profile', href: '/dashboard/profile' },
+  // { icon: CreditCard, label: 'My Plan',    href: '/dashboard/plan'    },
+  // { icon: Settings,   label: 'Settings',  href: '/dashboard/settings' },
+  { icon: HelpCircle, label: 'Support', href: '/dashboard/support' },
 ];
 
 function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { user, logout } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     if (!open) return;
@@ -167,6 +172,16 @@ function ProfileMenu() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
+
+  const initials = user?.name
+    ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : '?';
+
+  const handleLogout = async () => {
+    setOpen(false);
+    await logout();
+    router.replace('/auth');
+  };
 
   return (
     <div ref={ref} className="relative">
@@ -178,7 +193,7 @@ function ProfileMenu() {
         )}
       >
         <div className="w-7 h-7 rounded-lg bg-[var(--color-primary-light)] flex items-center justify-center shrink-0">
-          <span className="text-[11px] font-bold text-primary">AS</span>
+          <span className="text-[11px] font-bold text-primary">{initials}</span>
         </div>
         <ChevronDown
           size={13}
@@ -193,8 +208,8 @@ function ProfileMenu() {
         <div className="absolute right-0 top-[calc(100%+6px)] w-56 bg-[var(--color-dropdown-bg)] border border-[var(--color-dropdown-border)] rounded-2xl shadow-lg py-1.5 z-[1050]">
           {/* User info */}
           <div className="px-4 py-2.5 border-b border-[var(--color-border)] mb-1">
-            <p className="text-sm font-semibold text-[var(--color-text-primary)]">Aryan Sharma</p>
-            <p className="text-xs text-[var(--color-text-muted)]">aryan@example.com</p>
+            <p className="text-sm font-semibold text-[var(--color-text-primary)]">{user?.name ?? '—'}</p>
+            <p className="text-xs text-[var(--color-text-muted)] truncate">{user?.email ?? user?.phone ?? '—'}</p>
           </div>
 
           {profileLinks.map(({ icon: Icon, label, href }) => (
@@ -219,7 +234,10 @@ function ProfileMenu() {
           </div>
 
           <div className="mx-3 my-1 border-t border-[var(--color-border)]" />
-          <button className="flex items-center gap-3 px-4 py-2 w-full text-sm text-error hover:bg-[var(--color-error-light)] transition-colors rounded-b-2xl">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-2 w-full text-sm text-error hover:bg-[var(--color-error-light)] transition-colors rounded-b-2xl"
+          >
             <LogOut size={14} className="shrink-0" />
             Logout
           </button>
@@ -242,6 +260,42 @@ function NavLink({ href, icon: Icon, label }: { href: string; icon: React.Elemen
   );
 }
 
+/* ── Header search bar ──────────────────────────────────────────── */
+function SearchBar() {
+  const [value, setValue] = useState('');
+  const router = useRouter();
+
+  const submit = () => {
+    const q = value.trim();
+    if (!q) return;
+    router.push(`/dashboard/colleges?q=${encodeURIComponent(q)}`);
+  };
+
+  return (
+    <div className="flex-1 flex justify-center px-4">
+      <div className="relative w-full max-w-md">
+        <button
+          onClick={submit}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-icon-muted)] hover:text-[var(--color-icon-primary)] transition-colors"
+        >
+          <Search size={15} />
+        </button>
+        <input
+          type="search"
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && submit()}
+          placeholder="Search colleges, states…"
+          className="w-full h-9 pl-9 pr-4 text-sm bg-[var(--color-bg-muted)]
+            rounded-xl border border-transparent
+            focus:border-[var(--color-border-focus)]
+            focus:bg-[var(--color-input-bg)] outline-none transition-colors"
+        />
+      </div>
+    </div>
+  );
+}
+
 /* ── Main header ────────────────────────────────────────────────── */
 export function DashboardHeader() {
   const { expanded } = useSidebar();
@@ -261,16 +315,28 @@ export function DashboardHeader() {
           transition: 'width 240ms cubic-bezier(0.4,0,0.2,1)',
         }}
       >
-        <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-sm">
-            <span className="text-white text-sm font-bold leading-none">N</span>
-          </div>
-          {expanded && (
-            <div>
-              <p className="text-sm font-extrabold text-[var(--color-text-primary)]">NeEtal</p>
-              <p className="text-[9px] text-[var(--color-text-muted)] uppercase tracking-wide">
-                Medical Counselling
-              </p>
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+
+          {/* Image when sidebar expanded */}
+          {expanded ? (
+            <Image
+              src="/logo-nobg.png"
+              alt="NeEtal Full Logo"
+              width={140}
+              height={40}
+              className="object-contain"
+              priority
+            />
+          ) : (
+            <div className="w-10 h-10 overflow-hidden flex items-center justify-center">
+              <Image
+                src="/logo-outline.png"
+                alt="NeEtal Icon"
+                width={500}
+                height={500}
+                className="scale-[2] object-contain"
+                priority
+              />
             </div>
           )}
         </Link>
@@ -283,22 +349,7 @@ export function DashboardHeader() {
       </div>
 
       {/* ── CENTER: Search ───────────────────────────────────────── */}
-      <div className="flex-1 flex justify-center px-4">
-        <div className="relative w-full max-w-md">
-          <Search
-            size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-icon-muted)]"
-          />
-          <input
-            type="search"
-            placeholder="Search colleges, states, courses…"
-            className="w-full h-9 pl-9 pr-4 text-sm bg-[var(--color-bg-muted)]
-              rounded-xl border border-transparent
-              focus:border-[var(--color-border-focus)]
-              focus:bg-[var(--color-input-bg)] outline-none transition-colors"
-          />
-        </div>
-      </div>
+      <SearchBar />
 
       {/* ── RIGHT: Nav + CTAs + Profile ─────────────────────────── */}
       <div className="flex items-center gap-1 px-3 shrink-0">

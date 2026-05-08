@@ -1,512 +1,314 @@
-// app/(routes)/news/page.tsx
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
-  Search, Calendar, BookOpen, TrendingUp, Clock,
-  Eye, Heart, ChevronLeft, ChevronRight,
-  Filter, ChevronDown, Newspaper, Sparkles,
-  MessageCircle, X,
-  Share2,
-} from "lucide-react";
-import { format } from "date-fns";
+  Search, BookOpen, TrendingUp, ChevronLeft, ChevronRight,
+  Filter, ChevronDown, Sparkles, X, Share2, User, Tag,
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { getBlogs, type Blog } from '@/lib/api';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface Author {
-  id: number;
-  name: string;
-  avatar?: string;
-  role?: string;
+function cn(...cls: (string | false | null | undefined)[]) {
+  return cls.filter(Boolean).join(' ');
 }
 
-interface BlogPost {
-  id: number;
-  title: string;
-  slug: string;
-  excerpt: string;
-  coverImage: string;
-  publishedAt: string;
-  readTime: number;
-  author: Author;
-  category: string;
-  tags: string[];
-  views: number;
-  likes: number;
-  comments: number;
-  featured?: boolean;
-  trending?: boolean;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  count: number;
-}
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const mockPosts: BlogPost[] = [
-  {
-    id: 1,
-    title: "NEET 2024: Complete Guide to Counseling Process and Seat Allotment",
-    slug: "neet-2024-counseling-guide",
-    excerpt: "Everything you need to know about NEET counseling 2024. Step-by-step guide to registration, document verification, choice filling, and seat allotment.",
-    coverImage: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&h=500&fit=crop",
-    publishedAt: "2024-03-15T10:30:00Z",
-    readTime: 8,
-    author: { id: 1, name: "Dr. Rajesh Kumar", avatar: "https://ui-avatars.com/api/?name=Dr.+Rajesh+Kumar&background=0D9488&color=fff", role: "Medical Education Expert" },
-    category: "Exam Updates",
-    tags: ["NEET", "Counseling", "Admissions"],
-    views: 15420, likes: 234, comments: 45, featured: true, trending: true,
-  },
-  {
-    id: 2,
-    title: "Top 10 Medical Colleges in Jharkhand: Ranking, Fees, and Seats",
-    slug: "top-medical-colleges-jharkhand",
-    excerpt: "Comprehensive analysis of medical colleges in Jharkhand including AIIMS Deoghar, MGMCH Jamshedpur, and more. Compare fees, seat matrix, and placement records.",
-    coverImage: "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=800&h=500&fit=crop",
-    publishedAt: "2024-03-10T14:15:00Z",
-    readTime: 12,
-    author: { id: 2, name: "Priya Sharma", avatar: "https://ui-avatars.com/api/?name=Priya+Sharma&background=0891B2&color=fff", role: "Education Analyst" },
-    category: "College Reviews",
-    tags: ["Rankings", "Jharkhand", "Fee Structure"],
-    views: 9820, likes: 156, comments: 28, featured: true,
-  },
-  {
-    id: 3,
-    title: "How to Prepare for NEET 2025: Expert Tips and Study Plan",
-    slug: "neet-2025-preparation-tips",
-    excerpt: "Expert-recommended study plan for NEET 2025. Learn time management, important topics, mock test strategies, and common mistakes to avoid.",
-    coverImage: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800&h=500&fit=crop",
-    publishedAt: "2024-03-05T09:00:00Z",
-    readTime: 10,
-    author: { id: 1, name: "Dr. Rajesh Kumar", avatar: "https://ui-avatars.com/api/?name=Dr.+Rajesh+Kumar&background=0D9488&color=fff", role: "Medical Education Expert" },
-    category: "Preparation Tips",
-    tags: ["NEET", "Study Tips", "Strategy"],
-    views: 12450, likes: 312, comments: 67, trending: true,
-  },
-  {
-    id: 4,
-    title: "AIIMS Deoghar: New Campus, Facilities, and Admission Process",
-    slug: "aiims-deoghar-admission-guide",
-    excerpt: "Everything about AIIMS Deoghar — from infrastructure to faculty, hostel facilities, and the complete admission process through INI CET.",
-    coverImage: "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=800&h=500&fit=crop",
-    publishedAt: "2024-02-28T11:20:00Z",
-    readTime: 7,
-    author: { id: 3, name: "Amit Singh", avatar: "https://ui-avatars.com/api/?name=Amit+Singh&background=14B8A6&color=fff", role: "Medical Journalist" },
-    category: "Institute Spotlight",
-    tags: ["AIIMS", "INI CET", "New Campus"],
-    views: 6730, likes: 98, comments: 23,
-  },
-  {
-    id: 5,
-    title: "MBBS vs BDS: Which Medical Career Path Should You Choose?",
-    slug: "mbbs-vs-bds-career-comparison",
-    excerpt: "Detailed comparison between MBBS and BDS courses. Curriculum, career opportunities, earning potential, and future prospects analyzed.",
-    coverImage: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=800&h=500&fit=crop",
-    publishedAt: "2024-02-20T16:45:00Z",
-    readTime: 9,
-    author: { id: 2, name: "Priya Sharma", avatar: "https://ui-avatars.com/api/?name=Priya+Sharma&background=0891B2&color=fff", role: "Education Analyst" },
-    category: "Career Guidance",
-    tags: ["MBBS", "BDS", "Career"],
-    views: 8450, likes: 187, comments: 42,
-  },
-  {
-    id: 6,
-    title: "Latest Updates: NMC Releases New Guidelines for Medical Colleges",
-    slug: "nmc-new-guidelines-medical-colleges",
-    excerpt: "National Medical Commission announces new guidelines for medical colleges. Key changes in curriculum, faculty requirements, and infrastructure norms.",
-    coverImage: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&h=500&fit=crop",
-    publishedAt: "2024-02-15T08:30:00Z",
-    readTime: 6,
-    author: { id: 1, name: "Dr. Rajesh Kumar", avatar: "https://ui-avatars.com/api/?name=Dr.+Rajesh+Kumar&background=0D9488&color=fff", role: "Medical Education Expert" },
-    category: "Regulatory Updates",
-    tags: ["NMC", "Guidelines", "Policy"],
-    views: 11230, likes: 278, comments: 56, featured: true,
-  },
-  {
-    id: 7,
-    title: "Scholarships for Medical Students: Complete Guide 2024",
-    slug: "medical-scholarships-guide",
-    excerpt: "List of scholarships available for medical students in India. Eligibility criteria, application process, and deadlines for various schemes.",
-    coverImage: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&h=500&fit=crop",
-    publishedAt: "2024-02-10T13:15:00Z",
-    readTime: 8,
-    author: { id: 3, name: "Amit Singh", avatar: "https://ui-avatars.com/api/?name=Amit+Singh&background=14B8A6&color=fff", role: "Medical Journalist" },
-    category: "Scholarships",
-    tags: ["Scholarship", "Financial Aid"],
-    views: 5420, likes: 89, comments: 19,
-  },
-  {
-    id: 8,
-    title: "How to Crack INI CET: Tips from AIIMS Toppers",
-    slug: "ini-cet-preparation-tips",
-    excerpt: "Learn from AIIMS toppers about their INI CET preparation strategy. Study materials, time table, and exam day tips for success.",
-    coverImage: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=500&fit=crop",
-    publishedAt: "2024-02-05T10:00:00Z",
-    readTime: 11,
-    author: { id: 1, name: "Dr. Rajesh Kumar", avatar: "https://ui-avatars.com/api/?name=Dr.+Rajesh+Kumar&background=0D9488&color=fff", role: "Medical Education Expert" },
-    category: "Exam Tips",
-    tags: ["INI CET", "AIIMS", "Exam Prep"],
-    views: 7680, likes: 145, comments: 34, trending: true,
-  },
-];
-
-const categories: Category[] = [
-  { id: "all", name: "All Posts", count: 8 },
-  { id: "Exam Updates", name: "Exam Updates", count: 1 },
-  { id: "College Reviews", name: "College Reviews", count: 1 },
-  { id: "Preparation Tips", name: "Preparation Tips", count: 1 },
-  { id: "Institute Spotlight", name: "Institute Spotlight", count: 1 },
-  { id: "Career Guidance", name: "Career Guidance", count: 1 },
-  { id: "Regulatory Updates", name: "Regulatory Updates", count: 1 },
-  { id: "Scholarships", name: "Scholarships", count: 1 },
-  { id: "Exam Tips", name: "Exam Tips", count: 1 },
-];
-
-const ITEMS_PER_PAGE = 6;
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+const LIMIT = 9;
 
 export default function NewsPage() {
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
-  const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set());
+  const [blogs, setBlogs]           = useState<Blog[]>([]);
+  const [total, setTotal]           = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage]             = useState(1);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
 
-  useEffect(() => {
+  const [search, setSearch]   = useState('');
+  const [tag, setTag]         = useState('');
+  const [showFilter, setShowFilter] = useState(false);
+
+  /* Debounced fetch */
+  const fetchBlogs = useCallback(async (p: number, s: string, t: string) => {
     setLoading(true);
-    const t = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(t);
+    setError('');
+    try {
+      const res = await getBlogs({ page: p, limit: LIMIT, search: s || undefined, tag: t || undefined });
+      setBlogs(res.blogs);
+      setTotal(res.total);
+      setTotalPages(res.totalPages);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to load articles');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const filteredPosts = mockPosts.filter(post => {
-    const q = searchTerm.toLowerCase();
-    const matchesSearch = !q ||
-      post.title.toLowerCase().includes(q) ||
-      post.excerpt.toLowerCase().includes(q) ||
-      post.author.name.toLowerCase().includes(q) ||
-      post.tags.some(t => t.toLowerCase().includes(q));
-    const matchesCategory = selectedCategory === "all" || post.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  /* Re-fetch when filters change (debounced for search) */
+  useEffect(() => {
+    const id = setTimeout(() => fetchBlogs(page, search, tag), search ? 400 : 0);
+    return () => clearTimeout(id);
+  }, [page, search, tag, fetchBlogs]);
 
-  const totalPages = Math.ceil(filteredPosts.length / ITEMS_PER_PAGE);
-  const paginatedPosts = filteredPosts.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+  /* Reset to page 1 when filters change */
+  useEffect(() => { setPage(1); }, [search, tag]);
+
+  const clearFilters = () => { setSearch(''); setTag(''); };
+  const hasFilters = !!(search || tag);
+
+  return (
+    <div className="pt-6 pb-10 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+
+      {/* Hero */}
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary-light border border-primary/20
+          rounded-full text-xs font-semibold text-primary mb-3">
+          <Sparkles className="w-3 h-3" />
+          Fresh insights daily
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight mb-2">
+          Medical Education <span className="text-primary">News & Blog</span>
+        </h1>
+        <p className="text-sm text-foreground-muted max-w-lg mx-auto leading-relaxed">
+          Latest insights, exam tips, college reviews and career guidance for NEET aspirants.
+        </p>
+      </div>
+
+      {/* Search + Filter bar */}
+      <div className="bg-card border border-border rounded-2xl shadow-sm p-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-subtle pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search articles, topics…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 h-10 text-sm rounded-xl border border-border
+                bg-input text-foreground placeholder:text-foreground-subtle
+                focus:border-primary outline-none transition-colors"
+            />
+          </div>
+
+          <button
+            onClick={() => setShowFilter(v => !v)}
+            className={cn(
+              'h-10 px-4 rounded-xl border text-sm font-medium flex items-center gap-2 transition-colors',
+              showFilter
+                ? 'bg-primary-light border-primary/30 text-primary'
+                : 'border-border text-foreground-muted hover:bg-hover',
+            )}
+          >
+            <Filter className="w-3.5 h-3.5" />
+            Filter by tag
+            <ChevronDown className={cn('w-3 h-3 transition-transform', showFilter && 'rotate-180')} />
+          </button>
+
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="h-10 px-3 rounded-xl border border-border text-sm text-error
+                font-medium flex items-center gap-1.5 hover:bg-error-light transition-colors"
+            >
+              <X className="w-3.5 h-3.5" /> Clear
+            </button>
+          )}
+        </div>
+
+        {showFilter && (
+          <div className="pt-4 mt-4 border-t border-border">
+            <p className="text-xs font-semibold uppercase tracking-widest text-foreground-subtle mb-3">
+              Filter by tag
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {['NEET', 'Exam Tips', 'College Reviews', 'Counselling', 'Study Plan', 'Career'].map(t => (
+                <button
+                  key={t}
+                  onClick={() => setTag(prev => prev === t ? '' : t)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors',
+                    tag === t
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted text-foreground-muted border-border hover:bg-hover',
+                  )}
+                >
+                  #{t}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Result count */}
+      {!loading && !error && (
+        <div className="flex items-center justify-between text-sm mb-5">
+          <p className="text-foreground-muted">
+            <span className="font-semibold text-foreground">{total}</span> article{total !== 1 ? 's' : ''}
+            {hasFilters && ' matching your filters'}
+          </p>
+          <div className="flex items-center gap-1.5 text-foreground-subtle text-xs">
+            <TrendingUp className="w-3 h-3 text-success" />
+            Page {page} of {totalPages}
+          </div>
+        </div>
+      )}
+
+      {/* Content */}
+      {loading ? (
+        <LoadingSkeleton />
+      ) : error ? (
+        <ErrorState message={error} onRetry={() => fetchBlogs(page, search, tag)} />
+      ) : blogs.length === 0 ? (
+        <EmptyState onClear={clearFilters} hasFilters={hasFilters} />
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {blogs.map(blog => <BlogCard key={blog.id} blog={blog} />)}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && !error && totalPages > 1 && (
+        <div className="mt-10 flex justify-center items-center gap-2">
+          <PageBtn onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+            <ChevronLeft className="w-4 h-4" />
+          </PageBtn>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+            .reduce<(number | '…')[]>((acc, p, i, arr) => {
+              if (i > 0 && (p as number) - (arr[i - 1] as number) > 1) acc.push('…');
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((p, i) =>
+              p === '…' ? (
+                <span key={`e${i}`} className="w-9 text-center text-foreground-subtle text-sm">…</span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setPage(p as number)}
+                  className={cn(
+                    'w-9 h-9 rounded-xl text-sm font-semibold transition-all',
+                    page === p
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'border border-border text-foreground-muted hover:bg-primary-light hover:text-primary hover:border-primary/30',
+                  )}
+                >
+                  {p}
+                </button>
+              ),
+            )
+          }
+
+          <PageBtn onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+            <ChevronRight className="w-4 h-4" />
+          </PageBtn>
+        </div>
+      )}
+    </div>
   );
+}
 
-  useEffect(() => { setCurrentPage(1); }, [searchTerm, selectedCategory]);
+/* ─── Blog Card ──────────────────────────────────────────────────────────── */
 
-  const handleLike = (postId: number, e: React.MouseEvent) => {
+function BlogCard({ blog }: { blog: Blog }) {
+  const cover = blog.coverImageUrl ?? blog.imageUrl;
+  const slug  = blog.slug ?? blog.id;
+  const date  = format(new Date(blog.createdAt), 'MMM dd, yyyy');
+
+  const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    setLikedPosts(prev => {
-      const next = new Set(prev);
-      next.has(postId) ? next.delete(postId) : next.add(postId);
-      return next;
+    navigator.share?.({
+      title: blog.title,
+      text: blog.description ?? '',
+      url: `${window.location.origin}/news/${slug}`,
     });
   };
 
-  const clearFilters = () => { setSearchTerm(""); setSelectedCategory("all"); };
-  const hasFilters = searchTerm || selectedCategory !== "all";
-
   return (
-    <section className="relative py-16 mt-20 bg-background min-h-screen">
+    <Link href={`/news/${slug}`} className="group block h-full">
+      <article className="bg-card border border-border rounded-2xl overflow-hidden h-full flex flex-col
+        hover:border-primary/30 hover:shadow-md transition-all duration-200">
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-
-        {/* ── Header ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center max-w-2xl mx-auto mb-10"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-light border border-primary/20 mb-4">
-            <Newspaper className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs font-semibold text-primary">Latest Updates & Insights</span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3 tracking-tight">
-            Medical Education{" "}
-            <span className="text-primary">News & Blog</span>
-          </h1>
-          <p className="text-sm text-foreground-muted leading-relaxed">
-            Stay updated with the latest in medical education, exam tips, college reviews, and career guidance.
-          </p>
-        </motion.div>
-
-        {/* ── Search & Filter Bar ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="mb-6"
-        >
-          <div className="bg-surface border border-border rounded-2xl shadow-sm p-4">
-            <div className="flex flex-col lg:flex-row gap-3">
-
-              {/* Search */}
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-subtle pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Search articles, topics, or authors…"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 h-10 text-sm rounded-xl border border-border
-                    bg-input text-foreground placeholder:text-foreground-subtle
-                    focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all"
-                />
-              </div>
-
-              {/* Category toggle */}
-              <button
-                onClick={() => setShowFilters(v => !v)}
-                className={`px-4 h-10 rounded-xl border text-sm font-medium flex items-center gap-2 transition-all ${
-                  showFilters
-                    ? "bg-primary-light border-primary/30 text-primary"
-                    : "border-border text-foreground-muted hover:border-primary/30 hover:bg-primary-light hover:text-primary"
-                }`}
-              >
-                <Filter className="w-3.5 h-3.5" />
-                Categories
-                <ChevronDown className={`w-3 h-3 transition-transform ${showFilters ? "rotate-180" : ""}`} />
-              </button>
-
-              {/* Trending pill */}
-              <div className="flex items-center gap-2 px-3 h-10 bg-warning-light rounded-xl border border-warning/20">
-                <TrendingUp className="w-3.5 h-3.5 text-warning" />
-                <span className="text-xs font-semibold text-warning">Trending Articles</span>
-              </div>
-
+        {/* Cover */}
+        <div className="relative h-44 overflow-hidden bg-muted shrink-0">
+          {cover ? (
+            <img
+              src={cover}
+              alt={blog.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-light to-muted">
+              <BookOpen className="w-10 h-10 text-primary/40" />
             </div>
-
-            {/* Category Pills */}
-            <AnimatePresence>
-              {showFilters && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-4 mt-4 border-t border-border">
-                    <div className="flex flex-wrap gap-2">
-                      {categories.map(cat => (
-                        <button
-                          key={cat.id}
-                          onClick={() => setSelectedCategory(cat.id)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                            selectedCategory === cat.id
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : "bg-muted text-foreground-muted hover:bg-hover hover:text-foreground border border-border"
-                          }`}
-                        >
-                          {cat.name}
-                          <span className="ml-1 opacity-70">({cat.count})</span>
-                        </button>
-                      ))}
-                    </div>
-                    {hasFilters && (
-                      <div className="mt-3 flex justify-end">
-                        <button
-                          onClick={clearFilters}
-                          className="text-xs text-error font-medium flex items-center gap-1 hover:opacity-80 transition-opacity"
-                        >
-                          <X className="w-3 h-3" />
-                          Clear all filters
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
-
-        {/* ── Result count ── */}
-        <div className="mb-5 flex items-center justify-between text-sm">
-          <p className="text-foreground-muted">
-            Showing{" "}
-            <span className="font-semibold text-foreground">{paginatedPosts.length}</span>
-            {" "}of{" "}
-            <span className="font-semibold text-foreground">{filteredPosts.length}</span>
-            {" "}articles
-          </p>
-          <div className="flex items-center gap-1.5 text-foreground-subtle">
-            <Sparkles className="w-3 h-3 text-warning" />
-            <span className="text-xs">Fresh insights daily</span>
-          </div>
+          )}
+          {blog.tags.length > 0 && (
+            <div className="absolute bottom-3 left-3">
+              <span className="px-2.5 py-1 bg-card/90 backdrop-blur-sm text-primary text-xs font-bold rounded-full">
+                {blog.tags[0]}
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* ── Grid ── */}
-        {loading ? (
-          <LoadingSkeleton />
-        ) : filteredPosts.length === 0 ? (
-          <EmptyState onClear={clearFilters} />
-        ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-5"
-          >
-            <AnimatePresence>
-              {paginatedPosts.map((post, i) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  index={i}
-                  //liked={likedPosts.has(post.id)}
-                  //onLike={handleLike}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        )}
-
-        {/* ── Pagination ── */}
-        {!loading && totalPages > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-            className="mt-10 flex justify-center items-center gap-2"
-          >
-            <PaginationBtn
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </PaginationBtn>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all ${
-                  currentPage === page
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "border border-border text-foreground-muted hover:border-primary/30 hover:bg-primary-light hover:text-primary"
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-
-            <PaginationBtn
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </PaginationBtn>
-          </motion.div>
-        )}
-
-      </div>
-    </section>
-  );
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function PostCard({
-  post,
-  index,
-}: {
-  post: BlogPost;
-  index: number;
-}) {
-  return (
-    <motion.article
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.35, delay: index * 0.05 }}
-      className="group cursor-pointer"
-      onClick={() => window.location.href = `/news/${post.slug}`}
-    >
-      <div className="bg-card border border-border rounded-2xl overflow-hidden
-        hover:border-primary/30 hover:shadow-md transition-all duration-200 h-full flex flex-col">
-
-        {/* Thumbnail */}
-        <div className="relative h-48 overflow-hidden bg-muted">
-          <img
-            src={post.coverImage}
-            alt={post.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-
-          {/* Label (category) */}
-          <div className="absolute bottom-3 left-3">
-            <span className="px-2.5 py-1 bg-surface/90 backdrop-blur-sm text-primary text-[10px] font-bold rounded-full">
-              {post.category}
-            </span>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-5 flex flex-col gap-3">
-
-          {/* Title */}
-          <h3 className="text-[15px] font-bold text-foreground line-clamp-2 group-hover:text-primary transition-colors leading-snug">
-            {post.title}
+        {/* Body */}
+        <div className="p-4 flex flex-col gap-2.5 flex-1">
+          <h3 className="text-sm font-bold text-foreground line-clamp-2 group-hover:text-primary transition-colors leading-snug">
+            {blog.title}
           </h3>
 
-          {/* Description */}
-          <p className="text-xs text-foreground-muted leading-relaxed line-clamp-2">
-            {post.excerpt}
-          </p>
+          {blog.description && (
+            <p className="text-xs text-foreground-muted leading-relaxed line-clamp-2">
+              {blog.description}
+            </p>
+          )}
 
-          {/* Updated Date */}
-          <p className="text-[11px] text-foreground-subtle">
-            Updated on {format(new Date(post.publishedAt), "MMM dd, yyyy")}
-          </p>
+          {/* Author + date */}
+          <div className="flex items-center gap-2 mt-auto pt-1">
+            {blog.author.avatarUrl ? (
+              <img src={blog.author.avatarUrl} alt={blog.author.name}
+                className="w-6 h-6 rounded-full object-cover shrink-0" />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-primary-light flex items-center justify-center shrink-0">
+                <User className="w-3 h-3 text-primary" />
+              </div>
+            )}
+            <span className="text-xs text-foreground-muted truncate">{blog.author.name}</span>
+            <span className="text-foreground-subtle text-xs ml-auto shrink-0">{date}</span>
+          </div>
 
           {/* Tags */}
-          <div className="flex flex-wrap gap-1.5">
-            {post.tags.slice(0, 3).map(tag => (
-              <span
-                key={tag}
-                className="text-[10px] font-medium px-2 py-0.5 bg-muted border border-border text-foreground-subtle rounded-full"
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
+          {blog.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {blog.tags.slice(0, 3).map(t => (
+                <span key={t}
+                  className="text-xs px-1.5 py-0.5 bg-muted border border-border text-foreground-subtle rounded-full">
+                  #{t}
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* Share */}
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigator.share?.({
-                  title: post.title,
-                  text: post.excerpt,
-                  url: `${window.location.origin}/news/${post.slug}`,
-                });
-              }}
-              className="p-2 rounded-lg hover:bg-muted transition"
+              onClick={handleShare}
+              className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+              aria-label="Share"
             >
-              <Share2 className="w-4 h-4 text-foreground-muted" />
+              <Share2 className="w-3.5 h-3.5 text-foreground-muted" />
             </button>
           </div>
-
         </div>
-      </div>
-    </motion.article>
+      </article>
+    </Link>
   );
 }
 
-function PaginationBtn({ onClick, disabled, children }: {
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
+
+function PageBtn({ onClick, disabled, children }: {
   onClick: () => void; disabled: boolean; children: React.ReactNode;
 }) {
   return (
@@ -525,20 +327,16 @@ function PaginationBtn({ onClick, disabled, children }: {
 function LoadingSkeleton() {
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-      {[1, 2, 3, 4, 5, 6].map(i => (
+      {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="bg-card border border-border rounded-2xl overflow-hidden animate-pulse">
-          <div className="h-48 bg-skeleton" />
-          <div className="p-5 space-y-3">
-            <div className="h-4 bg-skeleton rounded-full w-24" />
-            <div className="h-5 bg-skeleton rounded-full w-3/4" />
+          <div className="h-44 bg-skeleton" />
+          <div className="p-4 space-y-3">
+            <div className="h-4 bg-skeleton rounded-full w-3/4" />
             <div className="h-3 bg-skeleton rounded-full w-full" />
             <div className="h-3 bg-skeleton rounded-full w-2/3" />
-            <div className="flex items-center gap-2 pt-1">
-              <div className="w-7 h-7 rounded-full bg-skeleton" />
-              <div className="flex-1 space-y-1.5">
-                <div className="h-2.5 bg-skeleton rounded-full w-24" />
-                <div className="h-2 bg-skeleton rounded-full w-16" />
-              </div>
+            <div className="flex items-center gap-2 pt-2">
+              <div className="w-6 h-6 rounded-full bg-skeleton shrink-0" />
+              <div className="h-3 bg-skeleton rounded-full w-24" />
             </div>
           </div>
         </div>
@@ -547,24 +345,42 @@ function LoadingSkeleton() {
   );
 }
 
-function EmptyState({ onClear }: { onClear: () => void }) {
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center py-24 text-center"
-    >
-      <div className="w-14 h-14 rounded-2xl bg-muted border border-border flex items-center justify-center mb-4">
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-12 h-12 rounded-2xl bg-error-light flex items-center justify-center mb-4">
+        <BookOpen className="w-6 h-6 text-error" />
+      </div>
+      <p className="text-sm font-semibold text-foreground mb-1">Failed to load articles</p>
+      <p className="text-xs text-foreground-muted mb-4">{message}</p>
+      <button
+        onClick={onRetry}
+        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors"
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
+
+function EmptyState({ onClear, hasFilters }: { onClear: () => void; hasFilters: boolean }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mb-4">
         <BookOpen className="w-6 h-6 text-foreground-subtle" />
       </div>
-      <h3 className="text-lg font-bold text-foreground mb-1">No articles found</h3>
-      <p className="text-sm text-foreground-muted mb-4">Try adjusting your search or category filters.</p>
-      <button
-        onClick={onClear}
-        className="px-5 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary-hover transition-colors"
-      >
-        Clear all filters
-      </button>
-    </motion.div>
+      <p className="text-sm font-semibold text-foreground mb-1">No articles found</p>
+      <p className="text-xs text-foreground-muted mb-4">
+        {hasFilters ? 'Try adjusting your filters.' : 'Check back soon for new content.'}
+      </p>
+      {hasFilters && (
+        <button
+          onClick={onClear}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors"
+        >
+          Clear filters
+        </button>
+      )}
+    </div>
   );
 }

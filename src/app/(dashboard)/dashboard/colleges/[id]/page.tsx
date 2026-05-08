@@ -12,7 +12,7 @@ import {
   ImageIcon, Info, Hotel,
 } from 'lucide-react';
 
-const API = 'http://localhost:8000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 // ─── types ────────────────────────────────────────────────────────────────────
 interface ContactPerson {
@@ -592,7 +592,7 @@ export default function CollegeDetailPage() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    fetch(`${API}/api/institute/${id}`)
+    fetch(`${API}/institutes/${id}`)
       .then(r => r.json())
       .then(j => {
         const d = j.data ?? j;

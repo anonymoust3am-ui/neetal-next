@@ -22,7 +22,7 @@ export function HeroSection() {
 
   return (
     <section className="relative overflow-hidden bg-bg-primary min-h-[94vh] flex flex-col items-center">
-       <ExamScroller exams={[{ name: "Exam 1", date: "2023-10-01" }, { name: "Exam 2", date: "2023-10-02" }, { name: "Exam 3", date: "2023-10-03" }, { name: "Exam 4", date: "2023-10-04" }, { name: "Exam 5", date: "2023-10-05" }, { name: "Exam 6", date: "2023-10-06" }]} speed={10} />
+       {/* <ExamScroller exams={[{ name: "Exam 1", date: "2023-10-01" }, { name: "Exam 2", date: "2023-10-02" }, { name: "Exam 3", date: "2023-10-03" }, { name: "Exam 4", date: "2023-10-04" }, { name: "Exam 5", date: "2023-10-05" }, { name: "Exam 6", date: "2023-10-06" }]} speed={10} /> */}
       {/* Background decoration */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Large blur blob top-right */}
@@ -106,7 +106,7 @@ export function HeroSection() {
                 </div>
                 {/* CTA */}
                 <Link
-                  href={`/predictors/college${rank ? `?rank=${rank}&category=${category}` : ""}`}
+                  href={`/dashboard/predictor${rank ? `?rank=${rank}&category=${category}` : ""}`}
                   className="flex items-center justify-center gap-2 h-11 px-5 rounded-lg bg-primary hover:bg-primary-hover active:bg-primary-hover text-primary-foreground text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap flex-shrink-0"
                 >
                   Predict <ArrowRight size={15} />

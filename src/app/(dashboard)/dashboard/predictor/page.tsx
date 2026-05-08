@@ -269,8 +269,7 @@ interface CollegeCardProps {
 }
 
 function CollegeCard({ college, saved, onSave, selectedYear }: CollegeCardProps) {
-  const [activeRound, setActiveRound] = useState<Round>('r1');
-  const cutoff = college.cutoffs[selectedYear][activeRound];
+  const cutoff = college.cutoffs[selectedYear]['r1'];
   const initials = college.shortName.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase();
 
   return (
@@ -385,51 +384,32 @@ function CollegeCard({ college, saved, onSave, selectedYear }: CollegeCardProps)
             />
           </div>
 
-          {/* Year & Round Pills */}
+          {/* R1 / R2 / R3 cutoffs */}
           <div className="border-t border-border pt-3.5">
             <div className="flex items-center justify-between mb-2.5">
               <p className="text-[10px] font-semibold tracking-[0.08em] uppercase text-foreground-subtle">
-                Cutoff trends · All India Quota
+                Cutoff · All India Quota
               </p>
             </div>
 
-            {/* Round selector */}
-            <div className="flex gap-1.5 mb-3">
-              {(['r1', 'r2', 'r3'] as Round[]).map(round => (
-                <button
-                  key={round}
-                  onClick={() => setActiveRound(round)}
-                  className={cn(
-                    'flex-1 py-1.5 px-2.5 rounded-md text-xs font-semibold transition-all',
-                    activeRound === round
-                      ? 'bg-foreground text-foreground-inverse'
-                      : 'bg-muted text-foreground-muted hover:bg-hover'
-                  )}
-                >
-                  {round.toUpperCase()}
-                </button>
-              ))}
-            </div>
-
-            {/* Year cutoff trend */}
             <div className="grid grid-cols-3 gap-2 mb-3">
-              {([2023, 2024, 2025] as Year[]).map((yr, idx) => {
-                const val = college.cutoffs[yr][activeRound];
-                const isLatest = yr === 2025;
-                const prev = idx > 0 ? college.cutoffs[([2023, 2024, 2025] as Year[])[idx - 1]][activeRound] : null;
+              {(['r1', 'r2', 'r3'] as Round[]).map((round, idx) => {
+                const val = college.cutoffs[selectedYear][round];
+                const prevRound = idx > 0 ? (['r1', 'r2', 'r3'] as Round[])[idx - 1] : null;
+                const prev = prevRound ? college.cutoffs[selectedYear][prevRound] : null;
                 const trend = prev ? ((val - prev) / prev) * 100 : 0;
 
                 return (
                   <div
-                    key={yr}
+                    key={round}
                     className={cn(
                       'rounded-lg px-2.5 py-2 border',
-                      isLatest
+                      round === 'r1'
                         ? 'border-primary/30 bg-primary-light/40'
                         : 'border-border bg-muted/40'
                     )}
                   >
-                    <p className="text-[10px] font-semibold text-foreground-subtle">{yr}</p>
+                    <p className="text-[10px] font-semibold text-foreground-subtle uppercase">{round.toUpperCase()}</p>
                     <p className="text-sm font-bold text-foreground tabular-nums leading-tight mt-0.5">
                       {formatRank(val)}
                     </p>

@@ -16,7 +16,7 @@ import { UserSection } from '@/components/dashboard/sections/v2/UserSection';
 export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background pb-16">
-      <DashboardTabs />
+      {/* <DashboardTabs /> */}
       <div className="px-6 lg:px-8 py-6 max-w-[1500px] mx-auto space-y-6 pt-18">
 
         {/* <HeroSection /> */}

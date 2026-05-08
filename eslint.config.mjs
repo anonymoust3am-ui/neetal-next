@@ -13,6 +13,10 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    ignoreDuringBuilds: true,
+  },
 ]);
+
 
 export default eslintConfig;

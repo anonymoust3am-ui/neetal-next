@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Search, SlidersHorizontal, X, Building2,
@@ -8,7 +9,7 @@ import {
   GraduationCap, Loader2,
 } from 'lucide-react';
 
-const API = 'http://localhost:8000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 // ─── types ────────────────────────────────────────────────────────────────────
 interface Institute {
@@ -270,7 +271,7 @@ function FilterPanel({ fd, state, instType, uniId, onState, onType, onUni, onCle
       </div>
 
       {/* university */}
-      <div>
+      {/* <div>
         <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle mb-2">University</p>
         <div className="relative mb-2">
           <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground-subtle pointer-events-none" />
@@ -301,20 +302,23 @@ function FilterPanel({ fd, state, instType, uniId, onState, onType, onUni, onCle
             </button>
           ))}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function CollegesPage() {
+  const searchParams = useSearchParams();
+  const initialQ = searchParams.get('q') ?? '';
+
   const [fd,         setFd]         = useState<FilterData | null>(null);
   const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [total,      setTotal]      = useState(0);
   const [page,       setPage]       = useState(1);
   const [loading,    setLoading]    = useState(false);
-  const [search,     setSearch]     = useState('');
-  const [dSearch,    setDSearch]    = useState('');
+  const [search,     setSearch]     = useState(initialQ);
+  const [dSearch,    setDSearch]    = useState(initialQ);
   const [state,      setState]      = useState('');
   const [instType,   setInstType]   = useState('');
   const [uniId,      setUniId]      = useState<number | null>(null);
@@ -322,6 +326,13 @@ export default function CollegesPage() {
 
   const PAGE_SIZE  = 50;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // sync when URL ?q= changes (e.g. new header search while already on this page)
+  useEffect(() => {
+    const q = searchParams.get('q') ?? '';
+    setSearch(q);
+    setDSearch(q);
+  }, [searchParams]);
 
   // debounce search
   const debRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -332,7 +343,7 @@ export default function CollegesPage() {
   };
 
   useEffect(() => {
-    fetch(`${API}/api/filter-data`)
+    fetch(`${API}/institutes/filter-data`)
       .then(r => r.json())
       .then(j => setFd(j.data))
       .catch(() => {});
@@ -345,7 +356,7 @@ export default function CollegesPage() {
     if (instType) p.set('institute_type', instType);
     if (uniId)   p.set('university_id', String(uniId));
     p.set('page', String(page));
-    fetch(`${API}/api/institutes?${p}`)
+    fetch(`${API}/institutes?${p}`)
       .then(r => r.json())
       .then(j => { setInstitutes(j.data?.institutes ?? []); setTotal(j.data?.total ?? 0); })
       .catch(() => {})

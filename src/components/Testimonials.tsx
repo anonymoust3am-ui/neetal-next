@@ -3,6 +3,7 @@
 import { Star, Quote } from "lucide-react";
 import { useEffect, useRef } from "react";
 import AnimatedTitle from "./AnimatedTitle";
+import { SectionHeader } from "./ui/SectionHeader";
 
 const testimonials = [
   {
@@ -61,45 +62,45 @@ export function Testimonials() {
     const leftColumn = leftColumnRef.current;
     const centerColumn = centerColumnRef.current;
     const rightColumn = rightColumnRef.current;
-    
+
     if (!leftColumn || !centerColumn || !rightColumn) return;
 
     let leftPosition = 0;
     let centerPosition = -200;
     let rightPosition = 0;
-    
+
     const cardHeight = 280;
     const totalHeight = testimonials.length * cardHeight;
 
     const animateLeft = () => {
       leftPosition -= 0.15;
-      
+
       if (Math.abs(leftPosition) >= totalHeight) {
         leftPosition = 0;
       }
-      
+
       leftColumn.style.transform = `translateY(${leftPosition}px)`;
       leftAnimationRef.current = requestAnimationFrame(animateLeft);
     };
 
     const animateCenter = () => {
       centerPosition += 0.15;
-      
+
       if (centerPosition >= 0) {
         centerPosition = -totalHeight;
       }
-      
+
       centerColumn.style.transform = `translateY(${centerPosition}px)`;
       centerAnimationRef.current = requestAnimationFrame(animateCenter);
     };
 
     const animateRight = () => {
       rightPosition -= 0.15;
-      
+
       if (Math.abs(rightPosition) >= totalHeight) {
         rightPosition = 0;
       }
-      
+
       rightColumn.style.transform = `translateY(${rightPosition}px)`;
       rightAnimationRef.current = requestAnimationFrame(animateRight);
     };
@@ -118,30 +119,32 @@ export function Testimonials() {
   return (
     <section className="py-24 bg-gradient-to-br from-primary-light/30 via-accent-light/30 to-primary-light/30 relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-12">
-          <AnimatedTitle className="text-4xl md:text-5xl font-bold text-foreground mb-3" text="What Our Students Say" />
-          <p className="text-foreground-muted text-lg">
-            Real students. Real results.
-          </p>
-        </div>
+
+        <SectionHeader
+          eyebrow="User Testimonials"
+          title="Built for NEET, Loved by Students"
+          description="Hear from our students who have transformed their NEET preparation with our platform."
+          align="center"
+          className="mb-14"
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative min-h-[600px]">
-          
+
           <div className="hidden md:block relative h-[600px] overflow-hidden rounded-lg">
-            <div 
+            <div
               ref={leftColumnRef}
               className="absolute inset-0 space-y-4 will-change-transform"
               style={{ transform: 'translateY(0px)' }}
             >
               {duplicatedTestimonials.map((t, index) => (
-                <div 
-                  key={`left-${index}`} 
+                <div
+                  key={`left-${index}`}
                   className="bg-card backdrop-blur-sm border border-border rounded-lg p-5 shadow-sm hover:shadow-md transition duration-300"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-border">
-                      <img 
-                        src={t.image} 
+                      <img
+                        src={t.image}
                         alt={t.name}
                         className="w-full h-full object-cover"
                       />
@@ -151,17 +154,17 @@ export function Testimonials() {
                       <div className="text-xs text-foreground-muted truncate">{t.college}</div>
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-0.5 mb-2">
                     {[...Array(t.rating)].map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-primary text-primary" />
                     ))}
                   </div>
-                  
+
                   <p className="text-foreground-muted text-xs leading-relaxed line-clamp-2 mb-2">
                     "{t.quote}"
                   </p>
-                  
+
                   <div className="inline-block bg-primary text-primary-foreground text-[10px] font-bold px-2 py-1 rounded-full">
                     {t.rank}
                   </div>
@@ -173,18 +176,18 @@ export function Testimonials() {
           </div>
 
           <div className="relative h-[600px] overflow-hidden rounded-lg md:col-span-1">
-            <div 
+            <div
               ref={centerColumnRef}
               className="absolute inset-0 space-y-4 will-change-transform"
               style={{ transform: 'translateY(-200px)' }}
             >
               {duplicatedTestimonials.map((t, index) => (
-                <div 
-                  key={`center-${index}`} 
+                <div
+                  key={`center-${index}`}
                   className="bg-card backdrop-blur-sm border border-border rounded-lg p-5 shadow-sm hover:shadow-md transition duration-300 relative"
                 >
                   <Quote className="absolute top-3 right-3 w-5 h-5 text-primary/30" />
-                  
+
                   <div className="flex flex-col">
                     <p className="text-foreground-muted text-xs leading-relaxed line-clamp-3 mb-3 pr-6">
                       "{t.quote}"
@@ -224,20 +227,20 @@ export function Testimonials() {
           </div>
 
           <div className="hidden md:block relative h-[600px] overflow-hidden rounded-lg">
-            <div 
+            <div
               ref={rightColumnRef}
               className="absolute inset-0 space-y-4 will-change-transform"
               style={{ transform: 'translateY(0px)' }}
             >
               {duplicatedTestimonials.map((t, index) => (
-                <div 
-                  key={`right-${index}`} 
+                <div
+                  key={`right-${index}`}
                   className="bg-card backdrop-blur-sm border border-border rounded-lg p-5 shadow-sm hover:shadow-md transition duration-300"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-border">
-                      <img 
-                        src={t.image} 
+                      <img
+                        src={t.image}
                         alt={t.name}
                         className="w-full h-full object-cover"
                       />
@@ -247,17 +250,17 @@ export function Testimonials() {
                       <div className="text-xs text-foreground-muted truncate">{t.college}</div>
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-0.5 mb-2">
                     {[...Array(t.rating)].map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-primary text-primary" />
                     ))}
                   </div>
-                  
+
                   <p className="text-foreground-muted text-xs leading-relaxed line-clamp-2 mb-2">
                     "{t.quote}"
                   </p>
-                  
+
                   <div className="inline-block bg-primary text-primary-foreground text-[10px] font-bold px-2 py-1 rounded-full">
                     {t.rank}
                   </div>

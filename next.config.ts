@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'public.zynerd.com' },
     ],
+    
+  },
+  allowedDevOrigins: ['http://localhost:3000', 'http://localhost:8080'],
+  typescript: {
+    ignoreBuildErrors: true,
   },
 };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { Mail, Phone, MapPin } from 'lucide-react';
+import Link from 'next/link';
 
 export function Footer() {
   return (
@@ -16,12 +17,13 @@ export function Footer() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 py-16">
           <div>
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-xl">N</span>
-              </div>
-              <span className="text-xl font-bold text-foreground">
-                Neetel
-              </span>
+              <Link href="/" className="shrink-0">
+                <img
+                  src="/logo-nobg.png"
+                  alt="Neetell Logo"
+                  className="h-35 w-auto"
+                />
+              </Link>
             </div>
             <p className="text-foreground-muted mb-6 leading-relaxed">
               Your trusted partner for NEET counselling guidance. Helping thousands of students achieve their dream of becoming doctors.
@@ -87,7 +89,7 @@ export function Footer() {
         <div className="border-t border-border py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-foreground-muted">
-              © 2026 Neetel. All rights reserved.
+              © 2026 NeeTell. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm">
               <a href="#" className="text-foreground-muted hover:text-primary transition-colors">

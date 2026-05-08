@@ -29,7 +29,9 @@ export default function Home() {
       <DataIntelligence />
       <FeatureGrid />
       <Testimonials />
-      <PricingPlans />
+      <section id="pricing">
+        <PricingPlans />
+      </section>
       <AppPreview />
       <Footer />
     </div>

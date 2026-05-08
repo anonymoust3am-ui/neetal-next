@@ -1,69 +1,85 @@
-import { Heart, Plus } from 'lucide-react';
+'use client';
 
-const SAVED_LISTS = [
-  { id: 1, name: 'AIIMS Target', date: 'Apr 10, 2026', count: 12, active: false },
-  { id: 2, name: 'Safe Govt Colleges', date: 'Apr 15, 2026', count: 8, active: false },
-  { id: 3, name: 'South Zone Preferences', date: 'Apr 20, 2026', count: 24, active: false },
-  { id: 4, name: 'Dream Tier', date: 'Apr 22, 2026', count: 5, active: false },
-  { id: 5, name: 'Backup Options', date: 'Apr 24, 2026', count: 15, active: false },
-  { id: 6, name: 'Deemed Universities', date: 'Apr 24, 2026', count: 6, active: false },
-];
+import { useEffect, useState } from 'react';
+import { Heart, Plus, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { getChoiceLists } from '@/lib/api';
+import type { ChoiceListSummary } from '@/lib/api';
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 export default function ChoiceListPanel() {
+  const { firebaseUser } = useAuth();
+  const [lists, setLists]     = useState<ChoiceListSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!firebaseUser) { setLoading(false); return; }
+    firebaseUser.getIdToken()
+      .then(token => getChoiceLists(token, { limit: 20 }))
+      .then(r => setLists(r.choiceLists))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [firebaseUser]);
+
   return (
     <div className="flex flex-col w-80 h-[500px] bg-surface border border-border rounded-2xl shadow-sm overflow-hidden">
-      
-      {/* Sticky Header */}
+
+      {/* Header */}
       <div className="p-5 border-b border-border bg-surface shrink-0">
-        <h2 className="text-base font-bold text-foreground">Choice Lists</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-foreground">Choice Lists</h2>
+          {lists.length > 0 && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary-light text-primary">
+              {lists.length}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Scrollable List Area */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
-        {SAVED_LISTS.map((list) => (
-          <button
-            key={list.id}
-            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left group ${
-              list.active
-                ? 'bg-primary-light/30 border border-primary/20'
-                : 'hover:bg-muted border border-transparent'
-            }`}
-          >
-            {/* Heart Icon Wrapper */}
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-              list.active 
-                ? 'bg-primary/10 text-primary' 
-                : 'bg-background border border-border text-foreground-subtle group-hover:text-rose-500 group-hover:border-rose-200 group-hover:bg-rose-50'
-            }`}>
-              <Heart size={15} className={list.active ? 'fill-primary/20' : ''} />
-            </div>
-
-            {/* List Details */}
-            <div className="flex-1 min-w-0">
-              <p className={`text-s font-semibold truncate ${
-                list.active ? 'text-primary' : 'text-foreground group-hover:text-foreground'
-              }`}>
-                {list.name}
-              </p>
-              
-              <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-foreground-subtle">
-                <span>{list.date}</span>
-                <span className="w-1 h-1 rounded-full bg-border" />
-                <span className="font-medium">{list.count} items</span>
+      {/* List */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-1" style={{ scrollbarWidth: 'thin' }}>
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 size={18} className="animate-spin text-foreground-subtle" />
+          </div>
+        ) : lists.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center px-4">
+            <Heart size={22} className="text-foreground-subtle mb-2" />
+            <p className="text-xs font-semibold text-foreground-muted">No lists yet</p>
+            <p className="text-[10px] text-foreground-subtle mt-0.5">Create a choice list to get started</p>
+          </div>
+        ) : (
+          lists.map(list => (
+            <button
+              key={list.id}
+              className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left group border border-transparent hover:bg-muted hover:border-border"
+            >
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-background border border-border text-foreground-subtle group-hover:text-rose-500 group-hover:border-rose-200 group-hover:bg-rose-50 transition-colors">
+                <Heart size={15} />
               </div>
-            </div>
-          </button>
-        ))}
+              <div className="flex-1 min-w-0">
+                <p className="text-s font-semibold truncate text-foreground">{list.name}</p>
+                <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-foreground-subtle">
+                  <span>{formatDate(list.createdAt)}</span>
+                  <span className="w-1 h-1 rounded-full bg-border" />
+                  <span className="font-medium">{list.detailsCount} items</span>
+                </div>
+              </div>
+            </button>
+          ))
+        )}
       </div>
 
-      {/* Sticky Footer Action */}
+      {/* Footer */}
       <div className="p-4 border-t border-border bg-surface shrink-0">
         <button className="w-full flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 hover:shadow-md transition-all active:scale-[0.98]">
           <Plus size={16} strokeWidth={2.5} />
           Create New List
         </button>
       </div>
-      
     </div>
   );
 }

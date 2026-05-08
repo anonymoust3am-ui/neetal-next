@@ -319,7 +319,7 @@ export default function NotFound() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-70" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
           </span>
-          <span className="text-xs font-semibold text-foreground-muted tracking-wide">NeEtal · Page not found</span>
+          <span className="text-xs font-semibold text-foreground-muted tracking-wide">Neetell · Page not found</span>
           <span className="text-[10px] font-mono text-foreground-subtle bg-muted px-2 py-0.5 rounded-md border border-border">HTTP 404</span>
         </div>
 
@@ -427,47 +427,8 @@ export default function NotFound() {
               }}
             />
           )}
-          <div className="relative">
-            <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground-subtle pointer-events-none z-10" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              placeholder="Search colleges, cutoffs, counselling…"
-              className="w-full h-12 pl-10 pr-4 rounded-2xl border border-border bg-surface/90 backdrop-blur-md text-sm text-foreground placeholder:text-foreground-subtle focus:outline-none transition-all shadow-sm relative z-[1]"
-              style={{ borderColor: focused ? 'transparent' : undefined }}
-            />
-          </div>
         </div>
 
-        {/* quick link cards */}
-        <div
-          className="grid grid-cols-4 gap-3 w-full mb-8"
-          style={{ animation: mounted ? 'nf-up 0.6s 0.6s ease both' : 'none' }}
-        >
-          {LINKS.map(({ href, icon: Icon, label, accent }, i) => (
-            <Link
-              key={href}
-              href={href}
-              className="group flex flex-col items-center gap-2.5 px-2 py-4 rounded-2xl border border-border bg-surface/80 backdrop-blur-md hover:shadow-lg transition-all duration-200 overflow-hidden relative"
-              style={{ animationDelay: `${0.62 + i * 0.06}s` }}
-            >
-              {/* hover fill */}
-              <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-2xl"
-                style={{ background: `${accent}0d` }}
-              />
-              <div
-                className="relative w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
-                style={{ background: `${accent}18` }}
-              >
-                <Icon size={18} style={{ color: accent }} className="opacity-70 group-hover:opacity-100 transition-opacity" />
-              </div>
-              <span className="relative text-[11px] font-semibold text-foreground-muted group-hover:text-foreground transition-colors">{label}</span>
-            </Link>
-          ))}
-        </div>
 
         {/* CTA row */}
         <div
@@ -493,16 +454,6 @@ export default function NotFound() {
             Go Back
           </button>
         </div>
-
-        {/* status row */}
-        <p
-          className="mt-8 text-[11px] text-foreground-subtle font-mono"
-          style={{ animation: mounted ? 'nf-up 0.5s 0.9s ease both' : 'none' }}
-        >
-          neetal.app&nbsp;·&nbsp;
-          <span className="text-primary">v2.5.0</span>&nbsp;·&nbsp;
-          <Link href="/dashboard" className="hover:text-foreground transition-colors">sitemap</Link>
-        </p>
       </div>
 
       {/* ── keyframes ── */}
