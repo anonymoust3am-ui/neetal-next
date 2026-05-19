@@ -17,14 +17,14 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
 
           script: |
-            export NVM_DIR="$HOME/.nvm"
+           export NVM_DIR="$HOME/.nvm"
             source "$NVM_DIR/nvm.sh"
 
             echo "Going to project folder..."
-            cd /home/neetell/neetall-next
+            cd /home/neetell/neetal-next
 
             echo "Pulling latest code..."
-            git pull origin main
+            git pull origin master
 
             echo "Installing dependencies..."
             npm install
