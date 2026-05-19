@@ -9,7 +9,7 @@ export function Hero() {
     <section
       className="relative min-h-screen flex items-center overflow-hidden"
       style={{
-        backgroundImage: `url('/hero-${theme}.png')`,
+        backgroundImage: typeof window !== 'undefined' && window.innerWidth >= 768 ? `url('/hero-${theme}.png')` : 'none',
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",

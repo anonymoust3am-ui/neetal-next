@@ -1,0 +1,40 @@
+name: Deploy Next.js Frontend
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+
+          script: |
+            export NVM_DIR="$HOME/.nvm"
+            source "$NVM_DIR/nvm.sh"
+
+            echo "Going to project folder..."
+            cd /home/neetell/neetall-next
+
+            echo "Pulling latest code..."
+            git pull origin main
+
+            echo "Installing dependencies..."
+            npm install
+
+            echo "Building Next.js..."
+            npm run build
+
+            echo "Restarting PM2..."
+            pm2 restart neetall-next || pm2 start npm --name "neetall-next" -- start
+
+            pm2 save
+
+            echo "Deployment done 🚀"

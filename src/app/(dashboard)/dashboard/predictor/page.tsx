@@ -1,1155 +1,704 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import {
-  ArrowRight, BookmarkIcon, GraduationCap, MapPin, Search,
-  SlidersHorizontal, Bed, IndianRupee, Trophy, ChevronRight,
-  Building2, Sparkles, X, RotateCcw, Filter, TrendingUp,
-  Calendar, Award, ShieldCheck, Hash
-} from 'lucide-react';
-import clsx, { ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { useState, useEffect } from 'react';
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+function formatRank(n: any) {
+  if (n === null || n === undefined || n === '' || Number.isNaN(Number(n))) return '-';
+  return Number(n).toLocaleString('en-IN');
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// TYPES & DATA
-// ────────────────────────────────────────────────────────────────────────────
-
-type Bucket = 'safe' | 'target' | 'dream';
-type Round = 'r1' | 'r2' | 'r3';
-type Year = 2023 | 2024 | 2025;
-
-interface CutoffMatrix {
-  [year: number]: { [round: string]: number };
+function escapeHtml(value: any) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
-interface College {
-  id: number;
-  name: string;
-  shortName: string;
-  state: string;
-  city: string;
-  type: 'Government' | 'Private' | 'Deemed' | 'AIIMS';
-  fees: number;
-  beds: number;
-  established: number;
-  bond: boolean;
-  hostel: boolean;
-  course: string;
-  cutoffs: CutoffMatrix;
-  image: string;
-  logoColor: string;
-  tags: string[];
+function bucketLabel(bucket: string) {
+  if (bucket === 'safe') return 'Safe';
+  if (bucket === 'target') return 'Target';
+  if (bucket === 'dream') return 'Dream';
+  return 'Unknown';
 }
 
-const STATES = [
-  'All States', 'Andhra Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi NCR',
-  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
-  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Odisha', 'Puducherry', 'Punjab',
-  'Rajasthan', 'Tamil Nadu', 'Telangana', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
-];
-
-const CATEGORIES = ['General', 'OBC-NCL', 'SC', 'ST', 'EWS'];
-const COURSES = ['MBBS', 'BDS', 'BAMS', 'BHMS', 'BUMS', 'BVSc'];
-const INSTITUTE_TYPES = ['All Types', 'Government', 'Private', 'Deemed', 'AIIMS'];
-
-const COLLEGES: College[] = [
-  {
-    id: 1, name: 'All India Institute of Medical Sciences, New Delhi', shortName: 'AIIMS Delhi',
-    state: 'Delhi NCR', city: 'New Delhi', type: 'AIIMS', fees: 1628, beds: 2478,
-    established: 1956, bond: false, hostel: true, course: 'MBBS',
-    cutoffs: { 2023: { r1: 47, r2: 52, r3: 67 }, 2024: { r1: 42, r2: 49, r3: 58 }, 2025: { r1: 38, r2: 45, r3: 51 } },
-    image: 'linear-gradient(135deg, #0d9488 0%, #042f2e 100%)',
-    logoColor: '#0d9488',
-    tags: ['AIIMS', 'AIQ', 'Top Tier'],
-  },
-  {
-    id: 2, name: 'Jawaharlal Institute of Postgraduate Medical Education', shortName: 'JIPMER',
-    state: 'Puducherry', city: 'Puducherry', type: 'Government', fees: 0, beds: 2150,
-    established: 1823, bond: false, hostel: true, course: 'MBBS',
-    cutoffs: { 2023: { r1: 102, r2: 145, r3: 198 }, 2024: { r1: 89, r2: 124, r3: 167 }, 2025: { r1: 78, r2: 105, r3: 142 } },
-    image: 'linear-gradient(135deg, #7c3aed 0%, #2e1065 100%)',
-    logoColor: '#7c3aed',
-    tags: ['JIPMER', 'AIQ'],
-  },
-  {
-    id: 3, name: 'Maulana Azad Medical College', shortName: 'MAMC',
-    state: 'Delhi NCR', city: 'New Delhi', type: 'Government', fees: 3200, beds: 2800,
-    established: 1958, bond: true, hostel: true, course: 'MBBS',
-    cutoffs: { 2023: { r1: 245, r2: 312, r3: 398 }, 2024: { r1: 198, r2: 267, r3: 342 }, 2025: { r1: 175, r2: 230, r3: 295 } },
-    image: 'linear-gradient(135deg, #0ea5e9 0%, #0c4a6e 100%)',
-    logoColor: '#0ea5e9',
-    tags: ['Government', 'AIQ'],
-  },
-  {
-    id: 4, name: 'Vardhman Mahavir Medical College & Safdarjung Hospital', shortName: 'VMMC',
-    state: 'Delhi NCR', city: 'New Delhi', type: 'Government', fees: 5000, beds: 1531,
-    established: 2001, bond: true, hostel: true, course: 'MBBS',
-    cutoffs: { 2023: { r1: 542, r2: 689, r3: 845 }, 2024: { r1: 478, r2: 612, r3: 756 }, 2025: { r1: 412, r2: 534, r3: 678 } },
-    image: 'linear-gradient(135deg, #16a34a 0%, #14532d 100%)',
-    logoColor: '#16a34a',
-    tags: ['Government', 'AIQ'],
-  },
-  {
-    id: 5, name: 'Grant Government Medical College', shortName: 'Grant Medical',
-    state: 'Maharashtra', city: 'Mumbai', type: 'Government', fees: 15000, beds: 1380,
-    established: 1845, bond: true, hostel: true, course: 'MBBS',
-    cutoffs: { 2023: { r1: 1245, r2: 1567, r3: 1892 }, 2024: { r1: 1089, r2: 1342, r3: 1645 }, 2025: { r1: 945, r2: 1198, r3: 1456 } },
-    image: 'linear-gradient(135deg, #d97706 0%, #78350f 100%)',
-    logoColor: '#d97706',
-    tags: ['Government', 'AIQ', 'Heritage'],
-  },
-  {
-    id: 6, name: 'Madras Medical College', shortName: 'MMC Chennai',
-    state: 'Tamil Nadu', city: 'Chennai', type: 'Government', fees: 5000, beds: 2718,
-    established: 1835, bond: true, hostel: true, course: 'MBBS',
-    cutoffs: { 2023: { r1: 1847, r2: 2234, r3: 2645 }, 2024: { r1: 1623, r2: 1956, r3: 2342 }, 2025: { r1: 1456, r2: 1789, r3: 2145 } },
-    image: 'linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)',
-    logoColor: '#dc2626',
-    tags: ['Government', 'AIQ', 'Heritage'],
-  },
-  {
-    id: 7, name: 'AIIMS Jodhpur', shortName: 'AIIMS Jodhpur',
-    state: 'Rajasthan', city: 'Jodhpur', type: 'AIIMS', fees: 1628, beds: 960,
-    established: 2012, bond: false, hostel: true, course: 'MBBS',
-    cutoffs: { 2023: { r1: 2345, r2: 2890, r3: 3456 }, 2024: { r1: 2098, r2: 2567, r3: 3098 }, 2025: { r1: 1845, r2: 2289, r3: 2756 } },
-    image: 'linear-gradient(135deg, #2563eb 0%, #1e3a5f 100%)',
-    logoColor: '#2563eb',
-    tags: ['AIIMS', 'AIQ'],
-  },
-  {
-    id: 8, name: 'Byramjee Jeejeebhoy Medical College', shortName: 'B.J. Medical',
-    state: 'Gujarat', city: 'Ahmedabad', type: 'Government', fees: 12000, beds: 2200,
-    established: 1946, bond: true, hostel: true, course: 'MBBS',
-    cutoffs: { 2023: { r1: 3245, r2: 3890, r3: 4567 }, 2024: { r1: 2876, r2: 3456, r3: 4123 }, 2025: { r1: 2534, r2: 3098, r3: 3712 } },
-    image: 'linear-gradient(135deg, #7c3aed 0%, #2e1065 100%)',
-    logoColor: '#7c3aed',
-    tags: ['Government', 'AIQ'],
-  },
-  {
-    id: 9, name: 'King George Medical University', shortName: 'KGMU Lucknow',
-    state: 'Uttar Pradesh', city: 'Lucknow', type: 'Government', fees: 18000, beds: 4500,
-    established: 1905, bond: true, hostel: true, course: 'MBBS',
-    cutoffs: { 2023: { r1: 4567, r2: 5234, r3: 6098 }, 2024: { r1: 4123, r2: 4789, r3: 5567 }, 2025: { r1: 3678, r2: 4234, r3: 4945 } },
-    image: 'linear-gradient(135deg, #0d9488 0%, #042f2e 100%)',
-    logoColor: '#0d9488',
-    tags: ['Government', 'AIQ', 'Heritage'],
-  },
-  {
-    id: 10, name: 'Kasturba Medical College', shortName: 'KMC Manipal',
-    state: 'Karnataka', city: 'Manipal', type: 'Deemed', fees: 1450000, beds: 2032,
-    established: 1953, bond: false, hostel: true, course: 'MBBS',
-    cutoffs: { 2023: { r1: 12450, r2: 15670, r3: 18900 }, 2024: { r1: 11200, r2: 14300, r3: 17200 }, 2025: { r1: 10100, r2: 12800, r3: 15600 } },
-    image: 'linear-gradient(135deg, #0ea5e9 0%, #0c4a6e 100%)',
-    logoColor: '#0ea5e9',
-    tags: ['Private', 'Deemed'],
-  },
-  {
-    id: 11, name: 'Christian Medical College', shortName: 'CMC Vellore',
-    state: 'Tamil Nadu', city: 'Vellore', type: 'Private', fees: 48000, beds: 2725,
-    established: 1900, bond: true, hostel: true, course: 'MBBS',
-    cutoffs: { 2023: { r1: 1567, r2: 1890, r3: 2234 }, 2024: { r1: 1389, r2: 1678, r3: 2012 }, 2025: { r1: 1234, r2: 1490, r3: 1789 } },
-    image: 'linear-gradient(135deg, #16a34a 0%, #14532d 100%)',
-    logoColor: '#16a34a',
-    tags: ['Private', 'Heritage', 'Top Tier'],
-  },
-  {
-    id: 12, name: 'Sri Ramachandra Institute', shortName: 'SRIHER',
-    state: 'Tamil Nadu', city: 'Chennai', type: 'Deemed', fees: 1250000, beds: 1685,
-    established: 1985, bond: false, hostel: true, course: 'MBBS',
-    cutoffs: { 2023: { r1: 18900, r2: 22300, r3: 26700 }, 2024: { r1: 17200, r2: 20100, r3: 24300 }, 2025: { r1: 15600, r2: 18400, r3: 22100 } },
-    image: 'linear-gradient(135deg, #d97706 0%, #78350f 100%)',
-    logoColor: '#d97706',
-    tags: ['Private', 'Deemed'],
-  },
-];
-
-// ────────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ────────────────────────────────────────────────────────────────────────────
-
-function getRankBucket(userRank: number, cutoff: number): Bucket | null {
-  const r = userRank / cutoff;
-  if (r <= 0.80) return 'safe';
-  if (r <= 1.15) return 'target';
-  if (r <= 1.50) return 'dream';
-  return null;
+interface PredictionResponse {
+  success: boolean;
+  data: any[];
+  summary: any;
+  mode: string;
+  message?: string;
 }
 
-function formatFees(n: number) {
-  if (n === 0) return 'Free';
-  if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
-  if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`;
-  return `₹${n}`;
+interface OptionsResponse {
+  success: boolean;
+  data: {
+    rounds: Array<{ round_no: string; label: string }>;
+    courses: Array<{ course_code: string }>;
+    categories: Array<{ candidate_category_code: string }>;
+    quotas: Array<{ quota_code: string }>;
+    institutes?: Array<{ institute_name: string }>;
+  };
+  message?: string;
 }
 
-function formatRank(n: number) {
-  return n.toLocaleString('en-IN');
-}
+export default function PredictorPage() {
+  const [inputMode, setInputMode] = useState<'marks' | 'rank'>('marks');
+  const [currentScope, setCurrentScope] = useState('ai');
+  const [marksInput, setMarksInput] = useState('');
+  const [rankInput, setRankInput] = useState('');
 
-function marksToRank(marks: number): number {
-  // Rough approximation for demo
-  if (marks >= 715) return Math.round((720 - marks) * 50 + 1);
-  if (marks >= 650) return Math.round((720 - marks) * 600);
-  if (marks >= 550) return Math.round((720 - marks) * 1200);
-  if (marks >= 450) return Math.round((720 - marks) * 1500);
-  return Math.round((720 - marks) * 2000);
-}
+  const [aiRoundSelect, setAiRoundSelect] = useState('');
+  const [aiCourseSelect, setAiCourseSelect] = useState('');
+  const [aiCategorySelect, setAiCategorySelect] = useState('');
+  const [aiQuotaSelect, setAiQuotaSelect] = useState('');
+  const [aiRangeSelect, setAiRangeSelect] = useState('25000');
+  const [aiLimitInput, setAiLimitInput] = useState('30');
 
-// ────────────────────────────────────────────────────────────────────────────
-// STYLE TOKENS
-// ────────────────────────────────────────────────────────────────────────────
+  const [stateRoundSelect, setStateRoundSelect] = useState('');
+  const [stateCourseSelect, setStateCourseSelect] = useState('');
+  const [stateCategorySelect, setStateCategorySelect] = useState('');
+  const [stateQuotaSelect, setStateQuotaSelect] = useState('');
+  const [stateInstituteSelect, setStateInstituteSelect] = useState('');
+  const [stateRangeSelect, setStateRangeSelect] = useState('25000');
+  const [stateLimitInput, setStateLimitInput] = useState('30');
 
-const BUCKET_BADGE: Record<Bucket, string> = {
-  safe: 'bg-success-light text-success ring-1 ring-success/20',
-  target: 'bg-warning-light text-warning ring-1 ring-warning/20',
-  dream: 'bg-secondary-light text-secondary ring-1 ring-secondary/20',
-};
+  const [aiOptions, setAiOptions] = useState<OptionsResponse['data'] | null>(null);
+  const [states, setStates] = useState<string[]>([]);
 
-const BUCKET_DOT: Record<Bucket, string> = {
-  safe: 'bg-success',
-  target: 'bg-warning',
-  dream: 'bg-secondary',
-};
+  const [loading, setLoading] = useState(false);
+  const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
+  const [bucketFilter, setBucketFilter] = useState<string | null>(null);
+  const [eyebrowText, setEyebrowText] = useState('NEET UG · Unified Predictor');
+  const [subtitleText, setSubtitleText] = useState('Switch between All India MCC and State counsellings.');
+  const [filterSubtitle, setFilterSubtitle] = useState('Select counselling type first');
 
-const BUCKET_LABEL: Record<Bucket, string> = {
-  safe: 'Safe',
-  target: 'Target',
-  dream: 'Dream',
-};
+  const INDIAN_STATES = [
+    'Andhra Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi NCR',
+    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+    'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Odisha', 'Puducherry', 'Punjab',
+    'Rajasthan', 'Tamil Nadu', 'Telangana', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  ];
 
-// ────────────────────────────────────────────────────────────────────────────
-// SKELETON
-// ────────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    loadAiOptions();
+  }, []);
 
-function CardSkeleton() {
-  return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden animate-pulse">
-      <div className="flex flex-col md:flex-row">
-        <div className="w-full md:w-[200px] h-[140px] md:h-auto bg-skeleton flex-shrink-0" />
-        <div className="flex-1 p-5 space-y-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-2 flex-1">
-              <div className="h-4 bg-skeleton rounded-md w-3/4" />
-              <div className="h-3 bg-skeleton rounded-md w-1/2" />
-            </div>
-            <div className="h-6 w-16 bg-skeleton rounded-full" />
-          </div>
-          <div className="grid grid-cols-4 gap-3 pt-2">
-            {[0, 1, 2, 3].map(i => (
-              <div key={i} className="space-y-1.5">
-                <div className="h-2.5 bg-skeleton rounded w-12" />
-                <div className="h-3.5 bg-skeleton rounded w-16" />
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border">
-            {[0, 1, 2].map(i => (
-              <div key={i} className="h-10 bg-skeleton rounded-lg" />
-            ))}
+  const loadAiOptions = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (aiRoundSelect) params.set('round_no', aiRoundSelect);
+      if (aiCourseSelect) params.set('course_code', aiCourseSelect);
+      if (aiCategorySelect) params.set('candidate_category_code', aiCategorySelect);
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+      const res = await fetch(`${baseUrl}/ai/options?${params.toString()}`);
+      const json = (await res.json()) as OptionsResponse;
+
+      if (!json.success) throw new Error(json.message || 'All India options failed.');
+      setAiOptions(json.data);
+    } catch (error) {
+      console.error(error);
+      alert((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStateOptions = async (stateSlug: string) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (stateRoundSelect) params.set('round_no', stateRoundSelect);
+      if (stateCourseSelect) params.set('course_code', stateCourseSelect);
+      if (stateCategorySelect) params.set('candidate_category_code', stateCategorySelect);
+      if (stateQuotaSelect) params.set('quota_code', stateQuotaSelect);
+      if (stateInstituteSelect) params.set('institute_name', stateInstituteSelect);
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+      const res = await fetch(`${baseUrl}/state/${stateSlug}/options?${params.toString()}`);
+      const json = (await res.json()) as OptionsResponse;
+
+      if (!json.success) throw new Error(json.message || 'State options failed.');
+    } catch (error) {
+      console.error(error);
+      alert((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const switchScope = (scope: string) => {
+    setCurrentScope(scope);
+    setBucketFilter(null);
+
+    if (scope === 'ai') {
+      setEyebrowText('MCC All India · NEET UG');
+      setSubtitleText('Uses imported MCC R1/R2/R3 All India allotment database.');
+      setFilterSubtitle('Rank + round + category + quota');
+      loadAiOptions();
+    } else {
+      const stateName = scope;
+      setEyebrowText(`${stateName} · NEET UG`);
+      setSubtitleText(`Unified prediction based on ${stateName} allotments.`);
+      setFilterSubtitle('Rank + round + course + category + quota');
+      loadStateOptions(scope);
+    }
+  };
+
+  const resetFilters = () => {
+    setMarksInput('');
+    setRankInput('');
+
+    if (currentScope === 'ai') {
+      setAiCourseSelect('');
+      setAiCategorySelect('');
+      setAiQuotaSelect('');
+      setAiRangeSelect('25000');
+      setAiLimitInput('30');
+      setPrediction(null);
+      loadAiOptions();
+    } else {
+      setStateRoundSelect('');
+      setStateCourseSelect('');
+      setStateCategorySelect('');
+      setStateQuotaSelect('');
+      setStateInstituteSelect('');
+      setStateRangeSelect('25000');
+      setStateLimitInput('30');
+      setPrediction(null);
+      switchScope(currentScope);
+    }
+  };
+
+  const predictColleges = async () => {
+    let marks = marksInput;
+    let rank = rankInput;
+
+    if (inputMode === 'marks' && !marks) {
+      alert('Please enter marks.');
+      return;
+    }
+
+    if (inputMode === 'rank' && !rank) {
+      alert('Please enter rank.');
+      return;
+    }
+
+    setLoading(true);
+    let url = '';
+    let payload: any = {
+      marks: inputMode === 'marks' ? marks : null,
+      rank: inputMode === 'rank' ? rank : null,
+    };
+
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+
+      if (currentScope === 'ai') {
+        url = `${baseUrl}/ai/predict`;
+        payload = {
+          ...payload,
+          round_no: aiRoundSelect,
+          course_code: aiCourseSelect,
+          candidate_category_code: aiCategorySelect,
+          quota_code: aiQuotaSelect,
+          nearby_range: aiRangeSelect,
+          limit: aiLimitInput,
+        };
+      } else {
+        url = `${baseUrl}/state/${currentScope}/predict`;
+        payload = {
+          ...payload,
+          round_no: stateRoundSelect,
+          course_code: stateCourseSelect,
+          candidate_category_code: stateCategorySelect,
+          quota_code: stateQuotaSelect,
+          institute_name: stateInstituteSelect,
+          nearby_range: stateRangeSelect,
+          limit: stateLimitInput,
+        };
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const json = (await res.json()) as PredictionResponse;
+
+      if (!json.success) {
+        throw new Error(json.message || 'Prediction failed.');
+      }
+
+      setPrediction(json);
+      setBucketFilter(null);
+      setLoading(false);
+    } catch (error) {
+      alert((error as Error).message);
+      setLoading(false);
+    }
+  };
+
+  const renderLoadingModal = () => (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-[24px] shadow-[0_20px_50px_rgba(15,23,42,0.3)] p-[48px_32px] text-center">
+        <div className="w-[60px] h-[60px] border-[4px] border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-[24px]"></div>
+        <h2 className="m-0 mb-[8px] text-[20px] font-bold text-slate-900">Loading options...</h2>
+        <p className="m-0 text-slate-500 text-[14px]">Please wait while we fetch the filter options</p>
+      </div>
+    </div>
+  );
+
+  const renderWelcome = () => (
+    <div className="bg-white/96 border border-slate-200 rounded-[24px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[48px_32px] text-center flex flex-col items-center justify-center h-full max-[600px]:p-[48px_18px]">
+      <div className="w-[74px] h-[74px] rounded-[24px] mx-auto mb-[18px] bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-[34px]">
+        🎓
+      </div>
+      <h2 className="m-0 mb-[12px] text-[20px] font-bold text-slate-900">Unified predictor ready</h2>
+      <p className="m-0 text-slate-500 text-[14px] max-w-[340px] leading-[1.5]">
+        Select counselling type: All India MCC or a State. The filter panel will change automatically.
+      </p>
+    </div>
+  );
+
+  const renderLoading = () => (
+    <div className="bg-white/96 border border-slate-200 rounded-[24px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[48px_32px] text-center flex flex-col items-center justify-center h-full max-[600px]:p-[48px_18px]">
+      <div className="w-[42px] h-[42px] border-[4px] border-slate-200 border-t-blue-600 rounded-full animate-spin mb-[24px]"></div>
+      <h2 className="m-0 mb-[12px] text-[20px] font-bold text-slate-900">Loading...</h2>
+      <p className="m-0 text-slate-500 text-[14px] max-w-[340px] leading-[1.5] font-[900]">
+        Generating college-wise prediction from MongoDB...
+      </p>
+    </div>
+  );
+
+  const renderResults = () => {
+    if (!prediction || !prediction.data || !prediction.data.length) {
+      return (
+        <div className="bg-white/96 border border-slate-200 rounded-[24px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[48px_32px] text-center flex flex-col items-center justify-center h-full max-[600px]:p-[48px_18px]">
+          <h2 className="m-0 mb-[12px] text-[20px] font-bold text-slate-900">No college cards found</h2>
+          <p className="m-0 text-slate-500 text-[14px] max-w-[340px] leading-[1.5]">
+            Try increasing rank range or reducing filters.
+          </p>
+        </div>
+      );
+    }
+
+    const data = prediction.data;
+    const summary = prediction.summary || {};
+    const filteredData = bucketFilter ? data.filter((c: any) => c.bucket === bucketFilter) : data;
+
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-5 gap-[12px] mb-[16px] max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1">
+          <button
+            onClick={() => setBucketFilter(null)}
+            className={`cursor-pointer transition-all hover:scale-[1.02] bg-white/96 border ${
+              !bucketFilter ? 'border-slate-900 ring-2 ring-slate-900/10' : 'border-slate-200'
+            } rounded-[18px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[16px] text-center max-[1100px]:col-span-2 max-[600px]:col-span-1`}
+          >
+            <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Cards</span>
+            <strong className="block mt-[5px] text-[24px] text-slate-900">{data.length}</strong>
+          </button>
+          <button
+            onClick={() => setBucketFilter('safe')}
+            className={`cursor-pointer transition-all hover:scale-[1.02] bg-white/96 border ${
+              bucketFilter === 'safe' ? 'border-emerald-500 ring-2 ring-emerald-500/10' : 'border-slate-200'
+            } rounded-[18px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[16px] text-center`}
+          >
+            <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Safe</span>
+            <strong className="block mt-[5px] text-[24px] text-emerald-600">{summary.safe || 0}</strong>
+          </button>
+          <button
+            onClick={() => setBucketFilter('target')}
+            className={`cursor-pointer transition-all hover:scale-[1.02] bg-white/96 border ${
+              bucketFilter === 'target' ? 'border-amber-500 ring-2 ring-amber-500/10' : 'border-slate-200'
+            } rounded-[18px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[16px] text-center`}
+          >
+            <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Target</span>
+            <strong className="block mt-[5px] text-[24px] text-amber-600">{summary.target || 0}</strong>
+          </button>
+          <button
+            onClick={() => setBucketFilter('dream')}
+            className={`cursor-pointer transition-all hover:scale-[1.02] bg-white/96 border ${
+              bucketFilter === 'dream' ? 'border-violet-500 ring-2 ring-violet-500/10' : 'border-slate-200'
+            } rounded-[18px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[16px] text-center`}
+          >
+            <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Dream</span>
+            <strong className="block mt-[5px] text-[24px] text-violet-600">{summary.dream || 0}</strong>
+          </button>
+          <div className="bg-white/96 border border-slate-200 rounded-[18px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[16px] text-center">
+            <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">User rank</span>
+            <strong className="block mt-[5px] text-[24px] text-slate-900">{formatRank(summary.userRank)}</strong>
           </div>
         </div>
+
+        <div className="bg-white/80 border border-slate-200 rounded-[18px] p-[13px_16px] flex justify-between gap-[12px] mb-[14px] text-slate-500 font-[800] text-[13px]">
+          <p className="m-0">
+            <b className="text-blue-600 font-[900]">{escapeHtml(summary.title || 'Prediction')}</b> around rank{' '}
+            <b className="text-slate-900 font-[900]">{formatRank(summary.userRank)}</b>{' '}
+            {bucketFilter && <span>(Filtering by <b className="capitalize">{bucketFilter}</b>)</span>}
+          </p>
+          <p className="m-0">Evidence range: ±{formatRank(summary.nearbyRange || summary.rankRange)}</p>
+        </div>
+
+        <div className="grid gap-[14px]">
+          {filteredData.map((college: any, idx: number) => (
+            <CollegeCard key={idx} college={college} summary={summary} mode={prediction.mode} />
+          ))}
+        </div>
       </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col pt-12">
+      {loading && renderLoadingModal()}
+      <header className="px-8 py-4 pb-2 max-[600px]:px-[18px] max-[600px]:py-[14px] max-[600px]:pb-[4px]">
+        <div className="mt-2 flex justify-between items-end gap-[18px]">
+          <div>
+            <h1 className="m-0 text-[34px] tracking-[-.045em] text-slate-900 font-bold">
+              NEET UG <span className="text-blue-600">College Predictor</span>
+            </h1>
+            <p className="m-0 mt-[7px] text-slate-500 text-[14px]">{subtitleText}</p>
+          </div>
+        </div>
+      </header>
+
+      <main className={`flex-1 px-8 py-[18px] pb-8 grid grid-cols-[390px_1fr] gap-[20px] max-w-[1540px] w-full mx-auto min-h-0 max-[1100px]:grid-cols-1 max-[600px]:p-[14px] max-[600px]:pb-[18px] max-[600px]:px-[18px] transition-opacity ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+        <aside className="bg-white/95 border border-slate-200 rounded-[24px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] overflow-hidden h-[calc(100vh-130px)] flex flex-col sticky top-[18px] max-[1100px]:h-auto max-[1100px]:static">
+          <div className="p-[18px] border-b border-slate-200 bg-slate-50/85 flex justify-between items-center">
+            <div>
+              <h2 className="m-0 text-[15px] font-bold text-slate-900">Refine prediction</h2>
+              <p className="m-0 mt-[3px] text-slate-500 text-[11px]">{filterSubtitle}</p>
+            </div>
+            <button
+              onClick={resetFilters}
+              className="bg-transparent border-0 text-slate-500 text-[12px] font-[900] cursor-pointer"
+            >
+              Reset
+            </button>
+          </div>
+
+          <div className="p-[18px] overflow-y-auto flex-1">
+            {/* Counselling Scope */}
+            <div className="flex items-center gap-[8px] my-[5px] mb-[14px]">
+              <span className="text-slate-400 text-[10px] font-mono font-[900]">00</span>
+              <span className="flex-1 h-[1px] bg-slate-200"></span>
+              <span className="text-[11px] font-[900] uppercase tracking-[.11em] text-slate-900">Counselling scope</span>
+            </div>
+
+            <div className="mb-[14px]">
+              <label className="block mb-[6px] text-slate-500 text-[12px] font-[900]">Choose counselling</label>
+              <select
+                value={currentScope}
+                onChange={e => switchScope(e.target.value)}
+                disabled={loading}
+                className="w-full h-[42px] rounded-[12px] border border-slate-300 bg-white text-slate-900 px-[12px] text-[14px] font-[750] outline-none transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:border-blue-600 focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)] appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20fill=%22none%22%20viewBox=%220%200%2024%2024%22%20stroke=%22%2364748b%22%3E%3Cpath%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%222.5%22%20d=%22M19%209l-7%207-7-7%22%3E%3C/path%3E%3C/svg%3E')] bg-no-repeat bg-[right_12px_center] bg-[length:14px] pr-[36px] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="ai">All India MCC</option>
+                {INDIAN_STATES.map(state => (
+                  <option key={state} value={state.toLowerCase().replace(/\s+/g, '-')}>
+                    {state}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="h-[1px] bg-slate-200 my-[18px]"></div>
+
+            {/* Your Score */}
+            <div className="flex items-center gap-[8px] my-[5px] mb-[14px]">
+              <span className="text-slate-400 text-[10px] font-mono font-[900]">01</span>
+              <span className="flex-1 h-[1px] bg-slate-200"></span>
+              <span className="text-[11px] font-[900] uppercase tracking-[.11em] text-slate-900">Your score</span>
+            </div>
+
+            <div className="grid grid-cols-2 bg-slate-100 rounded-[12px] p-[4px] gap-[4px] mb-[14px]">
+              <button
+                onClick={() => {
+                  setInputMode('marks');
+                  setRankInput('');
+                }}
+                disabled={loading}
+                className={`border-0 rounded-[9px] h-[34px] text-[12px] font-[900] cursor-pointer ${
+                  inputMode === 'marks'
+                    ? 'bg-white text-slate-900 shadow-[0_2px_8px_rgba(15,23,42,0.08)]'
+                    : 'bg-transparent text-slate-500'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                Marks
+              </button>
+              <button
+                onClick={() => {
+                  setInputMode('rank');
+                  setMarksInput('');
+                }}
+                disabled={loading}
+                className={`border-0 rounded-[9px] h-[34px] text-[12px] font-[900] cursor-pointer ${
+                  inputMode === 'rank'
+                    ? 'bg-white text-slate-900 shadow-[0_2px_8px_rgba(15,23,42,0.08)]'
+                    : 'bg-transparent text-slate-500'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                Rank
+              </button>
+            </div>
+
+            {inputMode === 'marks' && (
+              <div className="mb-[14px]">
+                <label className="block mb-[6px] text-slate-500 text-[12px] font-[900]">
+                  Enter marks <span className="text-slate-400 font-normal">approx rank generated</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="720"
+                  value={marksInput}
+                  onChange={e => setMarksInput(e.target.value)}
+                  disabled={loading}
+                  placeholder="e.g. 645"
+                  className="w-full h-[42px] rounded-[12px] border border-slate-300 bg-white text-slate-900 px-[12px] text-[14px] font-[750] outline-none transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:border-blue-600 focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+            )}
+
+            {inputMode === 'rank' && (
+              <div className="mb-[14px]">
+                <label className="block mb-[6px] text-slate-500 text-[12px] font-[900]">Enter NEET AIR rank</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={rankInput}
+                  onChange={e => setRankInput(e.target.value)}
+                  disabled={loading}
+                  placeholder="e.g. 45000"
+                  className="w-full h-[42px] rounded-[12px] border border-slate-300 bg-white text-slate-900 px-[12px] text-[14px] font-[750] outline-none transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:border-blue-600 focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+            )}
+
+            <div className="h-[1px] bg-slate-200 my-[18px]"></div>
+
+            {/* AI Filters */}
+            <div id="aiFilters">
+              <div className="flex items-center gap-[8px] my-[5px] mb-[14px]">
+                <span className="text-slate-400 text-[10px] font-mono font-[900]">02</span>
+                <span className="flex-1 h-[1px] bg-slate-200"></span>
+                <span className="text-[11px] font-[900] uppercase tracking-[.11em] text-slate-900">All India filters</span>
+              </div>
+
+              <SelectInput label="Round" value={aiRoundSelect} onChange={setAiRoundSelect} options={aiOptions?.rounds || []} />
+              <SelectInput label="Course" value={aiCourseSelect} onChange={setAiCourseSelect} options={aiOptions?.courses || []} />
+              <SelectInput label="Candidate category" value={aiCategorySelect} onChange={setAiCategorySelect} options={aiOptions?.categories || []} />
+              <SelectInput label="Quota" value={aiQuotaSelect} onChange={setAiQuotaSelect} options={aiOptions?.quotas || []} />
+
+              <div className="mb-[14px]">
+                <label className="block mb-[6px] text-slate-500 text-[12px] font-[900]">Nearby evidence range</label>
+                <select
+                  value={aiRangeSelect}
+                  onChange={e => setAiRangeSelect(e.target.value)}
+                  className="w-full h-[42px] rounded-[12px] border border-slate-300 bg-white text-slate-900 px-[12px] text-[14px] font-[750] outline-none transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:border-blue-600 focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)] appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20fill=%22none%22%20viewBox=%220%200%2024%2024%22%20stroke=%22%2364748b%22%3E%3Cpath%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%222.5%22%20d=%22M19%209l-7%207-7-7%22%3E%3C/path%3E%3C/svg%3E')] bg-no-repeat bg-[right_12px_center] bg-[length:14px] pr-[36px]"
+                >
+                  <option value="10000">±10K ranks</option>
+                  <option value="25000">±25K ranks</option>
+                  <option value="50000">±50K ranks</option>
+                  <option value="100000">±100K ranks</option>
+                </select>
+              </div>
+
+              <div className="mb-[14px]">
+                <label className="block mb-[6px] text-slate-500 text-[12px] font-[900]">College card limit</label>
+                <input
+                  type="number"
+                  min="5"
+                  max="80"
+                  value={aiLimitInput}
+                  onChange={e => setAiLimitInput(e.target.value)}
+                  className="w-full h-[42px] rounded-[12px] border border-slate-300 bg-white text-slate-900 px-[12px] text-[14px] font-[750] outline-none transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:border-blue-600 focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)]"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-[16px] border-t border-slate-200 bg-slate-50/90">
+            <button
+              onClick={predictColleges}
+              disabled={loading}
+              className="w-full border-0 h-[48px] rounded-[14px] bg-blue-600 text-white text-[14px] font-[950] cursor-pointer shadow-[0_10px_22px_rgba(37,99,235,0.23)] hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              ✨ Predict colleges →
+            </button>
+          </div>
+        </aside>
+
+        <section className="min-w-0">
+          <div className="space-y-4">{loading ? renderLoading() : !prediction ? renderWelcome() : renderResults()}</div>
+        </section>
+      </main>
     </div>
   );
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// COLLEGE CARD
-// ────────────────────────────────────────────────────────────────────────────
+function SelectInput({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  options: any[];
+}) {
+  return (
+    <div className="mb-[14px]">
+      <label className="block mb-[6px] text-slate-500 text-[12px] font-[900]">{label}</label>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full h-[42px] rounded-[12px] border border-slate-300 bg-white text-slate-900 px-[12px] text-[14px] font-[750] outline-none transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:border-blue-600 focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)] appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20fill=%22none%22%20viewBox=%220%200%2024%2024%22%20stroke=%22%2364748b%22%3E%3Cpath%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%222.5%22%20d=%22M19%209l-7%207-7-7%22%3E%3C/path%3E%3C/svg%3E')] bg-no-repeat bg-[right_12px_center] bg-[length:14px] pr-[36px]"
+      >
+        <option value="">All {label}</option>
+        {options.map((opt: any, idx: number) => {
+          let displayValue = '';
+          let optionValue = '';
 
-interface CollegeCardProps {
-  college: College & { bucket: Bucket };
-  saved: boolean;
-  onSave: () => void;
-  selectedYear: Year;
+          if (opt.round_no && opt.label) {
+            // For rounds
+            optionValue = opt.round_no;
+            displayValue = opt.label;
+          } else {
+            // For courses, categories, quotas, institutes
+            const key = Object.keys(opt).find(k => k.includes('code') || k.includes('name'));
+            optionValue = key ? opt[key] : '';
+            displayValue = optionValue;
+          }
+
+          return (
+            <option key={idx} value={optionValue}>
+              {displayValue}
+            </option>
+          );
+        })}
+      </select>
+    </div>
+  );
 }
 
-function CollegeCard({ college, saved, onSave, selectedYear }: CollegeCardProps) {
-  const cutoff = college.cutoffs[selectedYear]['r1'];
-  const initials = college.shortName.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase();
+function CollegeCard({ college, summary, mode }: { college: any; summary: any; mode: string }) {
+  const initials = (college.shortName || college.name || 'C')
+    .split(' ')
+    .filter((w: string) => w)
+    .map((w: string) => w[0])
+    .join('')
+    .slice(0, 3)
+    .toUpperCase();
+
+  const name = college.name || 'Unknown College';
+  const course = college.courseName || college.course || '-';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8080';
+
+  let image = college.image || 'linear-gradient(135deg, #2563eb 0%, #172554 100%)';
+  // If image contains /data, extract path and prepend base URL
+  if (college.image && college.image.includes('/data')) {
+    const match = college.image.match(/url\('([^']+)'\)/);
+    if (match && match[1]) {
+      image = `url('${baseUrl}${match[1]}')`;
+    } else if (college.image.startsWith('/data')) {
+      image = `url('${baseUrl}${college.image}')`;
+    }
+  }
+
+  let logoUrl = college.logoUrl;
+  // If logoUrl is relative, prepend base URL
+  if (logoUrl && logoUrl.startsWith('/data')) {
+    logoUrl = `${baseUrl}${logoUrl}`;
+  }
+
+  const logoColor = college.logoColor || '#2563eb';
+
+  const bucketBorders: Record<string, string> = {
+    safe: 'border-emerald-400 shadow-[0_10px_28px_rgba(16,185,129,0.08)]',
+    target: 'border-amber-400 shadow-[0_10px_28px_rgba(245,158,11,0.08)]',
+    dream: 'border-violet-400 shadow-[0_10px_28px_rgba(139,92,246,0.08)]',
+  };
+  const activeBorder = (college?.bucket && bucketBorders[college.bucket]) || 'border-slate-200 shadow-[0_10px_28px_rgba(15,23,42,0.06)]';
 
   return (
-    <article
-      className={cn(
-        'group relative bg-card border border-border rounded-2xl overflow-hidden',
-        'transition-all duration-300 hover:shadow-lg hover:border-border-strong',
-        'hover:-translate-y-0.5'
-      )}
-    >
-      <div className="flex flex-col md:flex-row">
-        {/* IMAGE / LOGO BLOCK */}
+    <article className={`bg-white/96 border-2 ${activeBorder} rounded-[24px] overflow-hidden transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[0_14px_32px_rgba(15,23,42,0.1)]`}>
+      <div className="flex max-[1100px]:flex-col">
         <div
-          className="relative w-full md:w-[200px] h-[160px] md:h-auto flex-shrink-0 overflow-hidden"
-          style={{ background: college.image }}
+          className="w-[220px] min-h-[275px] max-[1100px]:w-full max-[1100px]:min-h-[165px] text-white shrink-0 relative overflow-hidden bg-cover bg-center cover-pattern"
+          style={{ background: image }}
         >
-          {/* Decorative pattern */}
-          <div
-            className="absolute inset-0 opacity-15"
-            style={{
-              backgroundImage: `radial-gradient(circle at 20% 30%, white 1px, transparent 1px),
-                                radial-gradient(circle at 80% 70%, white 1px, transparent 1px)`,
-              backgroundSize: '24px 24px, 32px 32px',
-            }}
-          />
-
-          {/* Bucket badge — top right */}
-          <div className="absolute top-3 right-3">
-            <span
-              className={cn(
-                'flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full',
-                'bg-white/95 backdrop-blur-sm shadow-sm'
-              )}
-              style={{ color: college.logoColor }}
-            >
-              <span className={cn('w-1.5 h-1.5 rounded-full', BUCKET_DOT[college.bucket])} />
-              {BUCKET_LABEL[college.bucket]}
-            </span>
+          <div className="absolute inset-0 flex items-center justify-center text-[105px] font-[950] text-white/10 select-none">
+            {escapeHtml(initials[0] || 'C')}
           </div>
 
-          {/* Logo & name overlay */}
-          <div className="absolute inset-x-0 bottom-0 p-4 flex items-end gap-3">
+          <div className="absolute top-[13px] right-[13px] bg-white/95 rounded-full px-[11px] py-[6px] text-[12px] font-[950]" style={{ color: logoColor }}>
+            ● {bucketLabel(college.bucket)}
+          </div>
+
+          <div className="absolute bottom-[14px] left-[14px] right-[14px] flex items-end gap-[10px]">
             <div
-              className={cn(
-                'w-12 h-12 rounded-xl bg-white shadow-lg flex items-center justify-center',
-                'flex-shrink-0 font-bold text-sm tracking-tight'
-              )}
-              style={{ color: college.logoColor }}
+              className="w-[46px] h-[46px] rounded-[14px] bg-white flex items-center justify-center font-[950] shadow-[0_8px_18px_rgba(0,0,0,0.18)] overflow-hidden"
+              style={{ color: logoColor }}
             >
-              {initials}
+              {logoUrl ? <img src={logoUrl} alt="logo" className="w-full h-full object-contain p-[4px]" /> : escapeHtml(initials)}
             </div>
-            <div className="flex-1 min-w-0 pb-0.5">
-              <p className="text-sm font-bold text-white drop-shadow-md leading-tight">
-                {college.shortName}
-              </p>
-              <p className="text-xs text-white/85 drop-shadow-sm mt-0.5">
-                Est. {college.established}
-              </p>
+            <div>
+              <p className="m-0 text-[13px] font-[950] drop-shadow-md text-white">{escapeHtml(college.shortName || name)}</p>
+              <small className="text-white/80">{escapeHtml(college.courseCode || college.instituteCode || college.collegeCode || '-')}</small>
             </div>
           </div>
         </div>
 
-        {/* CONTENT */}
-        <div className="flex-1 p-5">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="min-w-0 flex-1">
-              <h3 className="text-base font-semibold text-foreground leading-tight line-clamp-1">
-                {college.name}
-              </h3>
-              <div className="flex items-center gap-3 mt-1 text-xs text-foreground-muted">
-                <span className="flex items-center gap-1">
-                  <MapPin size={11} className="text-foreground-subtle" />
-                  {college.city}, {college.state}
-                </span>
-                <span className="text-foreground-subtle">·</span>
-                <span className="flex items-center gap-1">
-                  <Building2 size={11} className="text-foreground-subtle" />
-                  {college.type}
-                </span>
-              </div>
-            </div>
+        <div className="p-[18px] flex-1 min-w-0">
+          <h3 className="m-0 text-[18px] tracking-[-.02em] text-slate-900 font-bold">{escapeHtml(name)}</h3>
 
-            <button
-              onClick={onSave}
-              className={cn(
-                'w-9 h-9 rounded-lg flex items-center justify-center transition-all flex-shrink-0',
-                saved
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-muted text-foreground-subtle hover:text-primary hover:bg-primary-light'
-              )}
-              aria-label="Save college"
-            >
-              <BookmarkIcon size={15} fill={saved ? 'currentColor' : 'none'} strokeWidth={2.2} />
-            </button>
+          <div className="mt-[7px] flex flex-wrap gap-[8px] text-slate-500 text-[12px] font-[750]">
+            <span>🎓 {escapeHtml(course)}</span>
+            <span>·</span>
+            <span>Rounds: {escapeHtml(college.rounds || '-')}</span>
+            {mode !== 'ai' && <span>·</span>}
+            {mode !== 'ai' && <span>📍 {escapeHtml(college.state || 'State')}</span>}
           </div>
 
-          {/* Metrics row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            <Metric icon={IndianRupee} label="Fees / yr" value={formatFees(college.fees)} />
-            <Metric icon={Bed} label="Beds" value={college.beds.toLocaleString('en-IN')} />
-            <Metric
-              icon={Trophy}
-              label="Closing rank"
-              value={formatRank(cutoff)}
-              accent
-            />
-            <Metric
-              icon={college.bond ? ShieldCheck : Award}
-              label={college.bond ? 'Bond' : 'No bond'}
-              value={college.bond ? 'Required' : 'Free'}
-            />
+          <div className="flex flex-wrap gap-[8px] mt-[12px]">
+            <span className="px-[9px] py-[6px] rounded-full text-[11px] font-[950] bg-blue-50 text-blue-700">Quota: {escapeHtml(college.quotaCodes || '-')}</span>
+            <span className="px-[9px] py-[6px] rounded-full text-[11px] font-[950] bg-emerald-50 text-emerald-700">
+              Candidate: {escapeHtml(college.candidateCategoryCodes || '-')}
+            </span>
+            <span className="px-[9px] py-[6px] rounded-full text-[11px] font-[950] bg-purple-50 text-purple-700">
+              Allotted: {escapeHtml(college.allottedCategoryCodes || '-')}
+            </span>
           </div>
 
-          {/* R1 / R2 / R3 cutoffs */}
-          <div className="border-t border-border pt-3.5">
-            <div className="flex items-center justify-between mb-2.5">
-              <p className="text-[10px] font-semibold tracking-[0.08em] uppercase text-foreground-subtle">
-                Cutoff · All India Quota
-              </p>
+          <div className="grid grid-cols-4 gap-[10px] my-[16px] max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1">
+            <div className="border border-slate-200 rounded-[14px] p-[11px] bg-slate-50 min-w-0">
+              <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Your rank</span>
+              <strong className="block mt-[4px] text-[14px] break-words">{formatRank(summary.userRank)}</strong>
             </div>
-
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {(['r1', 'r2', 'r3'] as Round[]).map((round, idx) => {
-                const val = college.cutoffs[selectedYear][round];
-                const prevRound = idx > 0 ? (['r1', 'r2', 'r3'] as Round[])[idx - 1] : null;
-                const prev = prevRound ? college.cutoffs[selectedYear][prevRound] : null;
-                const trend = prev ? ((val - prev) / prev) * 100 : 0;
-
-                return (
-                  <div
-                    key={round}
-                    className={cn(
-                      'rounded-lg px-2.5 py-2 border',
-                      round === 'r1'
-                        ? 'border-primary/30 bg-primary-light/40'
-                        : 'border-border bg-muted/40'
-                    )}
-                  >
-                    <p className="text-[10px] font-semibold text-foreground-subtle uppercase">{round.toUpperCase()}</p>
-                    <p className="text-sm font-bold text-foreground tabular-nums leading-tight mt-0.5">
-                      {formatRank(val)}
-                    </p>
-                    {prev && (
-                      <p className={cn(
-                        'text-[10px] font-medium mt-0.5 tabular-nums',
-                        trend < 0 ? 'text-success' : 'text-error'
-                      )}>
-                        {trend < 0 ? '↓' : '↑'} {Math.abs(trend).toFixed(1)}%
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="border border-slate-200 rounded-[14px] p-[11px] bg-slate-50 min-w-0">
+              <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Opening rank</span>
+              <strong className="block mt-[4px] text-[14px] break-words">{formatRank(college.openingRank)}</strong>
             </div>
-
-            {/* CTA */}
-            <button className={cn(
-              'w-full flex items-center justify-center gap-2 py-2.5 rounded-lg',
-              'bg-foreground text-foreground-inverse text-xs font-semibold',
-              'hover:bg-foreground/90 transition-all group/btn'
-            )}>
-              View full details
-              <ChevronRight size={14} className="transition-transform group-hover/btn:translate-x-0.5" />
-            </button>
+            <div className="border border-slate-200 rounded-[14px] p-[11px] bg-slate-50 min-w-0">
+              <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Closing rank</span>
+              <strong className="block mt-[4px] text-[14px] break-words">{formatRank(college.closingRank)}</strong>
+            </div>
+            <div className="border border-slate-200 rounded-[14px] p-[11px] bg-slate-50 min-w-0">
+              <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Seats</span>
+              <strong className="block mt-[4px] text-[14px] break-words">{escapeHtml(college.seats || '-')}</strong>
+            </div>
           </div>
         </div>
       </div>
     </article>
-  );
-}
-
-function Metric({
-  icon: Icon,
-  label,
-  value,
-  accent,
-}: {
-  icon: any;
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
-  return (
-    <div>
-      <div className="flex items-center gap-1 mb-0.5">
-        <Icon size={10} className="text-foreground-subtle" />
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-subtle">
-          {label}
-        </p>
-      </div>
-      <p className={cn(
-        'text-sm font-bold tabular-nums leading-none',
-        accent ? 'text-primary' : 'text-foreground'
-      )}>
-        {value}
-      </p>
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// FILTER PANEL (LEFT)
-// ────────────────────────────────────────────────────────────────────────────
-
-interface FilterState {
-  marks: string;
-  rank: string;
-  category: string;
-  state: string;
-  city: string;
-  course: string;
-  instituteType: string;
-  hostel: boolean;
-  feeMax: number;
-  noBond: boolean;
-  year: Year;
-}
-
-interface FilterPanelProps {
-  filters: FilterState;
-  setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
-  onPredict: () => void;
-  onReset: () => void;
-  errors: { rank?: string; marks?: string };
-}
-
-function FilterPanel({ filters, setFilters, onPredict, onReset, errors }: FilterPanelProps) {
-  const [inputMode, setInputMode] = useState<'marks' | 'rank'>('marks');
-
-  return (
-    <aside className="bg-card border border-border rounded-2xl overflow-hidden
-                      h-full flex flex-col min-h-0">
-      {/* Header — fixed */}
-      <div className="px-5 py-4 border-b border-border bg-muted/30 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-            <SlidersHorizontal size={14} strokeWidth={2.4} />
-          </div>
-          <div>
-            <h2 className="text-sm font-bold text-foreground">Refine search</h2>
-            <p className="text-[10px] text-foreground-muted">Tell us about your candidacy</p>
-          </div>
-        </div>
-        <button
-          onClick={onReset}
-          className="text-[11px] font-semibold text-foreground-muted hover:text-foreground
-                     flex items-center gap-1 transition-colors"
-        >
-          <RotateCcw size={11} />
-          Reset
-        </button>
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5
-                      scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-        {/* SECTION 1: SCORE INPUT */}
-        <section>
-          <SectionLabel num="01" title="Your score" />
-
-          {/* Toggle between marks/rank */}
-          <div className="bg-muted rounded-lg p-1 grid grid-cols-2 gap-1 mb-3">
-            <button
-              onClick={() => setInputMode('marks')}
-              className={cn(
-                'py-1.5 text-xs font-semibold rounded-md transition-all',
-                inputMode === 'marks'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-foreground-muted hover:text-foreground'
-              )}
-            >
-              Marks
-            </button>
-            <button
-              onClick={() => setInputMode('rank')}
-              className={cn(
-                'py-1.5 text-xs font-semibold rounded-md transition-all',
-                inputMode === 'rank'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-foreground-muted hover:text-foreground'
-              )}
-            >
-              Rank
-            </button>
-          </div>
-
-          {inputMode === 'marks' ? (
-            <div>
-              <FieldLabel>Enter your marks <span className="text-foreground-subtle font-normal">(out of 720)</span></FieldLabel>
-              <div className="relative">
-                <input
-                  type="number"
-                  min={0}
-                  max={720}
-                  value={filters.marks}
-                  onChange={e => setFilters(f => ({ ...f, marks: e.target.value, rank: '' }))}
-                  placeholder="e.g. 645"
-                  className={cn(
-                    'w-full h-10 pl-3 pr-14 rounded-lg bg-input text-sm font-medium text-foreground',
-                    'placeholder:text-foreground-subtle focus:outline-none transition-colors',
-                    errors.marks
-                      ? 'border-2 border-error'
-                      : 'border border-border focus:border-primary'
-                  )}
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-foreground-subtle">
-                  / 720
-                </span>
-              </div>
-              {errors.marks && <ErrorText>{errors.marks}</ErrorText>}
-            </div>
-          ) : (
-            <div>
-              <FieldLabel>Enter your rank</FieldLabel>
-              <input
-                type="number"
-                min={1}
-                value={filters.rank}
-                onChange={e => setFilters(f => ({ ...f, rank: e.target.value, marks: '' }))}
-                placeholder="e.g. 45,000"
-                className={cn(
-                  'w-full h-10 px-3 rounded-lg bg-input text-sm font-medium text-foreground',
-                  'placeholder:text-foreground-subtle focus:outline-none transition-colors',
-                  errors.rank
-                    ? 'border-2 border-error'
-                    : 'border border-border focus:border-primary'
-                )}
-              />
-              {errors.rank && <ErrorText>{errors.rank}</ErrorText>}
-            </div>
-          )}
-
-          <div className="mt-3">
-            <FieldLabel>Reservation category</FieldLabel>
-            <SelectField
-              value={filters.category}
-              onChange={v => setFilters(f => ({ ...f, category: v }))}
-              options={CATEGORIES}
-            />
-          </div>
-        </section>
-
-        <Divider />
-
-        {/* SECTION 2: PREFERENCES */}
-        <section>
-          <SectionLabel num="02" title="Preferences" />
-
-          <div className="space-y-3">
-            <div>
-              <FieldLabel>Course</FieldLabel>
-              <SelectField
-                value={filters.course}
-                onChange={v => setFilters(f => ({ ...f, course: v }))}
-                options={COURSES}
-              />
-            </div>
-
-            <div>
-              <FieldLabel>State</FieldLabel>
-              <SelectField
-                value={filters.state}
-                onChange={v => setFilters(f => ({ ...f, state: v }))}
-                options={STATES}
-              />
-            </div>
-
-            <div>
-              <FieldLabel>City <span className="text-foreground-subtle font-normal">(optional)</span></FieldLabel>
-              <input
-                type="text"
-                value={filters.city}
-                onChange={e => setFilters(f => ({ ...f, city: e.target.value }))}
-                placeholder="Any city"
-                className="w-full h-10 px-3 rounded-lg bg-input border border-border
-                  text-sm font-medium text-foreground placeholder:text-foreground-subtle
-                  focus:outline-none focus:border-primary transition-colors"
-              />
-            </div>
-
-            <div>
-              <FieldLabel>Institute type</FieldLabel>
-              <SelectField
-                value={filters.instituteType}
-                onChange={v => setFilters(f => ({ ...f, instituteType: v }))}
-                options={INSTITUTE_TYPES}
-              />
-            </div>
-          </div>
-        </section>
-
-        <Divider />
-
-        {/* SECTION 3: ADDITIONAL */}
-        <section>
-          <SectionLabel num="03" title="Additional" />
-
-          <div className="space-y-3">
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <FieldLabel className="mb-0">Max annual fees</FieldLabel>
-                <span className="text-xs font-bold text-primary tabular-nums">
-                  {filters.feeMax >= 1500000 ? 'Any' : formatFees(filters.feeMax)}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={1500000}
-                step={50000}
-                value={filters.feeMax}
-                onChange={e => setFilters(f => ({ ...f, feeMax: Number(e.target.value) }))}
-                className="w-full accent-primary cursor-pointer"
-              />
-              <div className="flex justify-between text-[10px] text-foreground-subtle font-medium mt-0.5">
-                <span>Free</span>
-                <span>15L+</span>
-              </div>
-            </div>
-
-            <div>
-              <FieldLabel>Cutoff year</FieldLabel>
-              <div className="grid grid-cols-3 gap-1.5">
-                {([2023, 2024, 2025] as Year[]).map(yr => (
-                  <button
-                    key={yr}
-                    onClick={() => setFilters(f => ({ ...f, year: yr }))}
-                    className={cn(
-                      'py-2 rounded-lg text-xs font-bold transition-all',
-                      filters.year === yr
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'bg-muted text-foreground-muted hover:bg-hover'
-                    )}
-                  >
-                    {yr}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <ToggleRow
-              label="Hostel available"
-              checked={filters.hostel}
-              onChange={v => setFilters(f => ({ ...f, hostel: v }))}
-            />
-            <ToggleRow
-              label="No bond obligation"
-              checked={filters.noBond}
-              onChange={v => setFilters(f => ({ ...f, noBond: v }))}
-            />
-          </div>
-        </section>
-      </div>
-
-      {/* Action button — fixed at bottom */}
-      <div className="p-4 border-t border-border bg-muted/30 flex-shrink-0">
-        <button
-          onClick={onPredict}
-          className={cn(
-            'w-full flex items-center justify-center gap-2 h-11 rounded-lg',
-            'bg-primary text-primary-foreground text-sm font-bold',
-            'hover:bg-primary-hover transition-all shadow-sm hover:shadow-md',
-            'group'
-          )}
-        >
-          <Sparkles size={15} />
-          Predict colleges
-          <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
-        </button>
-      </div>
-    </aside>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// SUB-COMPONENTS
-// ────────────────────────────────────────────────────────────────────────────
-
-function SectionLabel({ num, title }: { num: string; title: string }) {
-  return (
-    <div className="flex items-center gap-2 mb-3">
-      <span className="text-[10px] font-bold tabular-nums text-foreground-subtle font-mono">
-        {num}
-      </span>
-      <span className="h-px flex-1 bg-border" />
-      <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-foreground">
-        {title}
-      </span>
-    </div>
-  );
-}
-
-function FieldLabel({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <label className={cn('block text-xs font-semibold text-foreground-muted mb-1.5', className)}>
-      {children}
-    </label>
-  );
-}
-
-function ErrorText({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mt-1.5 text-[11px] font-semibold text-error flex items-center gap-1">
-      <span className="w-1 h-1 rounded-full bg-error" />
-      {children}
-    </p>
-  );
-}
-
-function SelectField({
-  value, onChange, options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
-}) {
-  return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="w-full h-10 pl-3 pr-9 rounded-lg bg-input border border-border
-          text-sm font-medium text-foreground focus:outline-none focus:border-primary
-          transition-colors appearance-none cursor-pointer"
-      >
-        {options.map(o => <option key={o}>{o}</option>)}
-      </select>
-      <ChevronRight
-        size={14}
-        className="absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-foreground-subtle pointer-events-none"
-      />
-    </div>
-  );
-}
-
-function ToggleRow({
-  label, checked, onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      className="w-full flex items-center justify-between py-2 group"
-    >
-      <span className="text-sm font-medium text-foreground">{label}</span>
-      <span
-        className={cn(
-          'relative w-9 h-5 rounded-full transition-colors',
-          checked ? 'bg-primary' : 'bg-border'
-        )}
-      >
-        <span
-          className={cn(
-            'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm',
-            'transition-transform',
-            checked && 'translate-x-4'
-          )}
-        />
-      </span>
-    </button>
-  );
-}
-
-function Divider() {
-  return <div className="h-px bg-border" />;
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// EMPTY / WELCOME STATE
-// ────────────────────────────────────────────────────────────────────────────
-
-function WelcomeState() {
-  return (
-    <div className="bg-card border border-border rounded-2xl p-10 lg:p-14 text-center">
-      <div className="relative inline-block mb-5">
-        <div className="absolute inset-0 bg-primary/15 blur-2xl rounded-full" />
-        <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary-hover
-          flex items-center justify-center shadow-lg">
-          <GraduationCap size={28} className="text-primary-foreground" strokeWidth={2.2} />
-        </div>
-      </div>
-      <h2 className="text-xl font-bold text-foreground mb-2">
-        Find your medical college
-      </h2>
-      <p className="text-sm text-foreground-muted max-w-sm mx-auto leading-relaxed">
-        Enter your NEET marks or rank to see personalized college predictions
-        across <span className="font-semibold text-foreground">12+ institutes</span> with
-        cutoff trends from 2023–2025.
-      </p>
-
-      <div className="grid grid-cols-3 gap-2 max-w-sm mx-auto mt-8">
-        {[
-          { val: '500+', lbl: 'Colleges' },
-          { val: '3 yrs', lbl: 'Cutoff data' },
-          { val: 'AIQ', lbl: 'All India Quota' },
-        ].map(s => (
-          <div key={s.lbl} className="bg-muted rounded-xl p-3">
-            <p className="text-base font-bold text-foreground tabular-nums">{s.val}</p>
-            <p className="text-[10px] font-semibold text-foreground-muted uppercase tracking-wide mt-0.5">
-              {s.lbl}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// SUMMARY STRIP
-// ────────────────────────────────────────────────────────────────────────────
-
-function SummaryStrip({
-  total, safe, target, dream, savedCount,
-}: {
-  total: number; safe: number; target: number; dream: number; savedCount: number;
-}) {
-  const stats = [
-    { label: 'Total matches', value: total, dot: 'bg-foreground' },
-    { label: 'Safe', value: safe, dot: 'bg-success' },
-    { label: 'Target', value: target, dot: 'bg-warning' },
-    { label: 'Dream', value: dream, dot: 'bg-secondary' },
-    { label: 'Shortlisted', value: savedCount, dot: 'bg-primary' },
-  ];
-
-  return (
-    <div className="bg-card border border-border rounded-2xl px-5 py-4">
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-        {stats.map(s => (
-          <div key={s.label} className="flex items-center gap-2.5">
-            <span className={cn('w-2 h-2 rounded-full', s.dot)} />
-            <div>
-              <p className="text-[10px] font-semibold tracking-wide uppercase text-foreground-muted">
-                {s.label}
-              </p>
-              <p className="text-lg font-bold text-foreground tabular-nums leading-tight">
-                {s.value}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// MAIN PAGE
-// ────────────────────────────────────────────────────────────────────────────
-
-export default function PredictorPage() {
-  const [filters, setFilters] = useState<FilterState>({
-    marks: '',
-    rank: '',
-    category: 'General',
-    state: 'All States',
-    city: '',
-    course: 'MBBS',
-    instituteType: 'All Types',
-    hostel: false,
-    feeMax: 1500000,
-    noBond: false,
-    year: 2025,
-  });
-
-  const [predicted, setPredicted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ rank?: string; marks?: string }>({});
-  const [saved, setSaved] = useState<Set<number>>(new Set());
-  const [sortBy, setSortBy] = useState<'cutoff' | 'fees' | 'name'>('cutoff');
-
-  const toggleSave = (id: number) =>
-    setSaved(prev => {
-      const s = new Set(prev);
-      s.has(id) ? s.delete(id) : s.add(id);
-      return s;
-    });
-
-  const handlePredict = () => {
-    const newErrors: typeof errors = {};
-    if (!filters.marks && !filters.rank) {
-      newErrors.marks = 'Field is required';
-      newErrors.rank = 'Field is required';
-    }
-    if (filters.marks && (Number(filters.marks) < 0 || Number(filters.marks) > 720)) {
-      newErrors.marks = 'Marks must be between 0 and 720';
-    }
-
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
-
-    setLoading(true);
-    setPredicted(true);
-    setTimeout(() => setLoading(false), 1100);
-  };
-
-  const handleReset = () => {
-    setFilters({
-      marks: '', rank: '', category: 'General', state: 'All States',
-      city: '', course: 'MBBS', instituteType: 'All Types',
-      hostel: false, feeMax: 1500000, noBond: false, year: 2025,
-    });
-    setPredicted(false);
-    setErrors({});
-  };
-
-  const userRank = useMemo(() => {
-    if (filters.rank) return parseInt(filters.rank);
-    if (filters.marks) return marksToRank(parseInt(filters.marks));
-    return 0;
-  }, [filters.rank, filters.marks]);
-
-  const results = useMemo(() => {
-    if (!predicted || !userRank) return [];
-    return COLLEGES
-      .filter(c => {
-        if (filters.state !== 'All States' && c.state !== filters.state) return false;
-        if (filters.city && !c.city.toLowerCase().includes(filters.city.toLowerCase())) return false;
-        if (filters.instituteType !== 'All Types' && c.type !== filters.instituteType) return false;
-        if (filters.noBond && c.bond) return false;
-        if (filters.hostel && !c.hostel) return false;
-        if (c.fees > filters.feeMax) return false;
-        return true;
-      })
-      .map(c => ({
-        ...c,
-        bucket: getRankBucket(userRank, c.cutoffs[filters.year].r1),
-      }))
-      .filter((c): c is College & { bucket: Bucket } => c.bucket !== null)
-      .sort((a, b) => {
-        if (sortBy === 'cutoff') return a.cutoffs[filters.year].r1 - b.cutoffs[filters.year].r1;
-        if (sortBy === 'fees') return a.fees - b.fees;
-        return a.name.localeCompare(b.name);
-      });
-  }, [predicted, userRank, filters, sortBy]);
-
-  const safeCount = results.filter(r => r.bucket === 'safe').length;
-  const targetCount = results.filter(r => r.bucket === 'target').length;
-  const dreamCount = results.filter(r => r.bucket === 'dream').length;
-
-  return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
-      {/* HERO */}
-      {/* <header className="border-b border-border bg-card/40 backdrop-blur-sm flex-shrink-0">
-        <div className="px-4 sm:px-6 lg:px-10 max-w-[1500px] mx-auto py-6">
-          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase text-foreground-muted mb-2">
-            <span className="w-6 h-px bg-foreground-muted" />
-            NEET UG · 2026 Counselling
-          </div>
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
-                College <span className="text-primary">Predictor</span>
-              </h1>
-              <p className="text-sm text-foreground-muted mt-1 max-w-2xl">
-                Personalized college matches with three-year cutoff trends across all rounds.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-foreground-muted">
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success-light text-success font-semibold ring-1 ring-success/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                Live cutoff data
-              </span>
-            </div>
-          </div>
-        </div>
-      </header> */}
-
-      {/* MAIN GRID — fills remaining viewport, no page scroll */}
-      <main className="flex-1 min-h-0 px-4 sm:px-6 lg:px-10 max-w-[1500px] w-full mx-auto py-5 pt-22">
-        <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-5 h-full min-h-0">
-          {/* LEFT: FILTERS — fixed, fills column height */}
-          <FilterPanel
-            filters={filters}
-            setFilters={setFilters}
-            onPredict={handlePredict}
-            onReset={handleReset}
-            errors={errors}
-          />
-
-          {/* RIGHT: RESULTS — only this scrolls */}
-          <section className="min-w-0 h-full overflow-y-auto pr-1 -mr-1
-                              scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-            <div className="space-y-4 pb-2">
-            {!predicted && <WelcomeState />}
-
-            {predicted && loading && (
-              <>
-                <div className="bg-card border border-border rounded-2xl px-5 py-4 animate-pulse">
-                  <div className="grid grid-cols-5 gap-4">
-                    {[0, 1, 2, 3, 4].map(i => (
-                      <div key={i} className="space-y-1.5">
-                        <div className="h-2.5 bg-skeleton rounded w-16" />
-                        <div className="h-5 bg-skeleton rounded w-10" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {[0, 1, 2, 3].map(i => <CardSkeleton key={i} />)}
-              </>
-            )}
-
-            {predicted && !loading && results.length > 0 && (
-              <>
-                <SummaryStrip
-                  total={results.length}
-                  safe={safeCount}
-                  target={targetCount}
-                  dream={dreamCount}
-                  savedCount={saved.size}
-                />
-
-                {/* Sort bar */}
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <p className="text-sm font-semibold text-foreground">
-                    Showing <span className="text-primary">{results.length}</span> matched colleges
-                    <span className="text-foreground-muted font-normal">
-                      {' '}for rank <span className="font-bold tabular-nums text-foreground">{formatRank(userRank)}</span>
-                    </span>
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-foreground-muted">Sort by:</span>
-                    <div className="flex gap-1 bg-muted rounded-lg p-1">
-                      {(['cutoff', 'fees', 'name'] as const).map(s => (
-                        <button
-                          key={s}
-                          onClick={() => setSortBy(s)}
-                          className={cn(
-                            'px-2.5 py-1 rounded-md text-xs font-semibold capitalize transition-all',
-                            sortBy === s
-                              ? 'bg-card text-foreground shadow-sm'
-                              : 'text-foreground-muted hover:text-foreground'
-                          )}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Cards */}
-                <div className="space-y-4">
-                  {results.map(c => (
-                    <CollegeCard
-                      key={c.id}
-                      college={c}
-                      saved={saved.has(c.id)}
-                      onSave={() => toggleSave(c.id)}
-                      selectedYear={filters.year}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-
-            {predicted && !loading && results.length === 0 && (
-              <div className="bg-card border border-border rounded-2xl p-12 text-center">
-                <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center mx-auto mb-4">
-                  <Search size={22} className="text-foreground-subtle" />
-                </div>
-                <h3 className="text-base font-bold text-foreground mb-1">No colleges found</h3>
-                <p className="text-sm text-foreground-muted max-w-sm mx-auto">
-                  Try widening your filters — increase max fees, change state, or remove the bond restriction.
-                </p>
-                <button
-                  onClick={handleReset}
-                  className="mt-5 inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
-                >
-                  <RotateCcw size={12} /> Reset all filters
-                </button>
-              </div>
-            )}
-            </div>
-          </section>
-        </div>
-      </main>
-    </div>
   );
 }

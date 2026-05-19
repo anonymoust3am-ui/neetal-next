@@ -8,6 +8,8 @@ import {
   GraduationCap,
   ListChecks,
   Heart,
+  LayoutGrid,
+  BarChart3,
 } from 'lucide-react';
 
 export interface BottomNavItem {
@@ -18,7 +20,7 @@ export interface BottomNavItem {
 }
 
 export const bottomNavItems: BottomNavItem[] = [
-    {
+  {
     key: 'choices',
     label: 'Choices List',
     icon: Heart,
@@ -43,15 +45,15 @@ export const bottomNavItems: BottomNavItem[] = [
     href: '/dashboard',
   },
   {
-    key: 'insights',
-    label: 'Insights',
-    icon: TrendingUp,
+    key: 'closing-rank',
+    label: 'Closing Rank',
+    icon: BarChart3,
     href: '/dashboard/insights',
   },
   {
-    key: 'resources',
-    label: 'Resources',
-    icon: BookOpen,
+    key: 'allotment',
+    label: 'Allotment',
+    icon: LayoutGrid,
     href: '/dashboard/resources',
   },
   {
