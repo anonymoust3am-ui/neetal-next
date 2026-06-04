@@ -7,43 +7,35 @@ import { cn } from "@/lib/utils";
 import ExamScroller from "./ExamScroller";
 
 const categories = ["General", "OBC-NCL", "SC", "ST", "EWS", "PH"];
-const quotas      = ["All India (AIQ)", "State Quota", "Management Quota", "NRI Quota"];
+const quotas = ["All India (AIQ)", "State Quota", "Management Quota", "NRI Quota"];
 
 const demoCards = [
-  { college: "AIIMS New Delhi",       rank: "42,815", bucket: "dream",  tag: "Dream",   fees: "₹1,628/yr" },
-  { college: "MAMC, New Delhi",       rank: "58,340", bucket: "target", tag: "Target",  fees: "₹7,200/yr" },
-  { college: "VMMC & Safdarjung",     rank: "89,622", bucket: "safe",   tag: "Safe",    fees: "₹5,000/yr" },
+  { college: "AIIMS New Delhi", rank: "42,815", bucket: "dream", tag: "Dream", fees: "₹1,628/yr" },
+  { college: "MAMC, New Delhi", rank: "58,340", bucket: "target", tag: "Target", fees: "₹7,200/yr" },
+  { college: "VMMC & Safdarjung", rank: "89,622", bucket: "safe", tag: "Safe", fees: "₹5,000/yr" },
 ];
 
 export function HeroSection() {
-  const [rank, setRank]         = useState("");
+  const [rank, setRank] = useState("");
   const [category, setCategory] = useState("General");
-  const [quota, setQuota]       = useState("All India (AIQ)");
+  const [quota, setQuota] = useState("All India (AIQ)");
 
   return (
-    <section className="relative overflow-hidden bg-bg-primary min-h-[94vh] flex flex-col items-center">
-       {/* <ExamScroller exams={[{ name: "Exam 1", date: "2023-10-01" }, { name: "Exam 2", date: "2023-10-02" }, { name: "Exam 3", date: "2023-10-03" }, { name: "Exam 4", date: "2023-10-04" }, { name: "Exam 5", date: "2023-10-05" }, { name: "Exam 6", date: "2023-10-06" }]} speed={10} /> */}
+    <section className="relative overflow-hidden bg-bg-primary min-h-auto flex flex-col items-center">
+      {/* <ExamScroller exams={[{ name: "Exam 1", date: "2023-10-01" }, { name: "Exam 2", date: "2023-10-02" }, { name: "Exam 3", date: "2023-10-03" }, { name: "Exam 4", date: "2023-10-04" }, { name: "Exam 5", date: "2023-10-05" }, { name: "Exam 6", date: "2023-10-06" }]} speed={10} /> */}
       {/* Background decoration */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Large blur blob top-right */}
+      {/* <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full"
           style={{ background: "radial-gradient(circle at 60% 40%, rgba(13,148,136,0.12) 0%, rgba(124,58,237,0.07) 40%, transparent 70%)" }} />
-        {/* Accent blob bottom-left */}
         <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] rounded-full"
           style={{ background: "radial-gradient(circle, rgba(13,148,136,0.08) 0%, transparent 65%)" }} />
-        {/* Dot pattern */}
         <div className="absolute inset-0 dot-grid opacity-40" />
-        {/* Horizontal rule accent */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-10 md:py-20 lg:py-25">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-
-          {/* ── Left: Content ─────────────────────────────────── */}
           <div className="flex flex-col gap-7">
-
-            {/* Eyebrow badge */}
             <div className="flex items-center gap-3 animate-fade-up">
               <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-semibold tracking-wide">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
@@ -54,8 +46,6 @@ export function HeroSection() {
                 Choice filling closes Apr 13
               </span>
             </div>
-
-            {/* Headline */}
             <div className="flex flex-col gap-3 animate-fade-up delay-75">
               <h1 className="font-sans font-bold tracking-tight leading-[1.05] text-[1.5rem] md:text-[1.5rem] lg:text-[2.5rem] xl:text-[3rem]">
                 <span className="text-foreground block">Make smarter</span>
@@ -63,20 +53,15 @@ export function HeroSection() {
                 <span className="text-foreground block">decisions.</span>
               </h1>
             </div>
-
-            {/* Subtitle */}
             <p className="text-lg md:text-xl text-foreground-muted leading-relaxed max-w-lg animate-fade-up delay-150">
               Rank-aware. State-aware. Data-backed. Explore realistic college options,
               compare fees &amp; bonds, and navigate AIQ + state counselling — all in one place.
             </p>
-
-            {/* Search panel */}
             <div className="bg-card rounded-xl p-4 md:p-5 shadow-md border border-border animate-fade-up delay-200">
               <p className="text-xs font-semibold text-foreground-muted uppercase tracking-widest mb-3.5 flex items-center gap-2">
                 <Zap size={12} className="text-accent" /> Find colleges for your NEET rank
               </p>
               <div className="flex flex-col sm:flex-row gap-2.5">
-                {/* Rank */}
                 <div className="relative flex-1">
                   <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none" />
                   <input
@@ -88,7 +73,6 @@ export function HeroSection() {
                     min={1}
                   />
                 </div>
-                {/* Category */}
                 <div className="relative">
                   <select value={category} onChange={(e) => setCategory(e.target.value)}
                     className="w-full sm:w-32 h-11 px-3 pr-8 text-sm rounded-lg bg-input border border-border focus:border-border-focus focus:outline-none text-foreground appearance-none cursor-pointer">
@@ -96,7 +80,6 @@ export function HeroSection() {
                   </select>
                   <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none" />
                 </div>
-                {/* Quota */}
                 <div className="relative">
                   <select value={quota} onChange={(e) => setQuota(e.target.value)}
                     className="w-full sm:w-40 h-11 px-3 pr-8 text-sm rounded-lg bg-input border border-border focus:border-border-focus focus:outline-none text-foreground appearance-none cursor-pointer">
@@ -104,7 +87,6 @@ export function HeroSection() {
                   </select>
                   <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none" />
                 </div>
-                {/* CTA */}
                 <Link
                   href={`/dashboard/predictor${rank ? `?rank=${rank}&category=${category}` : ""}`}
                   className="flex items-center justify-center gap-2 h-11 px-5 rounded-lg bg-primary hover:bg-primary-hover active:bg-primary-hover text-primary-foreground text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap flex-shrink-0"
@@ -112,8 +94,6 @@ export function HeroSection() {
                   Predict <ArrowRight size={15} />
                 </Link>
               </div>
-
-              {/* Quick filters */}
               <div className="flex flex-wrap gap-2 mt-3.5 pt-3.5 border-t border-border">
                 <span className="text-[11px] font-semibold text-foreground-muted uppercase tracking-wider self-center">Quick:</span>
                 {["Govt. only", "No bond", "Under ₹5L/yr", "AIIMS/JIPMER", "State quota"].map((f) => (
@@ -123,13 +103,11 @@ export function HeroSection() {
                 ))}
               </div>
             </div>
-
-            {/* Trust strip */}
             <div className="flex flex-wrap items-center gap-5 animate-fade-up delay-300">
               {[
-                { icon: Shield,    text: "Official data only" },
+                { icon: Shield, text: "Official data only" },
                 { icon: BarChart2, text: "50K+ cutoff records" },
-                { icon: Clock,     text: "Updated every round" },
+                { icon: Clock, text: "Updated every round" },
               ].map(({ icon: Icon, text }) => (
                 <span key={text} className="flex items-center gap-1.5 text-sm text-foreground-muted">
                   <Icon size={13} className="text-primary" /> {text}
@@ -137,10 +115,8 @@ export function HeroSection() {
               ))}
             </div>
           </div>
-
-          {/* ── Right: Demo college cards ──────────────────────── */}
           <div className="hidden lg:flex flex-col gap-3 animate-slide-in-right delay-200">
-            {/* Header */}
+
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs font-semibold text-foreground-muted uppercase tracking-widest">
                 Sample results · Rank 45,200 · General · AIQ
@@ -153,13 +129,11 @@ export function HeroSection() {
             {demoCards.map((card, i) => (
               <DemoCollegeCard key={card.college} {...card} delay={i * 100} />
             ))}
-
-            {/* Stats row */}
             <div className="grid grid-cols-3 gap-3 mt-2">
               {[
-                { value: "706+",  label: "Colleges",   color: "bg-primary" },
-                { value: "28",    label: "States",     color: "bg-secondary" },
-                { value: "50K+",  label: "Cutoffs",    color: "bg-success" },
+                { value: "706+", label: "Colleges", color: "bg-primary" },
+                { value: "28", label: "States", color: "bg-secondary" },
+                { value: "50K+", label: "Cutoffs", color: "bg-success" },
               ].map(({ value, label, color }) => (
                 <div key={label} className="bg-card rounded-lg p-3.5 border border-border shadow-sm text-center">
                   <div className={cn("w-1.5 h-1.5 rounded-full mx-auto mb-2", color)} />
@@ -169,6 +143,45 @@ export function HeroSection() {
               ))}
             </div>
           </div>
+        </div>
+      </div> */}
+
+      {/* Trust Section */}
+      <div className="w-full flex flex-col items-center text-center mt-16 gap-10 px-4">
+
+        {/* Title */}
+        <div className="flex flex-col gap-2">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
+            Proven Over Time.
+          </h2>
+          <p className="text-lg md:text-2xl text-foreground-muted">
+            Trusted By Thousands.
+          </p>
+        </div>
+
+        {/* Stats */}
+        <div className="flex w-full justify-between items-center text-foreground-muted">
+
+          <div className="flex flex-col items-center flex-1">
+            <span className="text-4xl md:text-5xl font-bold text-foreground">12+</span>
+            <span className="text-sm md:text-base">Years of Expertise</span>
+          </div>
+
+          <div className="flex flex-col items-center flex-1">
+            <span className="text-4xl md:text-5xl font-bold text-foreground">200k+</span>
+            <span className="text-sm md:text-base">Students Registered</span>
+          </div>
+
+          <div className="flex flex-col items-center flex-1">
+            <span className="text-4xl md:text-5xl font-bold text-foreground">1M+</span>
+            <span className="text-sm md:text-base">Candidates Served</span>
+          </div>
+
+          <div className="flex flex-col items-center flex-1">
+            <span className="text-4xl md:text-5xl font-bold text-foreground">500k+</span>
+            <span className="text-sm md:text-base">Queries Answered</span>
+          </div>
+
         </div>
       </div>
     </section>
@@ -181,9 +194,9 @@ function DemoCollegeCard({
   college: string; rank: string; bucket: string; tag: string; fees: string; delay: number;
 }) {
   const tagStyles: Record<string, string> = {
-    safe:   "bg-success-light text-success",
+    safe: "bg-success-light text-success",
     target: "bg-warning-light text-warning",
-    dream:  "bg-secondary-light text-secondary",
+    dream: "bg-secondary-light text-secondary",
   };
   const dotStyles: Record<string, string> = {
     safe: "bg-success", target: "bg-warning", dream: "bg-secondary",

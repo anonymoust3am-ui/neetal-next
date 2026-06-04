@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { bottomNavItems } from './BottomNavConfig';
@@ -8,7 +9,7 @@ function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-/* ── SVG glass distortion filter — same as reference code ── */
+/* ── SVG glass distortion filter — kept for desktop ── */
 function GlassFilter() {
   return (
     <svg style={{ display: 'none' }}>
@@ -64,11 +65,10 @@ function GlassFilter() {
   );
 }
 
-/* ── Three stacked glass layers — same technique as reference ── */
+/* ── Three stacked glass layers — kept for desktop ── */
 function GlassLayers({ borderRadius = 24 }: { borderRadius?: number }) {
   return (
     <>
-      {/* Layer 1 — backdrop blur + SVG distortion */}
       <div
         className="absolute inset-0 z-0 overflow-hidden"
         style={{
@@ -78,7 +78,6 @@ function GlassLayers({ borderRadius = 24 }: { borderRadius?: number }) {
           isolation: 'isolate',
         }}
       />
-      {/* Layer 2 — white tint */}
       <div
         className="absolute inset-0 z-10"
         style={{
@@ -86,7 +85,6 @@ function GlassLayers({ borderRadius = 24 }: { borderRadius?: number }) {
           background: 'rgba(255,255,255,0.22)',
         }}
       />
-      {/* Layer 3 — inset rim highlights */}
       <div
         className="absolute inset-0 z-20 overflow-hidden"
         style={{
@@ -113,18 +111,91 @@ const labelBase: React.CSSProperties = {
 
 export function BottomNav() {
   const pathname = usePathname();
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
+
+  // Screen size detection hydration guard
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768); // 768px is the standard Tailwind md breakpoint
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   const isActive = (href: string) =>
     href === '/dashboard'
       ? pathname === '/dashboard'
       : pathname === href || pathname.startsWith(href + '/');
 
+  // Prevent flash of layout before hook runs on client mount
+  if (isMobile === null) return null;
+
+  /* ─────────────────────────────────────────────────────────
+     MOBILE COMPONENT: Fixed bottom, solid background, active pop out
+     ───────────────────────────────────────────────────────── */
+  if (isMobile) {
+    return (
+      <div className="fixed bottom-0 left-0 right-0 z-[1200] bg-white border-t-2 border-slate-500 shadow-[0_-8px_30px_rgb(0,0,0,0.08)] rounded-t-[24px] px-2 pb-safe-bottom">
+        <nav className="flex items-end justify-between w-full h-[72px] max-w-md mx-auto px-4">
+          {bottomNavItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            const isCenter = item.key === 'dashboard';
+
+            return (
+              <Link
+                key={item.key}
+                href={item.href}
+                className="relative flex flex-col items-center justify-center flex-1 h-full pb-2 select-none group"
+              >
+                {/* Visual Pop-out Wrapper for Icon */}
+                <div
+                  className={cn(
+                    "flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+                    active
+                      ? isCenter
+                        ? "w-12 h-12 rounded-2xl bg-teal-600 text-white shadow-[0_6px_16px_rgba(13,148,136,0.4)] -translate-y-4"
+                        : "w-12 h-12 rounded-2xl bg-teal-600 text-white shadow-[0_6px_16px_rgba(13,148,136,0.4)] -translate-y-4"
+                      : "w-10 h-10 text-slate-400 group-hover:text-slate-600"
+                  )}
+                >
+                  <Icon
+                    size={isCenter && active ? 26 : 22}
+                    strokeWidth={active ? 2.2 : 1.8}
+                    className="transition-transform duration-200"
+                  />
+                </div>
+
+                {/* Micro Label directly below the icon */}
+                <span
+                  className="absolute bottom-1 text-[11px] font-bold tracking-tight text-center transition-all duration-250 ease-out"
+                  style={{
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+                    opacity: active ? 1 : 0,
+                    transform: active ? 'translateY(0) scale(1)' : 'translateY(4px) scale(0.9)',
+                    color: isCenter ? '#0d9488' : '#0d9488', // Teal color for active state text
+                  }}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+    );
+  }
+
+  /* ─────────────────────────────────────────────────────────
+     DESKTOP COMPONENT: Unchanged floating glass layout
+     ───────────────────────────────────────────────────────── */
   return (
     <>
       <GlassFilter />
 
       <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[1200] flex justify-center w-full px-4 pointer-events-none">
-        {/* ── NAV PILL — outer glass shell ── */}
         <nav
           className="pointer-events-auto relative flex items-center gap-1 overflow-hidden"
           style={{
@@ -136,7 +207,6 @@ export function BottomNav() {
         >
           <GlassLayers borderRadius={32} />
 
-          {/* ── ITEMS ── */}
           {bottomNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -167,10 +237,8 @@ export function BottomNav() {
                   transitionTimingFunction: 'cubic-bezier(0.175,0.885,0.32,2.2)',
                 }}
               >
-                {/* Per-item glass layers when active OR on hover */}
                 {active && (
                   <>
-                    {/* distortion layer */}
                     <div
                       className="absolute inset-0 z-0 overflow-hidden"
                       style={{
@@ -180,7 +248,6 @@ export function BottomNav() {
                         isolation: 'isolate',
                       }}
                     />
-                    {/* tint — teal for center, white for others */}
                     <div
                       className="absolute inset-0 z-10"
                       style={{
@@ -190,7 +257,6 @@ export function BottomNav() {
                           : 'rgba(255,255,255,0.38)',
                       }}
                     />
-                    {/* rim */}
                     <div
                       className="absolute inset-0 z-20 overflow-hidden"
                       style={{
@@ -202,7 +268,6 @@ export function BottomNav() {
                   </>
                 )}
 
-                {/* hover glass — only for inactive items */}
                 {!active && (
                   <>
                     <div
@@ -232,7 +297,6 @@ export function BottomNav() {
                   </>
                 )}
 
-                {/* Icon */}
                 <Icon
                   size={iconSize}
                   strokeWidth={active ? 2.1 : 1.8}
@@ -247,7 +311,6 @@ export function BottomNav() {
                   }}
                 />
 
-                {/* Label */}
                 <span
                   className={cn('relative z-30', !active && 'group-hover:!max-w-[110px] group-hover:!opacity-60 group-hover:!ml-2')}
                   style={{

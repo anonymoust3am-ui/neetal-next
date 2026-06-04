@@ -1,7 +1,6 @@
 "use client";
 import { motion } from "motion/react";
 import { Check, Sparkles } from "lucide-react";
-import AnimatedTitle from "./AnimatedTitle";
 import { SectionHeader } from "./ui/SectionHeader";
 
 const plans = [
@@ -21,8 +20,12 @@ const plans = [
             "State Counselling Data",
             "Valid till Final Round",
         ],
-        color: "primary",
-        lightColor: "primary-light",
+        // Explicit layout tokens mapping to your CSS root variables
+        badgeStyles: "bg-[var(--color-primary-light)] text-[var(--color-primary)]",
+        checkStyles: "bg-[var(--color-primary)] text-white",
+        buttonStyles: "bg-[var(--color-btn-outline-hover)] text-[var(--color-primary)] border border-[var(--color-border-strong)] hover:bg-[var(--color-primary)] hover:text-white",
+        cardBorderStyles: "border-[var(--color-border)] hover:border-[var(--color-primary)]/40",
+        blobColor: "bg-[var(--color-primary)]",
     },
     {
         name: "NEET PG",
@@ -40,8 +43,12 @@ const plans = [
             "Bond & Service Details",
             "Valid for 1 Year",
         ],
-        color: "secondary",
-        lightColor: "secondary-light",
+        badgeStyles: "bg-[var(--color-secondary-light)] text-[var(--color-secondary)]",
+        checkStyles: "bg-[var(--color-secondary)] text-white",
+        // Popular plan gets the solid, prominent filled primary button
+        buttonStyles: "bg-[var(--color-primary)] text-white shadow-md hover:bg-[var(--color-primary-hover)] hover:shadow-lg hover:-translate-y-0.5",
+        cardBorderStyles: "border-[var(--color-primary)] shadow-xl shadow-[var(--color-primary)]/5",
+        blobColor: "bg-[var(--color-secondary)]",
     },
     {
         name: "INICET",
@@ -58,15 +65,19 @@ const plans = [
             "Fee Structure Details",
             "Valid till Final Round",
         ],
-        color: "accent",
-        lightColor: "accent-light",
+        badgeStyles: "bg-[var(--color-accent-light)] text-[var(--color-accent)]",
+        checkStyles: "bg-[var(--color-accent)] text-white",
+        buttonStyles: "bg-[var(--color-btn-outline-hover)] text-[var(--color-primary)] border border-[var(--color-border-strong)] hover:bg-[var(--color-primary)] hover:text-white",
+        cardBorderStyles: "border-[var(--color-border)] hover:border-[var(--color-primary)]/40",
+        blobColor: "bg-[var(--color-accent)]",
     },
 ];
 
 export function PricingPlans() {
     return (
-        <section className="py-24 bg-gradient-to-b from-bg-secondary to-bg-primary relative overflow-hidden">
-            <div className="absolute inset-0 opacity-20">
+        <section className="py-24 bg-gradient-to-b from-[var(--color-bg-secondary)] to-[var(--color-bg-primary)] relative overflow-hidden">
+            {/* Background Grid Pattern */}
+            <div className="absolute inset-0 opacity-10">
                 <div
                     className="absolute inset-0"
                     style={{
@@ -93,7 +104,7 @@ export function PricingPlans() {
                     />
                 </motion.div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto items-stretch">
                     {plans.map((plan, index) => (
                         <motion.div
                             key={index}
@@ -102,64 +113,64 @@ export function PricingPlans() {
                             viewport={{ once: true }}
                             transition={{ duration: 0.5, delay: index * 0.1 }}
                             whileHover={{ y: -8 }}
-                            className={`relative ${plan.popular ? "lg:-mt-6 lg:mb-4" : ""}`}
+                            className={`relative flex flex-col ${plan.popular ? "lg:-mt-6 lg:mb-4" : ""}`}
                         >
                             <div
-                                className={`relative h-full p-6 rounded-xl border flex flex-col transition-all duration-300 overflow-hidden ${plan.popular
-                                    ? `border-${plan.color} bg-card shadow-xl shadow-${plan.color}/10`
-                                    : "border-border bg-card hover:border-primary/30"
-                                    }`}
+                                className={`relative flex flex-col h-full p-6 rounded-xl border bg-[var(--color-bg-secondary)] transition-all duration-300 overflow-hidden ${plan.cardBorderStyles}`}
                             >
+                                {/* Floating Popular Pill */}
                                 {plan.popular && (
-                                    <div className="absolute -top-0 pt-1 pb-4 right-3 z-20">
-                                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary text-primary-foreground text-xs font-semibold shadow-md whitespace-nowrap">
-                                            <Sparkles className="w-3 h-3" />
+                                    <div className="absolute top-4 right-4 z-20">
+                                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--color-primary)] text-white text-xs font-semibold shadow-md whitespace-nowrap animate-pulse">
+                                            <Sparkles className="w-3 h-3 text-white fill-white" />
                                             Popular
                                         </div>
                                     </div>
                                 )}
-                                <div className="mt-4 mb-6">
-                                    <div className={`inline-flex px-3 py-1 rounded-full bg-${plan.lightColor} mb-3`}>
-                                        <span className={`text-xs font-medium text-${plan.color}`}>
-                                            {plan.subtitle}
-                                        </span>
+
+                                <div className="mt-2 mb-6">
+                                    {/* Plan Category Badge */}
+                                    <div className={`inline-flex px-3 py-1 rounded-full mb-3 font-medium text-xs ${plan.badgeStyles}`}>
+                                        {plan.subtitle}
                                     </div>
-                                    <h3 className="text-xl font-bold text-foreground mb-1">
+                                    <h3 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">
                                         {plan.name}
                                     </h3>
 
                                     <div className="flex items-baseline gap-2 mt-3">
-                                        <span className="text-3xl font-bold text-foreground">
+                                        <span className="text-4xl font-bold text-[var(--color-text-primary)]">
                                             ₹{plan.price}
                                         </span>
-                                        <span className="text-sm text-foreground-muted line-through">
+                                        <span className="text-sm text-[var(--color-text-muted)] line-through">
                                             ₹{plan.originalPrice}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-foreground-muted mt-1">Starting from</p>
+                                    <p className="text-xs text-[var(--color-text-muted)] mt-1">Starting from</p>
                                 </div>
 
-                                <ul className="space-y-2.5 mb-6">
+                                {/* Feature List Element */}
+                                <ul className="space-y-3 mb-8 flex-grow">
                                     {plan.features.map((feature, idx) => (
-                                        <li key={idx} className="flex items-start gap-2.5">
-                                            <div className={`w-4 h-4 rounded-full bg-${plan.color} flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                                                <Check className="w-2.5 h-2.5 text-${plan.color}-foreground" />
+                                        <li key={idx} className="flex items-start gap-3">
+                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm ${plan.checkStyles}`}>
+                                                <Check className="w-3 h-3 stroke-[3]" />
                                             </div>
-                                            <span className="text-sm text-foreground-muted">{feature}</span>
+                                            <span className="text-sm text-[var(--color-text-secondary)] font-medium leading-normal">
+                                                {feature}
+                                            </span>
                                         </li>
                                     ))}
                                 </ul>
 
+                                {/* Action Buttons */}
                                 <button
-                                    className={`w-full py-2.5 rounded-lg font-medium text-sm transition-all duration-300 ${plan.popular
-                                        ? `bg-${plan.color} text-${plan.color}-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5`
-                                        : "bg-secondary text-secondary-foreground border border-border hover:bg-secondary-hover"
-                                        }`}
+                                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-300 ${plan.buttonStyles}`}
                                 >
                                     Get Started
                                 </button>
 
-                                <div className={`absolute -bottom-16 -right-16 w-48 h-48 bg-${plan.color} rounded-full opacity-5 blur-2xl pointer-events-none`}></div>
+                                {/* Aesthetic Background Blur Circles */}
+                                <div className={`absolute -bottom-16 -right-16 w-48 h-48 rounded-full opacity-5 blur-3xl pointer-events-none ${plan.blobColor}`}></div>
                             </div>
                         </motion.div>
                     ))}

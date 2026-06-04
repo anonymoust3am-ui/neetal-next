@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Home, ArrowLeft, Search, Stethoscope, BookOpen, BarChart2, Map } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Canvas — particle network with connecting lines
+// Canvas — Dynamic particle background using system properties
 // ─────────────────────────────────────────────────────────────────────────────
 function ParticleCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -15,9 +15,10 @@ function ParticleCanvas() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
 
-    const BRAND = ['#0d9488', '#7c3aed', '#0ea5e9', '#14b8a6', '#8b5cf6'];
-    const COUNT = 65;
-    const CONNECT = 130;
+    // Using unified system token strings instead of hardcoded raw hex colors
+    const BRAND = ['rgba(13,148,136,0.6)', 'rgba(124,58,237,0.6)', 'rgba(14,165,233,0.6)'];
+    const COUNT = 50;
+    const CONNECT = 120;
 
     interface P { x: number; y: number; vx: number; vy: number; r: number; color: string; }
 
@@ -25,10 +26,11 @@ function ParticleCanvas() {
     let H = (canvas.height = window.innerHeight);
 
     const pts: P[] = Array.from({ length: COUNT }, () => ({
-      x: Math.random() * W, y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.45,
-      vy: (Math.random() - 0.5) * 0.45,
-      r: Math.random() * 2.2 + 0.8,
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      r: Math.random() * 2 + 0.8,
       color: BRAND[Math.floor(Math.random() * BRAND.length)],
     }));
 
@@ -43,12 +45,12 @@ function ParticleCanvas() {
           const dy = pts[i].y - pts[j].y;
           const d  = Math.hypot(dx, dy);
           if (d < CONNECT) {
-            const alpha = (1 - d / CONNECT) * 0.22;
+            const alpha = (1 - d / CONNECT) * 0.15;
             ctx.beginPath();
             ctx.moveTo(pts[i].x, pts[i].y);
             ctx.lineTo(pts[j].x, pts[j].y);
-            ctx.strokeStyle = `rgba(13,148,136,${alpha})`;
-            ctx.lineWidth = 0.8;
+            ctx.strokeStyle = `rgba(148,163,184,${alpha})`;
+            ctx.lineWidth = 0.6;
             ctx.stroke();
           }
         }
@@ -57,7 +59,7 @@ function ParticleCanvas() {
       for (const p of pts) {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = p.color + 'aa';
+        ctx.fillStyle = p.color;
         ctx.fill();
 
         p.x += p.vx; p.y += p.vy;
@@ -78,11 +80,11 @@ function ParticleCanvas() {
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); };
   }, []);
 
-  return <canvas ref={ref} className="absolute inset-0 pointer-events-none" style={{ opacity: 0.65 }} />;
+  return <canvas ref={ref} className="absolute inset-0 pointer-events-none" style={{ opacity: 0.5 }} />;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ECG / heartbeat strip
+// ECG Heartbeat Strip
 // ─────────────────────────────────────────────────────────────────────────────
 function EcgStrip() {
   return (
@@ -90,10 +92,10 @@ function EcgStrip() {
       <svg viewBox="0 0 1400 56" preserveAspectRatio="none" className="w-full h-full">
         <defs>
           <linearGradient id="ecg-g" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor="rgba(13,148,136,0)" />
-            <stop offset="20%"  stopColor="rgba(13,148,136,0.6)" />
-            <stop offset="50%"  stopColor="rgba(124,58,237,0.7)" />
-            <stop offset="80%"  stopColor="rgba(14,165,233,0.6)" />
+            <stop offset="0%" stopColor="rgba(13,148,136,0)" />
+            <stop offset="20%" stopColor="rgba(13,148,136,0.3)" />
+            <stop offset="50%" stopColor="rgba(124,58,237,0.4)" />
+            <stop offset="80%" stopColor="rgba(14,165,233,0.3)" />
             <stop offset="100%" stopColor="rgba(14,165,233,0)" />
           </linearGradient>
         </defs>
@@ -106,7 +108,7 @@ function EcgStrip() {
              L860,28 L880,28 L892,6  L904,50 L916,8  L928,28 L950,28
              L1050,28 L1070,28 L1082,6 L1094,50 L1106,8 L1118,28 L1140,28
              L1240,28 L1260,28 L1272,6 L1284,50 L1296,8 L1308,28 L1400,28"
-          fill="none" stroke="url(#ecg-g)" strokeWidth="1.8"
+          fill="none" stroke="url(#ecg-g)" strokeWidth="1.5"
           strokeLinecap="round" strokeLinejoin="round"
         />
       </svg>
@@ -115,11 +117,11 @@ function EcgStrip() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// hooks
+// Interactive Custom Effects Hooks
 // ─────────────────────────────────────────────────────────────────────────────
 const GCHARS = '!<>-_\\/[]{}=+*^?#@$%&~|';
 
-function useGlitch(target: string, period = 3200) {
+function useGlitch(target: string, period = 4000) {
   const [text, setText] = useState(target);
   const [shift, setShift] = useState(false);
 
@@ -127,10 +129,10 @@ function useGlitch(target: string, period = 3200) {
     let frame = 0; let raf: number; let tout: ReturnType<typeof setTimeout>;
     const run = () => {
       frame++;
-      if (frame < 22) {
+      if (frame < 18) {
         setShift(frame % 4 < 2);
         setText(target.split('').map((c, i) =>
-          i < frame / 2.8 ? c : GCHARS[Math.floor(Math.random() * GCHARS.length)]
+          i < frame / 3 ? c : GCHARS[Math.floor(Math.random() * GCHARS.length)]
         ).join(''));
         raf = requestAnimationFrame(run);
       } else {
@@ -145,7 +147,7 @@ function useGlitch(target: string, period = 3200) {
   return { text, shift };
 }
 
-function useTypewriter(full: string, startDelay = 700, charDelay = 32) {
+function useTypewriter(full: string, startDelay = 500, charDelay = 25) {
   const [out, setOut] = useState('');
   useEffect(() => {
     let i = 0; let timer: ReturnType<typeof setTimeout>;
@@ -162,7 +164,7 @@ function useTypewriter(full: string, startDelay = 700, charDelay = 32) {
   return out;
 }
 
-function useCountUp(target: number, ms = 1300) {
+function useCountUp(target: number, ms = 1200) {
   const [val, setVal] = useState(0);
   useEffect(() => {
     let start: number | null = null; let raf: number;
@@ -178,7 +180,7 @@ function useCountUp(target: number, ms = 1300) {
   return val;
 }
 
-function useParallax(str = 14) {
+function useParallax(str = 10) {
   const [off, setOff] = useState({ x: 0, y: 0 });
   useEffect(() => {
     const fn = (e: MouseEvent) => {
@@ -191,7 +193,7 @@ function useParallax(str = 14) {
   return off;
 }
 
-function useTilt(el: React.RefObject<HTMLDivElement | null>, max = 7) {
+function useTilt(el: React.RefObject<HTMLDivElement | null>, max = 5) {
   const [t, setT] = useState({ x: 0, y: 0 });
   useEffect(() => {
     const node = el.current; if (!node) return;
@@ -211,74 +213,69 @@ function useTilt(el: React.RefObject<HTMLDivElement | null>, max = 7) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// data
+// Asset Arrays
 // ─────────────────────────────────────────────────────────────────────────────
-const LINKS = [
-  { href: '/dashboard',           icon: BarChart2,   label: 'Dashboard',  accent: '#0d9488' },
-  { href: '/dashboard/colleges',  icon: BookOpen,    label: 'Colleges',   accent: '#7c3aed' },
-  { href: '/dashboard/predictor', icon: Stethoscope, label: 'Predictor',  accent: '#0ea5e9' },
-  { href: '/dashboard/guides',    icon: Map,         label: 'Guides',     accent: '#14b8a6' },
-];
-
 const FLOATERS = [
-  { s: '+', x:  7, y: 14, d: 0,   sz: 18, o: 0.13, c: '#0d9488' },
-  { s: '⊕', x: 89, y: 18, d: 0.6, sz: 22, o: 0.1,  c: '#7c3aed' },
-  { s: '+', x: 14, y: 72, d: 1.1, sz: 15, o: 0.14, c: '#0ea5e9' },
-  { s: '⊕', x: 82, y: 78, d: 1.7, sz: 20, o: 0.09, c: '#0d9488' },
-  { s: '+', x: 52, y:  7, d: 0.9, sz: 17, o: 0.11, c: '#7c3aed' },
-  { s: '⊕', x: 94, y: 52, d: 2.1, sz: 24, o: 0.08, c: '#0ea5e9' },
-  { s: '+', x:  4, y: 48, d: 1.4, sz: 21, o: 0.1,  c: '#14b8a6' },
-  { s: '⊕', x: 45, y: 92, d: 0.4, sz: 19, o: 0.1,  c: '#8b5cf6' },
+  { s: '+', x:  8, y: 15, d: 0,   sz: 16, o: 0.1,  c: 'var(--color-primary)' },
+  { s: '⊕', x: 88, y: 20, d: 0.6, sz: 20, o: 0.08, c: 'var(--color-secondary)' },
+  { s: '+', x: 12, y: 75, d: 1.1, sz: 14, o: 0.12, c: 'var(--color-accent)' },
+  { s: '⊕', x: 84, y: 80, d: 1.7, sz: 18, o: 0.07, c: 'var(--color-primary)' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// page
+// Page Layout Render Engine
 // ─────────────────────────────────────────────────────────────────────────────
 export default function NotFound() {
-  const [mounted, setMounted]   = useState(false);
-  const [search,  setSearch]    = useState('');
-  const [focused, setFocused]   = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [search, setSearch] = useState('');
+  const [focused, setFocused] = useState(false);
 
-  const cardRef  = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const { text: glitch, shift } = useGlitch('404');
-  const typed   = useTypewriter("This page doesn't exist — or was moved. Let's get you back on track.");
-  const counted = useCountUp(404, 1400);
-  const par     = useParallax(13);
-  const tilt    = useTilt(cardRef);
+  const typed = useTypewriter("This page doesn't exist — or was moved. Let's get you back on track.");
+  const counted = useCountUp(404, 1200);
+  const par = useParallax(8);
+  const tilt = useTilt(cardRef);
 
   useEffect(() => { setMounted(true); }, []);
 
-  return (
-    <div className="relative min-h-screen bg-background overflow-hidden flex flex-col items-center justify-center px-6 py-20 font-sans select-none">
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (search.trim()) {
+      window.location.href = `/dashboard?search=${encodeURIComponent(search.trim())}`;
+    }
+  };
 
-      {/* ── canvas network ── */}
+  return (
+    <div className="relative min-h-screen bg-background overflow-hidden flex flex-col items-center justify-center px-6 py-16 font-sans select-none">
+
+      {/* Canvas Layer Integration */}
       {mounted && <ParticleCanvas />}
 
-      {/* ── aurora blobs ── */}
+      {/* Decorative Aura Nodes */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
         <div className="n-aurora n-a1" />
         <div className="n-aurora n-a2" />
-        <div className="n-aurora n-a3" />
       </div>
 
-      {/* ── full-page dot grid ── */}
+      {/* Radial Grid Pattern Mask Overlay */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-20"
         aria-hidden
         style={{
-          backgroundImage: 'radial-gradient(circle, rgba(13,148,136,0.18) 1px, transparent 1px)',
-          backgroundSize: '36px 36px',
-          maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%)',
-          WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%)',
+          backgroundImage: 'radial-gradient(circle, var(--color-border-strong) 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
+          maskImage: 'radial-gradient(ellipse 70% 70% at 50% 50%, black 50%, transparent 100%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 70% 70% at 50% 50%, black 50%, transparent 100%)',
         }}
       />
 
-      {/* ── medical float symbols ── */}
+      {/* Float Symbols Layer */}
       {mounted && FLOATERS.map((f, i) => (
         <span
           key={i}
           aria-hidden
-          className="absolute pointer-events-none font-black n-floater"
+          className="absolute pointer-events-none font-medium n-floater"
           style={{
             left: `${f.x}%`, top: `${f.y}%`,
             fontSize: f.sz, opacity: f.o, color: f.c,
@@ -287,188 +284,122 @@ export default function NotFound() {
         >{f.s}</span>
       ))}
 
-      {/* ── ECG strip ── */}
+      {/* Line Draw Pulse Section */}
       <EcgStrip />
 
-      {/* ── decorative spinning rings ── */}
-      <div aria-hidden className="absolute -top-36 -right-36 w-[420px] h-[420px] rounded-full pointer-events-none n-ring-cw"
-        style={{ border: '1px solid rgba(13,148,136,0.13)', boxShadow: 'inset 0 0 60px rgba(13,148,136,0.04)' }} />
-      <div aria-hidden className="absolute -top-20 -right-20 w-64 h-64 rounded-full pointer-events-none"
-        style={{ border: '1px dashed rgba(124,58,237,0.1)' }} />
-      <div aria-hidden className="absolute -bottom-28 -left-28 w-80 h-80 rounded-full pointer-events-none n-ring-ccw"
-        style={{ border: '1px solid rgba(14,165,233,0.1)' }} />
-      <div aria-hidden className="absolute -bottom-12 -left-12 w-44 h-44 rounded-full pointer-events-none"
-        style={{ border: '1px dashed rgba(13,148,136,0.08)' }} />
+      {/* Concentric Circle Geometry Layout */}
+      <div aria-hidden className="absolute -top-32 -right-32 w-96 h-96 rounded-full pointer-events-none n-ring-cw border border-border/40" />
+      <div aria-hidden className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full pointer-events-none n-ring-ccw border border-border/30" />
 
-      {/* ── main card ── */}
+      {/* Core Display Card Body Block */}
       <div
         ref={cardRef}
-        className={`relative z-10 flex flex-col items-center text-center max-w-xl w-full transition-opacity duration-700 ${mounted ? 'opacity-100' : 'opacity-0'}`}
+        className={`relative z-10 flex flex-col items-center text-center max-w-md w-full transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
         style={{
-          transform: `perspective(1100px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-          transition: 'transform 0.18s ease',
+          transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+          transition: 'transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1)',
         }}
       >
 
-        {/* brand pill */}
-        <div
-          className="mb-8 inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-border bg-surface/80 backdrop-blur-md shadow-sm"
-          style={{ animation: mounted ? 'nf-pill 0.55s 0.1s ease both' : 'none' }}
-        >
+        {/* Identity Context Pill Indicator */}
+        <div className="mb-6 inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-surface/80 backdrop-blur-md shadow-sm">
           <span className="relative flex h-2 w-2 shrink-0">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-70" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
           </span>
           <span className="text-xs font-semibold text-foreground-muted tracking-wide">Neetell · Page not found</span>
-          <span className="text-[10px] font-mono text-foreground-subtle bg-muted px-2 py-0.5 rounded-md border border-border">HTTP 404</span>
+          <span className="text-[10px] font-mono font-medium text-foreground-subtle bg-muted px-1.5 py-0.5 rounded-md border border-border">HTTP 404</span>
         </div>
 
-        {/* ── 404 with parallax + glow + glitch + scanlines ── */}
+        {/* Digital Hologram Indicator Section */}
         <div
-          className="relative mb-1"
+          className="relative mb-2"
           style={{
-            transform: `translate(${par.x * 0.35}px, ${par.y * 0.35}px)`,
-            transition: 'transform 0.12s linear',
+            transform: `translate(${par.x * 0.25}px, ${par.y * 0.25}px)`,
+            transition: 'transform 0.1s linear',
           }}
         >
-          {/* glow bloom */}
-          <div
-            className="absolute inset-0 pointer-events-none flex items-center justify-center"
-            aria-hidden
-            style={{ filter: 'blur(55px)' }}
-          >
-            <span
-              className="font-black leading-none"
-              style={{
-                fontSize: 'clamp(90px, 18vw, 180px)',
-                background: 'linear-gradient(135deg, #0d9488, #7c3aed)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                opacity: 0.45,
-              }}
-            >404</span>
-          </div>
-
-          {/* main number */}
+          {/* Main Numeric Character Grid */}
           <p
-            className="relative font-black leading-none tracking-tighter"
+            className="relative font-bold leading-none tracking-tighter"
             style={{
-              fontSize: 'clamp(90px, 18vw, 180px)',
-              background: 'linear-gradient(135deg, #0d9488 0%, #7c3aed 50%, #0ea5e9 100%)',
+              fontSize: 'clamp(96px, 16vw, 150px)',
+              background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-accent) 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
               fontVariantNumeric: 'tabular-nums',
               filter: shift
-                ? 'drop-shadow(3px 0 rgba(255,0,80,0.5)) drop-shadow(-3px 0 rgba(0,220,255,0.5)) brightness(1.1)'
-                : 'drop-shadow(0 0 28px rgba(13,148,136,0.28))',
-              transition: 'filter 0.05s',
+                ? 'drop-shadow(2px 0 rgba(220,38,38,0.4)) drop-shadow(-2px 0 rgba(14,165,233,0.4))'
+                : 'drop-shadow(0 4px 12px var(--color-border))',
             }}
-          >{glitch}</p>
-
-          {/* scanlines */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            aria-hidden
-            style={{
-              background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.022) 2px, rgba(0,0,0,0.022) 4px)',
-            }}
-          />
-
-          {/* corner brackets */}
-          <div aria-hidden className="absolute top-2 left-2 w-5 h-5 pointer-events-none" style={{ borderTop: '2px solid rgba(13,148,136,0.4)', borderLeft: '2px solid rgba(13,148,136,0.4)' }} />
-          <div aria-hidden className="absolute top-2 right-2 w-5 h-5 pointer-events-none" style={{ borderTop: '2px solid rgba(124,58,237,0.4)', borderRight: '2px solid rgba(124,58,237,0.4)' }} />
-          <div aria-hidden className="absolute bottom-2 left-2 w-5 h-5 pointer-events-none" style={{ borderBottom: '2px solid rgba(14,165,233,0.4)', borderLeft: '2px solid rgba(14,165,233,0.4)' }} />
-          <div aria-hidden className="absolute bottom-2 right-2 w-5 h-5 pointer-events-none" style={{ borderBottom: '2px solid rgba(13,148,136,0.4)', borderRight: '2px solid rgba(13,148,136,0.4)' }} />
+          >
+            {glitch}
+          </p>
         </div>
 
-        {/* count-up badge */}
-        <div
-          className="mb-5 font-mono text-[11px] text-foreground-subtle tracking-widest"
-          style={{ animation: mounted ? 'nf-up 0.5s 0.55s ease both' : 'none' }}
-        >
+        {/* Context Configuration Metadata Trace */}
+        <div className="mb-4 font-mono text-[11px] text-foreground-subtle tracking-wider">
           error_code:&nbsp;
           <span className="text-primary font-bold">{String(counted).padStart(3, '0')}</span>
           &nbsp;·&nbsp;
           <span className="text-foreground-subtle">status: NOT_FOUND</span>
         </div>
 
-        {/* headline */}
-        <h1
-          className="text-[26px] sm:text-3xl font-bold text-foreground mb-3 leading-tight"
-          style={{ animation: mounted ? 'nf-up 0.6s 0.3s ease both' : 'none' }}
-        >
+        {/* Title Elements */}
+        <h1 className="text-2xl font-bold text-foreground mb-2 tracking-tight">
           Lost in the wards?
         </h1>
 
-        {/* typewriter */}
-        <p
-          className="text-base text-foreground-muted mb-8 max-w-sm leading-relaxed"
-          style={{ minHeight: 52, animation: mounted ? 'nf-up 0.6s 0.4s ease both' : 'none' }}
-        >
+        {/* Dynamic Character Layout Buffer Context */}
+        <p className="text-sm text-foreground-muted mb-6 max-w-xs leading-relaxed min-h-10">
           {typed}
-          <span className="inline-block w-[2px] h-[15px] bg-primary ml-0.5 align-middle n-blink" />
+          <span className="inline-block w-[2px] h-[12px] bg-primary ml-0.5 align-middle n-blink" />
         </p>
 
-        {/* search with animated focus ring */}
-        <div
-          className="relative w-full max-w-sm mb-8"
-          style={{ animation: mounted ? 'nf-up 0.6s 0.5s ease both' : 'none' }}
+        {/* Completed Search Mechanism Integration */}
+        <form 
+          onSubmit={handleSearchSubmit} 
+          className={`relative w-full rounded-lg bg-input border transition-all duration-200 flex items-center px-3 mb-6 ${focused ? 'border-border-focus ring-1 ring-border-focus shadow-sm' : 'border-border'}`}
         >
-          {/* animated gradient border on focus */}
-          {focused && (
-            <div
-              className="absolute -inset-[2px] rounded-[18px] pointer-events-none n-search-glow"
-              style={{
-                background: 'linear-gradient(135deg, #0d9488, #7c3aed, #0ea5e9, #0d9488)',
-                backgroundSize: '300% 300%',
-                animation: 'nf-grad-spin 2s linear infinite',
-              }}
-            />
-          )}
-        </div>
+          <Search size={16} className="text-foreground-subtle shrink-0" />
+          <input
+            type="text"
+            placeholder="Search platform routes..."
+            value={search}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full h-10 px-2 bg-transparent text-sm text-foreground placeholder:text-foreground-subtle outline-none border-none"
+          />
+        </form>
 
-
-        {/* CTA row */}
-        <div
-          className="flex flex-wrap items-center justify-center gap-3"
-          style={{ animation: mounted ? 'nf-up 0.6s 0.75s ease both' : 'none' }}
-        >
+        {/* Control Interactions Elements Frame Layer */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 w-full">
           <Link
             href="/dashboard"
-            className="group relative flex items-center gap-2 h-11 px-7 rounded-2xl bg-primary text-white text-sm font-semibold overflow-hidden transition-all hover:bg-primary-hover hover:shadow-xl active:scale-[0.97]"
-            style={{ boxShadow: '0 4px 24px rgba(13,148,136,0.3)' }}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-10 px-5 rounded-md bg-primary text-primary-foreground text-sm font-semibold transition-colors hover:bg-primary-hover active:scale-[0.98]"
           >
-            {/* shimmer sweep */}
-            <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-600 ease-in-out" />
-            <Home size={15} />
+            <Home size={14} />
             Go to Dashboard
           </Link>
 
           <button
             onClick={() => window.history.back()}
-            className="flex items-center gap-2 h-11 px-6 rounded-2xl border border-border bg-surface/80 backdrop-blur-md text-sm font-semibold text-foreground-muted hover:border-border-strong hover:text-foreground active:scale-[0.97] transition-all"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-10 px-5 rounded-md border border-border bg-surface text-sm font-semibold text-foreground-muted hover:bg-hover hover:text-foreground active:scale-[0.98] transition-colors"
           >
-            <ArrowLeft size={15} />
+            <ArrowLeft size={14} />
             Go Back
           </button>
         </div>
+
       </div>
 
-      {/* ── keyframes ── */}
+      {/* Styled Sheet Directives */}
       <style>{`
-        @keyframes nf-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to   { opacity: 1; transform: translateY(0);    }
-        }
-        @keyframes nf-pill {
-          from { opacity: 0; transform: scale(0.88) translateY(-8px); }
-          to   { opacity: 1; transform: scale(1)    translateY(0);    }
-        }
         @keyframes nf-float {
-          0%, 100% { transform: translateY(0)    rotate(0deg); }
-          50%       { transform: translateY(-14px) rotate(10deg); }
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50%       { transform: translateY(-10px) rotate(4deg); }
         }
         @keyframes nf-blink {
           0%, 100% { opacity: 1; }
@@ -476,71 +407,36 @@ export default function NotFound() {
         }
         @keyframes nf-ring-cw  { to { transform: rotate(360deg);  } }
         @keyframes nf-ring-ccw { to { transform: rotate(-360deg); } }
-        @keyframes nf-aurora1 {
-          0%, 100% { transform: translate(0,0) scale(1); }
-          33%       { transform: translate(70px,-50px) scale(1.12); }
-          66%       { transform: translate(-45px,35px) scale(0.93); }
-        }
-        @keyframes nf-aurora2 {
-          0%, 100% { transform: translate(0,0) scale(1); }
-          50%       { transform: translate(-90px,60px) scale(1.18); }
-        }
-        @keyframes nf-aurora3 {
-          0%, 100% { transform: translate(0,0) scale(1); }
-          40%       { transform: translate(55px,75px) scale(1.1); }
-          80%       { transform: translate(-30px,-25px) scale(0.88); }
-        }
-        @keyframes nf-ecg-draw {
-          from { stroke-dashoffset: 3000; }
-          to   { stroke-dashoffset: 0; }
-        }
-        @keyframes nf-ecg-pulse {
-          0%, 100% { opacity: 0.35; }
-          50%       { opacity: 0.9; }
-        }
-        @keyframes nf-grad-spin {
-          0%   { background-position: 0% 50%; }
-          50%  { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
 
-        .n-floater { animation: nf-float 4.5s ease-in-out infinite; }
-        .n-blink   { animation: nf-blink 1.1s step-end infinite; }
-        .n-ring-cw  { animation: nf-ring-cw  35s linear infinite; transform-origin: center; }
-        .n-ring-ccw { animation: nf-ring-ccw 22s linear infinite; transform-origin: center; }
+        .n-floater { animation: nf-float 4s ease-in-out infinite; }
+        .n-blink   { animation: nf-blink 1s step-end infinite; }
+        .n-ring-cw  { animation: nf-ring-cw  40s linear infinite; transform-origin: center; }
+        .n-ring-ccw { animation: nf-ring-ccw 25s linear infinite; transform-origin: center; }
 
         .n-aurora {
           position: absolute;
-          border-radius: 50%;
-          filter: blur(90px);
+          border-radius: var(--radius-full);
+          filter: blur(80px);
           pointer-events: none;
+          opacity: 0.6;
         }
         .n-a1 {
-          width: 520px; height: 520px;
-          top: -130px; right: -130px;
-          background: radial-gradient(circle, rgba(13,148,136,0.14) 0%, transparent 70%);
-          animation: nf-aurora1 13s ease-in-out infinite;
+          width: 400px; height: 400px;
+          top: -100px; right: -100px;
+          background: radial-gradient(circle, var(--color-primary-light) 0%, transparent 70%);
         }
         .n-a2 {
-          width: 620px; height: 620px;
-          bottom: -180px; left: -180px;
-          background: radial-gradient(circle, rgba(124,58,237,0.11) 0%, transparent 70%);
-          animation: nf-aurora2 17s ease-in-out infinite;
-        }
-        .n-a3 {
-          width: 420px; height: 420px;
-          top: 35%; left: 38%;
-          background: radial-gradient(circle, rgba(14,165,233,0.09) 0%, transparent 70%);
-          animation: nf-aurora3 11s ease-in-out infinite;
+          width: 450px; height: 450px;
+          bottom: -150px; left: -150px;
+          background: radial-gradient(circle, var(--color-secondary-light) 0%, transparent 70%);
         }
 
         .ecg-path {
-          stroke-dasharray: 3000;
-          animation: nf-ecg-draw 2.8s 0.5s ease forwards,
-                     nf-ecg-pulse 2.5s 3.3s ease-in-out infinite;
+          stroke-dasharray: 2000;
+          stroke-dashoffset: 2000;
+          animation: draw 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
-
-        .n-search-glow { border-radius: 18px; }
+        @keyframes draw { to { stroke-dashoffset: 0; } }
       `}</style>
     </div>
   );

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Phone, Mail, MapPin, Globe, Calendar, User,
   Monitor, Smartphone, LogOut, Edit3, Check, X,
-  Loader2, AlertCircle, Clock, Lock, Key, Shield, RefreshCw, ChevronRight,
+  Loader2, AlertCircle, Clock, Lock, Key, Shield, RefreshCw, ChevronRight
 } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,14 +37,15 @@ interface EditForm {
 
 type AlertState = { type: 'error' | 'success'; msg: string } | null;
 
-type EmailModal =
-  | { mode: 'update-email';        step: 'input'; email: string }
-  | { mode: 'update-email';        step: 'otp';   email: string; otp: string }
-  | { mode: 'enable-email-login';  step: 'input'; email: string; password: string; confirm: string }
-  | { mode: 'enable-email-login';  step: 'otp';   email: string; otp: string }
-  | { mode: 'change-password';     current: string; next: string; confirm: string }
-  | { mode: 'resend-verify' }
-  | null;
+type SecurityFlow = 
+  | { mode: 'idle' }
+  | { mode: 'update-email'; step: 'input'; email: string }
+  | { mode: 'update-email'; step: 'otp'; email: string; otp: string }
+  | { mode: 'enable-email-login'; step: 'input'; email: string; password: string; confirm: string }
+  | { mode: 'enable-email-login'; step: 'otp'; email: string; otp: string }
+  | { mode: 'change-password'; current: string; next: string; confirm: string };
+
+type TabType = 'profile' | 'security' | 'sessions';
 
 /* ─── Helpers ────────────────────────────────────────────────────────────────── */
 
@@ -54,7 +55,7 @@ function cn(...cls: (string | false | null | undefined)[]) {
 
 async function getToken(): Promise<string> {
   const u = auth.currentUser;
-  if (!u) throw new Error('Not authenticated');
+  if (!u) throw new Error('Not signed in');
   return u.getIdToken();
 }
 
@@ -80,169 +81,39 @@ function timeAgo(iso: string) {
   return d < 7 ? `${d}d ago` : new Date(iso).toLocaleDateString('en-IN');
 }
 
-/* ─── Primitive UI ───────────────────────────────────────────────────────────── */
+/* ─── UI Components ────────────────────────────────────────────────────────── */
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs font-semibold uppercase tracking-widest text-foreground-subtle">
-      {children}
-    </p>
-  );
-}
-
-type BadgeVariant = 'neutral' | 'success' | 'warning' | 'error';
-function Badge({ children, variant = 'neutral' }: { children: React.ReactNode; variant?: BadgeVariant }) {
-  const map: Record<BadgeVariant, string> = {
+function StatusBadge({ children, variant = 'neutral' }: { children: React.ReactNode; variant?: 'neutral' | 'success' | 'warning' | 'error' }) {
+  const map = {
     neutral: 'bg-muted text-foreground-muted',
-    success: 'bg-success-light text-success',
-    warning: 'bg-warning-light text-warning',
-    error:   'bg-error-light text-error',
+    success: 'bg-success-light text-success border border-success/10',
+    warning: 'bg-warning-light text-warning border border-warning/10',
+    error:   'bg-error-light text-error border border-error/10',
   };
   return (
-    <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', map[variant])}>
+    <span className={cn('text-xs font-medium px-2.5 py-0.5 rounded-full tracking-wide shrink-0', map[variant])}>
       {children}
     </span>
   );
 }
 
-function InfoAlert({ type, msg }: { type: 'error' | 'success'; msg: string }) {
+function MessageBox({ type, msg }: { type: 'error' | 'success'; msg: string }) {
   return (
     <div className={cn(
-      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium',
-      type === 'error' ? 'bg-error-light text-error' : 'bg-success-light text-success',
+      'flex items-start gap-2.5 p-3 rounded-md text-sm border',
+      type === 'error' ? 'bg-error-light border-error/20 text-error' : 'bg-success-light border-success/20 text-success',
     )}>
-      {type === 'error' ? <AlertCircle size={14} /> : <Check size={14} />}
-      {msg}
+      {type === 'error' ? <AlertCircle size={16} className="mt-0.5 shrink-0" /> : <Check size={16} className="mt-0.5 shrink-0" />}
+      <span className="font-medium">{msg}</span>
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs font-semibold uppercase tracking-widest text-foreground-subtle">
-        {label}
-      </span>
-      {children}
-    </div>
-  );
-}
-
-function TextInput({ value, onChange, placeholder, type = 'text', disabled }: {
-  value: string; onChange: (v: string) => void;
-  placeholder?: string; type?: string; disabled?: boolean;
-}) {
-  return (
-    <input
-      type={type} value={value} disabled={disabled}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="h-9 px-3 text-sm rounded-lg w-full outline-none
-        bg-muted border border-border text-foreground
-        placeholder:text-foreground-subtle
-        focus:border-border-focus focus:bg-surface
-        disabled:opacity-50 transition-colors"
-    />
-  );
-}
-
-function SelectInput({ value, onChange, options, placeholder }: {
-  value: string; onChange: (v: string) => void;
-  options: string[]; placeholder?: string;
-}) {
-  return (
-    <select
-      value={value} onChange={e => onChange(e.target.value)}
-      className="h-9 px-3 text-sm rounded-lg w-full outline-none appearance-none
-        bg-muted border border-border text-foreground
-        focus:border-border-focus transition-colors"
-    >
-      {placeholder && <option value="">{placeholder}</option>}
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
-    </select>
-  );
-}
-
-function IconBox({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0
-      bg-muted border border-border">
-      {children}
-    </div>
-  );
-}
-
-function BtnPrimary({ children, onClick, disabled, loading, className = '' }: {
-  children: React.ReactNode; onClick?: () => void;
-  disabled?: boolean; loading?: boolean; className?: string;
-}) {
-  return (
-    <button
-      onClick={onClick} disabled={disabled || loading}
-      className={cn(
-        'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium',
-        'bg-primary text-primary-foreground hover:bg-primary-hover',
-        'disabled:opacity-60 transition-colors', className,
-      )}
-    >
-      {loading && <Loader2 size={13} className="animate-spin" />}
-      {children}
-    </button>
-  );
-}
-
-function BtnGhost({ children, onClick, disabled, className = '' }: {
-  children: React.ReactNode; onClick?: () => void;
-  disabled?: boolean; className?: string;
-}) {
-  return (
-    <button
-      onClick={onClick} disabled={disabled}
-      className={cn(
-        'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium',
-        'border border-border text-foreground-muted',
-        'hover:bg-hover hover:text-foreground',
-        'disabled:opacity-60 transition-colors', className,
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ─── Modal ──────────────────────────────────────────────────────────────────── */
-
-function Modal({ title, subtitle, onClose, children }: {
-  title: string; subtitle?: string; onClose: () => void; children: React.ReactNode;
-}) {
-  return (
-    <div className="fixed inset-0 z-modal-backdrop flex items-center justify-center p-4 bg-overlay">
-      <div className="bg-modal border border-border rounded-xl shadow-lg w-full max-w-md z-modal">
-        <div className="flex items-start justify-between p-5 pb-0">
-          <div>
-            <p className="text-base font-semibold text-foreground">{title}</p>
-            {subtitle && <p className="text-sm text-foreground-subtle mt-0.5">{subtitle}</p>}
-          </div>
-          <button
-            onClick={onClose}
-            className="ml-4 p-1 rounded-lg text-foreground-subtle hover:bg-hover transition-colors"
-          >
-            <X size={16} />
-          </button>
-        </div>
-        <div className="p-5">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── OTP input ──────────────────────────────────────────────────────────────── */
-
-function OtpInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function CodeFieldInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const digits = value.padEnd(6, '').split('').slice(0, 6);
 
   function handleKey(i: number, e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Backspace' && !digits[i]) {
+    if (e.key === 'Backspace' && !digits[i] && i > 0) {
       (document.getElementById(`otp-${i - 1}`) as HTMLInputElement)?.focus();
     }
   }
@@ -251,104 +122,101 @@ function OtpInput({ value, onChange }: { value: string; onChange: (v: string) =>
     const digit = v.replace(/\D/g, '').slice(-1);
     const arr = [...digits]; arr[i] = digit;
     onChange(arr.join(''));
-    if (digit) (document.getElementById(`otp-${i + 1}`) as HTMLInputElement)?.focus();
-  }
-
-  function handlePaste(e: React.ClipboardEvent) {
-    e.preventDefault();
-    onChange(e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6).padEnd(6, ''));
+    if (digit && i < 5) (document.getElementById(`otp-${i + 1}`) as HTMLInputElement)?.focus();
   }
 
   return (
-    <div className="flex gap-2 justify-center my-4">
+    <div className="flex gap-2 justify-between max-w-xs mx-auto sm:mx-0 my-2">
       {Array.from({ length: 6 }, (_, i) => (
         <input
-          key={i} id={`otp-${i}`} type="text" inputMode="numeric"
+          key={i} id={`otp-${i}`} type="text" inputMode="numeric" pattern="[0-9]*"
           maxLength={1} value={digits[i] ?? ''}
           onChange={e => handleChange(i, e.target.value)}
-          onKeyDown={e => handleKey(i, e)} onPaste={handlePaste}
-          className="w-11 h-12 text-center text-lg font-semibold rounded-lg
-            border border-border bg-muted text-foreground outline-none
-            focus:border-border-focus focus:bg-surface transition-colors"
+          onKeyDown={e => handleKey(i, e)}
+          className="w-10 h-12 text-center text-lg font-bold rounded-md border border-border bg-input text-foreground outline-none focus:border-border-focus shadow-sm"
         />
       ))}
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════════
-   PAGE
-═══════════════════════════════════════════════════════════════════════════════ */
+/* ─── Main Component Page ────────────────────────────────────────────────────── */
 
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
 
-  /* edit */
-  const [editing, setEditing]     = useState(false);
-  const [form, setForm]           = useState<EditForm>({ name: '', state: '', city: '', country: '', gender: '', dob: '', alternatePhone: '' });
-  const [saving, setSaving]       = useState(false);
-  const [infoAlert, setInfoAlert] = useState<AlertState>(null);
+  /* Main States */
+  const [activeTab, setActiveTab] = useState<TabType>('profile');
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<EditForm>({ name: '', state: '', city: '', country: '', gender: '', dob: '', alternatePhone: '' });
+  const [saving, setSaving] = useState(false);
+  const [globalAlert, setGlobalAlert] = useState<AlertState>(null);
 
-  /* sessions */
-  const [sessions, setSessions]         = useState<SessionData[] | null>(null);
-  const [sessLoading, setSessLoading]   = useState(true);
-  const [sessError, setSessError]       = useState('');
-  const [loggingOut, setLoggingOut]     = useState<string | null>(null);
+  /* Inline Flow States */
+  const [secFlow, setSecFlow] = useState<SecurityFlow>({ mode: 'idle' });
+  const [secBusy, setSecBusy] = useState(false);
+  const [secAlert, setSecAlert] = useState<AlertState>(null);
+
+  /* Sessions Loading States */
+  const [sessions, setSessions] = useState<SessionData[] | null>(null);
+  const [sessLoading, setSessLoading] = useState(true);
+  const [sessError, setSessError] = useState('');
+  const [loggingOut, setLoggingOut] = useState<string | null>(null);
   const [logoutAllBusy, setLogoutAllBusy] = useState(false);
 
-  /* modal */
-  const [emailModal, setEmailModal] = useState<EmailModal>(null);
-  const [modalBusy, setModalBusy]   = useState(false);
-  const [modalAlert, setModalAlert] = useState<AlertState>(null);
-
-  /* sync form */
   useEffect(() => {
     if (!user) return;
-    setForm({ name: user.name ?? '', state: user.state ?? '', city: user.city ?? '', country: user.country ?? '', gender: user.gender ?? '', dob: user.dob ?? '', alternatePhone: user.alternatePhone ?? '' });
+    setForm({
+      name: user.name ?? '',
+      state: user.state ?? '',
+      city: user.city ?? '',
+      country: user.country ?? '',
+      gender: user.gender ?? '',
+      dob: user.dob ?? '',
+      alternatePhone: user.alternatePhone ?? ''
+    });
   }, [user]);
 
-  /* load sessions */
   const loadSessions = useCallback(async () => {
     setSessLoading(true); setSessError('');
     try {
       const token = await getToken();
       setSessions((await getSessions(token)).sessions);
     } catch (e) {
-      setSessError(e instanceof Error ? e.message : 'Failed to load sessions');
+      setSessError(e instanceof Error ? e.message : 'Could not fetch your active sessions');
     } finally { setSessLoading(false); }
   }, []);
 
-  useEffect(() => { loadSessions(); }, [loadSessions]);
+  useEffect(() => { if (activeTab === 'sessions') loadSessions(); }, [activeTab, loadSessions]);
 
-  /* save profile */
-  const handleSave = async () => {
-    if (!form.name.trim()) { setInfoAlert({ type: 'error', msg: 'Full name is required' }); return; }
-    setSaving(true); setInfoAlert(null);
+  const handleSaveProfile = async () => {
+    if (!form.name.trim()) { setGlobalAlert({ type: 'error', msg: 'Please provide your name.' }); return; }
+    setSaving(true); setGlobalAlert(null);
     try {
       const token = await getToken();
       await apiUpdateProfile(token, {
         name: form.name.trim(),
-        state: form.state || undefined, city: form.city.trim() || undefined,
-        country: form.country.trim() || undefined, gender: form.gender || undefined,
-        dob: form.dob || undefined, alternatePhone: form.alternatePhone.trim() || undefined,
+        state: form.state || undefined,
+        city: form.city.trim() || undefined,
+        country: form.country.trim() || undefined,
+        gender: form.gender || undefined,
+        dob: form.dob || undefined,
+        alternatePhone: form.alternatePhone.trim() || undefined,
       });
       await refreshUser();
-      setInfoAlert({ type: 'success', msg: 'Profile updated successfully' });
+      setGlobalAlert({ type: 'success', msg: 'Profile updated successfully!' });
       setEditing(false);
     } catch (e) {
-      setInfoAlert({ type: 'error', msg: e instanceof Error ? e.message : 'Update failed' });
+      setGlobalAlert({ type: 'error', msg: e instanceof Error ? e.message : 'Failed to update profile.' });
     } finally { setSaving(false); }
   };
 
-  const handleCancel = () => {
-    if (user) setForm({ name: user.name ?? '', state: user.state ?? '', city: user.city ?? '', country: user.country ?? '', gender: user.gender ?? '', dob: user.dob ?? '', alternatePhone: user.alternatePhone ?? '' });
-    setInfoAlert(null); setEditing(false);
-  };
-
-  /* sessions */
   const handleLogoutSession = async (deviceId: string) => {
     setLoggingOut(deviceId);
-    try { await logoutDevice(await getToken(), deviceId); setSessions(p => p?.filter(s => s.deviceId !== deviceId) ?? null); } catch {}
+    try {
+      await logoutDevice(await getToken(), deviceId);
+      setSessions(p => p?.filter(s => s.deviceId !== deviceId) ?? null);
+    } catch {}
     setLoggingOut(null);
   };
 
@@ -358,611 +226,435 @@ export default function ProfilePage() {
     setLogoutAllBusy(false);
   };
 
-  /* modal helpers */
-  const openModal  = (m: NonNullable<EmailModal>) => { setEmailModal(m); setModalAlert(null); };
-  const closeModal = () => { setEmailModal(null); setModalAlert(null); };
-
-  /* email update */
-  const handleSendEmailOtp = async () => {
-    if (emailModal?.mode !== 'update-email' || emailModal.step !== 'input') return;
-    if (!emailModal.email.trim()) { setModalAlert({ type: 'error', msg: 'Enter a valid email' }); return; }
-    setModalBusy(true); setModalAlert(null);
+  /* Action Handlers */
+  const runSendEmailOtp = async (targetEmail: string) => {
+    if (!targetEmail.trim()) { setSecAlert({ type: 'error', msg: 'Please enter a valid email address.' }); return; }
+    setSecBusy(true); setSecAlert(null);
     try {
-      await sendEmailUpdateOtp(await getToken(), emailModal.email.trim());
-      setEmailModal({ mode: 'update-email', step: 'otp', email: emailModal.email.trim(), otp: '' });
-    } catch (e) { setModalAlert({ type: 'error', msg: e instanceof Error ? e.message : 'Failed to send OTP' }); }
-    finally { setModalBusy(false); }
+      await sendEmailUpdateOtp(await getToken(), targetEmail.trim());
+      setSecFlow({ mode: 'update-email', step: 'otp', email: targetEmail.trim(), otp: '' });
+    } catch (e) { setSecAlert({ type: 'error', msg: e instanceof Error ? e.message : 'Failed to send verification code.' }); }
+    finally { setSecBusy(false); }
   };
 
-  const handleVerifyEmailOtp = async () => {
-    if (emailModal?.mode !== 'update-email' || emailModal.step !== 'otp') return;
-    if (emailModal.otp.length < 6) { setModalAlert({ type: 'error', msg: 'Enter the 6-digit OTP' }); return; }
-    setModalBusy(true); setModalAlert(null);
+  const runVerifyEmailOtp = async () => {
+    if (secFlow.mode !== 'update-email' || secFlow.step !== 'otp') return;
+    setSecBusy(true); setSecAlert(null);
     try {
-      await verifyEmailOtp(await getToken(), emailModal.email, emailModal.otp);
-      await refreshUser(); closeModal();
-      setInfoAlert({ type: 'success', msg: 'Email updated and verified' });
-    } catch (e) { setModalAlert({ type: 'error', msg: e instanceof Error ? e.message : 'Invalid OTP' }); }
-    finally { setModalBusy(false); }
+      await verifyEmailOtp(await getToken(), secFlow.email, secFlow.otp);
+      await refreshUser(); setSecFlow({ mode: 'idle' });
+      setGlobalAlert({ type: 'success', msg: 'Your email address has been successfully updated!' });
+    } catch (e) { setSecAlert({ type: 'error', msg: 'The code you entered is invalid or expired.' }); }
+    finally { setSecBusy(false); }
   };
 
-  const handleResendVerify = async () => {
-    if (!user?.email) return;
-    setModalBusy(true); setModalAlert(null);
-    try {
-      await resendEmailVerification(await getToken(), user.email);
-      setModalAlert({ type: 'success', msg: 'Verification email sent' });
-    } catch (e) { setModalAlert({ type: 'error', msg: e instanceof Error ? e.message : 'Failed' }); }
-    finally { setModalBusy(false); }
-  };
-
-  /* enable email login */
-  const handleEnableEmailLogin = async () => {
-    if (emailModal?.mode !== 'enable-email-login' || emailModal.step !== 'input') return;
-    const { email, password, confirm } = emailModal;
-    if (!email.trim()) { setModalAlert({ type: 'error', msg: 'Enter a valid email' }); return; }
-    if (password.length < 8) { setModalAlert({ type: 'error', msg: 'Password must be at least 8 characters' }); return; }
-    if (password !== confirm) { setModalAlert({ type: 'error', msg: 'Passwords do not match' }); return; }
-    setModalBusy(true); setModalAlert(null);
+  const runEnableEmailLogin = async () => {
+    if (secFlow.mode !== 'enable-email-login' || secFlow.step !== 'input') return;
+    const { email, password, confirm } = secFlow;
+    if (!email.trim() || password.length < 8) { setSecAlert({ type: 'error', msg: 'Check your details. Passwords must be at least 8 characters long.' }); return; }
+    if (password !== confirm) { setSecAlert({ type: 'error', msg: 'Passwords do not match.' }); return; }
+    setSecBusy(true); setSecAlert(null);
     try {
       await enableEmailLogin(await getToken(), email.trim(), password);
-      setEmailModal({ mode: 'enable-email-login', step: 'otp', email: email.trim(), otp: '' });
-    } catch (e) { setModalAlert({ type: 'error', msg: e instanceof Error ? e.message : 'Failed' }); }
-    finally { setModalBusy(false); }
+      setSecFlow({ mode: 'enable-email-login', step: 'otp', email: email.trim(), otp: '' });
+    } catch (e) { setSecAlert({ type: 'error', msg: 'Failed to initiate password login setup.' }); }
+    finally { setSecBusy(false); }
   };
 
-  const handleVerifyEmailLogin = async () => {
-    if (emailModal?.mode !== 'enable-email-login' || emailModal.step !== 'otp') return;
-    if (emailModal.otp.length < 6) { setModalAlert({ type: 'error', msg: 'Enter the 6-digit OTP' }); return; }
-    setModalBusy(true); setModalAlert(null);
+  const runVerifyEmailLogin = async () => {
+    if (secFlow.mode !== 'enable-email-login' || secFlow.step !== 'otp') return;
+    setSecBusy(true); setSecAlert(null);
     try {
-      await verifyEmailLogin(await getToken(), emailModal.email, emailModal.otp);
-      await refreshUser(); closeModal();
-      setInfoAlert({ type: 'success', msg: 'Email login enabled' });
-    } catch (e) { setModalAlert({ type: 'error', msg: e instanceof Error ? e.message : 'Invalid OTP' }); }
-    finally { setModalBusy(false); }
+      await verifyEmailLogin(await getToken(), secFlow.email, secFlow.otp);
+      await refreshUser(); setSecFlow({ mode: 'idle' });
+      setGlobalAlert({ type: 'success', msg: 'Password sign-in option is now enabled!' });
+    } catch (e) { setSecAlert({ type: 'error', msg: 'The verification code didn\'t match.' }); }
+    finally { setSecBusy(false); }
   };
 
-  /* change password */
-  const handleChangePassword = async () => {
-    if (emailModal?.mode !== 'change-password') return;
-    const { current, next, confirm } = emailModal;
-    if (!current) { setModalAlert({ type: 'error', msg: 'Enter your current password' }); return; }
-    if (next.length < 8) { setModalAlert({ type: 'error', msg: 'New password must be at least 8 characters' }); return; }
-    if (next !== confirm) { setModalAlert({ type: 'error', msg: 'Passwords do not match' }); return; }
-    setModalBusy(true); setModalAlert(null);
+  const runChangePassword = async () => {
+    if (secFlow.mode !== 'change-password') return;
+    const { current, next, confirm } = secFlow;
+    if (next.length < 8 || next !== confirm) { setSecAlert({ type: 'error', msg: 'Please check your new password guidelines or confirmation match.' }); return; }
+    setSecBusy(true); setSecAlert(null);
     try {
       await updatePassword(await getToken(), current, next);
-      closeModal(); setInfoAlert({ type: 'success', msg: 'Password updated successfully' });
-    } catch (e) { setModalAlert({ type: 'error', msg: e instanceof Error ? e.message : 'Failed' }); }
-    finally { setModalBusy(false); }
+      setSecFlow({ mode: 'idle' });
+      setGlobalAlert({ type: 'success', msg: 'Password changed successfully.' });
+    } catch (e) { setSecAlert({ type: 'error', msg: 'Your current password choice was incorrect.' }); }
+    finally { setSecBusy(false); }
   };
 
-  /* disable email login */
-  const handleDisableEmailLogin = async () => {
-    setModalBusy(true); setModalAlert(null);
+  const runDisableEmailLogin = async () => {
+    setSecBusy(true); setSecAlert(null);
     try {
       await disableEmailLogin(await getToken());
-      await refreshUser(); closeModal();
-      setInfoAlert({ type: 'success', msg: 'Email login disabled' });
-    } catch (e) { setModalAlert({ type: 'error', msg: e instanceof Error ? e.message : 'Failed' }); }
-    finally { setModalBusy(false); }
+      await refreshUser();
+      setGlobalAlert({ type: 'success', msg: 'Password sign-in has been turned off safely.' });
+    } catch (e) { setSecAlert({ type: 'error', msg: 'Failed to turn off password option.' }); }
+    finally { setSecBusy(false); }
   };
 
-  const pct = calcPct(user);
-  const ini = makeInitials(user?.name, user?.phone);
-
   if (!user) return null;
+  const pct = calcPct(user);
 
-  /* ══ RENDER ══════════════════════════════════════════════════════════════ */
   return (
-    <>
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-5 pt-18">
-
-        {/* Header */}
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">My Profile</h1>
-          <p className="text-sm text-foreground-subtle mt-0.5">
-            Manage your personal information, security, and active sessions
-          </p>
-        </div>
-
-        {/* ── 1. Profile header card ──────────────────────────────────────── */}
-        <div className="bg-card border border-border rounded-xl p-5">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
+    <div className="min-h-screen bg-background text-foreground transition-colors selection:bg-selection">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
+        
+        {/* Profile Card Header */}
+        <div className="bg-card border border-border rounded-xl p-5 sm:p-6 shadow-sm mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0
-                bg-primary-light text-lg font-bold text-primary">
-                {ini}
+              <div className="w-14 h-14 rounded-lg flex items-center justify-center shrink-0 bg-primary text-primary-foreground font-bold text-lg shadow-sm">
+                {makeInitials(user.name, user.phone)}
               </div>
-              <div>
-                <p className="text-base font-semibold text-foreground leading-tight">
-                  {user.name ?? 'No name set'}
-                </p>
-                <p className="text-sm text-foreground-subtle mt-0.5">{user.phone}</p>
-                {user.email && <p className="text-xs text-foreground-subtle">{user.email}</p>}
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold tracking-tight truncate">{user.name ?? 'My Profile Account'}</h1>
+                <p className="text-sm text-foreground-muted mt-0.5">{user.phone}</p>
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  <Badge variant={user.isProfileComplete ? 'success' : 'warning'}>
-                    {user.isProfileComplete ? 'Profile complete' : 'Incomplete'}
-                  </Badge>
-                  {user.phoneVerified  && <Badge variant="success">Phone verified</Badge>}
-                  {user.emailVerified  && <Badge variant="success">Email verified</Badge>}
-                  {user.enableEmailLogin && <Badge variant="success">Email login on</Badge>}
+                  <StatusBadge variant={user.isProfileComplete ? 'success' : 'warning'}>
+                    {user.isProfileComplete ? 'Profile Complete' : 'Profile Incomplete'}
+                  </StatusBadge>
+                  {user.emailVerified && <StatusBadge variant="success">Email Linked</StatusBadge>}
                 </div>
               </div>
             </div>
-            {!editing && (
+            
+            {!editing && activeTab === 'profile' && (
               <button
-                onClick={() => { setInfoAlert(null); setEditing(true); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg shrink-0
-                  border border-border text-sm font-medium text-foreground-muted
-                  hover:bg-hover hover:text-foreground transition-colors"
+                onClick={() => { setGlobalAlert(null); setEditing(true); }}
+                className="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-md border border-border hover:bg-hover text-sm font-medium transition-colors"
               >
-                <Edit3 size={13} /> Edit profile
+                <Edit3 size={14} /> Edit Details
               </button>
             )}
           </div>
 
-          {/* Completion bar */}
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-medium text-foreground-subtle">Profile completeness</span>
-              <span className="text-xs font-semibold text-foreground-muted">{pct}%</span>
+          <div className="mt-5 pt-4 border-t border-border">
+            <div className="flex items-center justify-between mb-1 text-xs font-semibold text-foreground-muted">
+              <span>Profile Progress</span>
+              <span className="font-mono">{pct}%</span>
             </div>
-            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-              <div
-                className={cn(
-                  'h-full rounded-full transition-all duration-500',
-                  pct < 40 ? 'bg-error' : pct < 75 ? 'bg-warning' : 'bg-primary',
-                )}
-                style={{ width: `${pct}%` }}
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div 
+                className={cn("h-full transition-all duration-500 rounded-full", pct < 50 ? "bg-error" : pct < 80 ? "bg-warning" : "bg-primary")} 
+                style={{ width: `${pct}%` }} 
               />
             </div>
-            {!user.isProfileComplete && (
-              <p className="text-xs text-foreground-subtle mt-1.5">
-                Add name, state, city and email to complete your profile.
-              </p>
-            )}
           </div>
         </div>
 
-        {/* ── 2. Personal information ─────────────────────────────────────── */}
-        <div className="bg-card border border-border rounded-xl p-5">
-          <SectionLabel>Personal information</SectionLabel>
+        {/* Global Notifications Panel */}
+        {globalAlert && <div className="mb-5"><MessageBox type={globalAlert.type} msg={globalAlert.msg} /></div>}
 
-          {infoAlert && <div className="mt-3 mb-4"><InfoAlert type={infoAlert.type} msg={infoAlert.msg} /></div>}
-
-          {editing ? (
-            <div className="mt-4 flex flex-col gap-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Full name *">
-                  <TextInput value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} placeholder="Your full name" />
-                </Field>
-                <Field label="Gender">
-                  <SelectInput value={form.gender} onChange={v => setForm(f => ({ ...f, gender: v }))} options={GENDERS} placeholder="Select gender" />
-                </Field>
-                <Field label="State">
-                  <SelectInput value={form.state} onChange={v => setForm(f => ({ ...f, state: v }))} options={STATES} placeholder="Select state" />
-                </Field>
-                <Field label="City">
-                  <TextInput value={form.city} onChange={v => setForm(f => ({ ...f, city: v }))} placeholder="Your city" />
-                </Field>
-                <Field label="Country">
-                  <TextInput value={form.country} onChange={v => setForm(f => ({ ...f, country: v }))} placeholder="Country" />
-                </Field>
-                <Field label="Date of birth">
-                  <TextInput type="date" value={form.dob} onChange={v => setForm(f => ({ ...f, dob: v }))} />
-                </Field>
-                <Field label="Alternate phone">
-                  <TextInput value={form.alternatePhone} onChange={v => setForm(f => ({ ...f, alternatePhone: v }))} placeholder="+91XXXXXXXXXX" />
-                </Field>
-              </div>
-              <div className="flex items-center gap-2 pt-3 border-t border-border">
-                <BtnPrimary onClick={handleSave} loading={saving} disabled={saving}>
-                  {!saving && <Check size={13} />} Save changes
-                </BtnPrimary>
-                <BtnGhost onClick={handleCancel} disabled={saving}>
-                  <X size={13} /> Cancel
-                </BtnGhost>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2">
-              {([
-                { icon: User,     label: 'Full name',      value: user.name },
-                { icon: User,     label: 'Gender',         value: user.gender },
-                { icon: MapPin,   label: 'State',          value: user.state },
-                { icon: MapPin,   label: 'City',           value: user.city },
-                { icon: Globe,    label: 'Country',        value: user.country },
-                { icon: Calendar, label: 'Date of birth',  value: user.dob ? new Date(user.dob).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : undefined },
-                { icon: Phone,    label: 'Alternate phone', value: user.alternatePhone },
-              ] as const).map(({ icon: Icon, label, value }) => (
-                <div key={label}
-                  className="flex items-center gap-3 py-2.5 border-b border-border/50
-                    last:border-0 sm:[&:nth-last-child(2)]:border-0"
-                >
-                  <Icon size={14} className="text-foreground-subtle shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-foreground-subtle font-medium">{label}</p>
-                    <p className={cn('text-sm font-medium truncate', value ? 'text-foreground' : 'text-foreground-subtle italic')}>
-                      {value ?? 'Not set'}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── 3. Account & security ───────────────────────────────────────── */}
-        <div className="bg-card border border-border rounded-xl p-5">
-          <SectionLabel>Account &amp; security</SectionLabel>
-
-          <div className="mt-4 flex flex-col divide-y divide-border/50">
-
-            {/* Phone */}
-            <div className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-3">
-                <IconBox><Phone size={14} className="text-foreground-subtle" /></IconBox>
-                <div>
-                  <p className="text-sm font-medium text-foreground">Phone number</p>
-                  <p className="text-xs text-foreground-subtle">{user.phone}</p>
-                </div>
-              </div>
-              <Badge variant="success">Verified</Badge>
-            </div>
-
-            {/* Email */}
-            <div className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-3">
-                <IconBox><Mail size={14} className="text-foreground-subtle" /></IconBox>
-                <div>
-                  <p className="text-sm font-medium text-foreground">Email address</p>
-                  <p className="text-xs text-foreground-subtle">{user.email ?? 'Not set'}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {user.email ? (
-                  <>
-                    <Badge variant={user.emailVerified ? 'success' : 'warning'}>
-                      {user.emailVerified ? 'Verified' : 'Unverified'}
-                    </Badge>
-                    {!user.emailVerified && (
-                      <button onClick={() => openModal({ mode: 'resend-verify' })}
-                        className="text-xs font-semibold text-primary hover:underline">
-                        Verify
-                      </button>
-                    )}
-                    <button onClick={() => openModal({ mode: 'update-email', step: 'input', email: user.email ?? '' })}
-                      className="text-xs font-semibold text-foreground-muted hover:text-primary hover:underline">
-                      Change
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Badge variant="neutral">Not set</Badge>
-                    <button onClick={() => openModal({ mode: 'update-email', step: 'input', email: '' })}
-                      className="text-xs font-semibold text-primary hover:underline">
-                      Add email
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Email login */}
-            <div className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-3">
-                <IconBox><Lock size={14} className="text-foreground-subtle" /></IconBox>
-                <div>
-                  <p className="text-sm font-medium text-foreground">Email login</p>
-                  <p className="text-xs text-foreground-subtle">
-                    {user.enableEmailLogin
-                      ? `Sign in with email & password${user.emailLoginVerified ? '' : ' (unverified)'}`
-                      : 'Sign in using email & password'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Badge variant={user.enableEmailLogin ? 'success' : 'neutral'}>
-                  {user.enableEmailLogin ? 'Enabled' : 'Disabled'}
-                </Badge>
-                {user.enableEmailLogin ? (
-                  <button
-                    onClick={() => openModal({ mode: 'enable-email-login', step: 'input', email: user.email ?? '', password: '', confirm: '' })}
-                    className="text-xs font-semibold text-error hover:underline">
-                    Disable
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => openModal({ mode: 'enable-email-login', step: 'input', email: user.email ?? '', password: '', confirm: '' })}
-                    className="text-xs font-semibold text-primary hover:underline">
-                    Enable
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Change password */}
-            {user.enableEmailLogin && (
-              <div className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <IconBox><Key size={14} className="text-foreground-subtle" /></IconBox>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Password</p>
-                    <p className="text-xs text-foreground-subtle tracking-widest">••••••••</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => openModal({ mode: 'change-password', current: '', next: '', confirm: '' })}
-                  className="text-xs font-semibold text-primary hover:underline">
-                  Change
-                </button>
-              </div>
-            )}
-
-            {/* Security note */}
-            <div className="flex items-start gap-3 py-3">
-              <IconBox><Shield size={14} className="text-foreground-subtle" /></IconBox>
-              <div>
-                <p className="text-sm font-medium text-foreground">Account security</p>
-                <p className="text-xs text-foreground-subtle mt-0.5">
-                  Your primary login is via OTP on {user.phone}. Email login is an optional secondary method.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── 4. Active sessions ──────────────────────────────────────────── */}
-        <div className="bg-card border border-border rounded-xl p-5">
-          <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
-            <div>
-              <SectionLabel>Active sessions</SectionLabel>
-              <p className="text-xs text-foreground-subtle mt-0.5">Devices currently signed in to your account</p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => handleLogoutSession('')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-                  border border-border text-xs font-medium text-foreground-muted
-                  hover:bg-hover transition-colors"
-              >
-                <LogOut size={12} /> This device
-              </button>
-              {sessions && sessions.length > 0 && (
-                <button
-                  onClick={handleLogoutAll} disabled={logoutAllBusy}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-                    border border-error/40 text-xs font-medium text-error
-                    hover:bg-error-light disabled:opacity-60 transition-colors"
-                >
-                  {logoutAllBusy ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}
-                  Sign out all
-                </button>
+        {/* Navigation Tabs Bar */}
+        <div className="border-b border-border mb-6 flex gap-2 overflow-x-auto no-scrollbar">
+          {([
+            { id: 'profile', label: 'My Details' },
+            { id: 'security', label: 'Sign-in & Password' },
+            { id: 'sessions', label: 'Where You\'re Signed In' }
+          ] as const).map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setEditing(false); setSecFlow({ mode: 'idle' }); setSecAlert(null); }}
+              className={cn(
+                "px-3 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-all",
+                activeTab === tab.id 
+                  ? "border-primary text-foreground font-semibold" 
+                  : "border-transparent text-foreground-muted hover:text-foreground"
               )}
-            </div>
-          </div>
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-          {sessLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 size={20} className="animate-spin text-foreground-subtle" />
-            </div>
-          ) : sessError ? (
-            <div className="flex items-center gap-3">
-              <InfoAlert type="error" msg={sessError} />
-              <button onClick={loadSessions}
-                className="text-sm font-semibold text-primary hover:underline flex items-center gap-1 shrink-0">
-                <RefreshCw size={12} /> Retry
-              </button>
-            </div>
-          ) : sessions && sessions.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {sessions.map(sess => {
-                const DevIcon = sess.deviceType === 'mobile' ? Smartphone : Monitor;
-                const busy = loggingOut === sess.deviceId;
-                return (
-                  <div key={sess.id}
-                    className="flex items-center justify-between px-3.5 py-3 rounded-xl
-                      bg-muted border border-border/60"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0
-                        bg-surface border border-border">
-                        <DevIcon size={15} className="text-foreground-subtle" />
+        {/* Workspace Display Area */}
+        <div className="bg-card border border-border rounded-xl p-5 sm:p-6 shadow-sm">
+          
+          {/* TAB 1: DETAILS AND INFORMATION */}
+          {activeTab === 'profile' && (
+            <div>
+              {editing ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-foreground-muted mb-1">Full Name</label>
+                      <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none focus:border-border-focus transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-foreground-muted mb-1">Gender</label>
+                      <select value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })} className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none focus:border-border-focus appearance-none transition-colors">
+                        <option value="">Select Gender</option>
+                        {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-foreground-muted mb-1">State</label>
+                      <select value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none focus:border-border-focus appearance-none transition-colors">
+                        <option value="">Select State</option>
+                        {STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-foreground-muted mb-1">City</label>
+                      <input type="text" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none focus:border-border-focus transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-foreground-muted mb-1">Country</label>
+                      <input type="text" value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none focus:border-border-focus transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-foreground-muted mb-1">Date of Birth</label>
+                      <input type="date" value={form.dob} onChange={e => setForm({ ...form, dob: e.target.value })} className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none focus:border-border-focus transition-colors" />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-bold text-foreground-muted mb-1">Backup Phone Number</label>
+                      <input type="text" value={form.alternatePhone} onChange={e => setForm({ ...form, alternatePhone: e.target.value })} placeholder="+91 XXXXX XXXXX" className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none focus:border-border-focus transition-colors" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-4 border-t border-border">
+                    <button onClick={handleSaveProfile} disabled={saving} className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold inline-flex items-center gap-1.5 hover:bg-primary-hover transition-colors">
+                      {saving && <Loader2 size={14} className="animate-spin" />} Save Details
+                    </button>
+                    <button onClick={() => setEditing(false)} className="h-9 px-4 rounded-md border border-border text-sm text-foreground-muted font-semibold hover:bg-hover transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                  {([
+                    { icon: User, label: 'Full Name', value: user.name },
+                    { icon: User, label: 'Gender', value: user.gender },
+                    { icon: MapPin, label: 'State Location', value: user.state },
+                    { icon: MapPin, label: 'City / Town', value: user.city },
+                    { icon: Globe, label: 'Country', value: user.country },
+                    { icon: Calendar, label: 'Date of Birth', value: user.dob ? new Date(user.dob).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : undefined },
+                    { icon: Phone, label: 'Alternate Phone', value: user.alternatePhone },
+                  ]).map((field, index) => (
+                    <div key={index} className="flex items-center gap-3.5 py-3 border-b border-border/40 last:border-0 sm:[&:nth-last-child(-n+2)]:border-0">
+                      <div className="w-9 h-9 rounded-md bg-muted flex items-center justify-center text-foreground-muted shrink-0 border border-border/30">
+                        <field.icon size={15} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {sess.deviceName ?? (sess.deviceType === 'mobile' ? 'Mobile device' : 'Desktop / Web')}
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-foreground-subtle">{field.label}</p>
+                        <p className={cn("text-sm font-medium mt-0.5 truncate", field.value ? "text-foreground" : "text-foreground-subtle italic font-normal")}>
+                          {field.value ?? 'Not set yet'}
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {sess.ipAddress && (
-                            <span className="text-xs text-foreground-subtle">{sess.ipAddress}</span>
-                          )}
-                          <span className="flex items-center gap-1 text-xs text-foreground-subtle">
-                            <Clock size={10} /> {timeAgo(sess.lastSeen)}
-                          </span>
-                          {sess.isActive && (
-                            <span className="flex items-center gap-1 text-xs font-medium text-success">
-                              <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />
-                              Active
-                            </span>
-                          )}
-                        </div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleLogoutSession(sess.deviceId)} disabled={busy}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ml-3 shrink-0
-                        text-xs font-medium text-error hover:bg-error-light
-                        disabled:opacity-60 transition-colors"
-                    >
-                      {busy ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}
-                      Sign out
-                    </button>
-                  </div>
-                );
-              })}
+                  ))}
+                </div>
+              )}
             </div>
-          ) : (
-            <p className="text-sm text-foreground-subtle text-center py-6">
-              No active sessions found
-            </p>
           )}
+
+          {/* TAB 2: SIGN IN & PASSWORD CONTROLS */}
+          {activeTab === 'security' && (
+            <div className="space-y-6">
+              {/* {secAlert && <StatusCard type={secAlert.type} msg={secAlert.msg} />} */}
+
+              {secFlow.mode === 'idle' && (
+                <div className="divide-y divide-border/50">
+                  <div className="flex items-center justify-between py-4 first:pt-0">
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">Phone Number Login</h4>
+                      <p className="text-xs text-foreground-muted mt-0.5">{user.phone}</p>
+                    </div>
+                    <StatusBadge variant="success">Verified Primary Method</StatusBadge>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between py-4 gap-2">
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">Email Address</h4>
+                      <p className="text-xs text-foreground-muted mt-0.5">{user.email ?? 'No email linked to your account'}</p>
+                    </div>
+                    <div className="flex items-center gap-2 self-start sm:self-center">
+                      {user.email ? (
+                        <>
+                          <StatusBadge variant={user.emailVerified ? 'success' : 'warning'}>{user.emailVerified ? 'Verified' : 'Unverified'}</StatusBadge>
+                          <button onClick={() => setSecFlow({ mode: 'update-email', step: 'input', email: user.email ?? '' })} className="text-xs font-bold text-text-link hover:text-text-link-hover hover:underline ml-2">Change</button>
+                        </>
+                      ) : (
+                        <button onClick={() => setSecFlow({ mode: 'update-email', step: 'input', email: '' })} className="text-xs font-bold text-primary hover:underline">Link Email</button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between py-4 gap-2">
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">Password Sign-In Option</h4>
+                      <p className="text-xs text-foreground-muted mt-0.5">Allows you to sign in with an email and password instead of phone codes.</p>
+                    </div>
+                    <div className="flex items-center gap-2 self-start sm:self-center">
+                      <StatusBadge variant={user.enableEmailLogin ? 'success' : 'neutral'}>{user.enableEmailLogin ? 'Enabled' : 'Disabled'}</StatusBadge>
+                      {user.enableEmailLogin ? (
+                        <button onClick={runDisableEmailLogin} disabled={secBusy} className="text-xs font-bold text-error hover:underline ml-2">Turn Off</button>
+                      ) : (
+                        <button onClick={() => setSecFlow({ mode: 'enable-email-login', step: 'input', email: user.email ?? '', password: '', confirm: '' })} className="text-xs font-bold text-primary hover:underline ml-2">Turn On</button>
+                      )}
+                    </div>
+                  </div>
+
+                  {user.enableEmailLogin && (
+                    <div className="flex items-center justify-between py-4 last:pb-0">
+                      <div>
+                        <h4 className="text-sm font-bold text-foreground">Account Password</h4>
+                        <p className="text-xs text-foreground-muted mt-0.5 font-mono tracking-widest">••••••••</p>
+                      </div>
+                      <button onClick={() => setSecFlow({ mode: 'change-password', current: '', next: '', confirm: '' })} className="text-xs font-bold text-text-link hover:text-text-link-hover hover:underline">Update Password</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Inline Action Sub-Cards */}
+              {secFlow.mode === 'update-email' && secFlow.step === 'input' && (
+                <div className="max-w-md space-y-3 bg-muted p-4 rounded-lg border border-border">
+                  <h3 className="text-sm font-bold text-foreground">Change Email Address</h3>
+                  <input type="email" placeholder="name@example.com" value={secFlow.email} onChange={e => setSecFlow({ ...secFlow, email: e.target.value })} className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none focus:border-border-focus transition-colors" />
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => runSendEmailOtp(secFlow.email)} disabled={secBusy} className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold inline-flex items-center gap-1.5 hover:bg-primary-hover transition-colors">
+                      {secBusy && <Loader2 size={12} className="animate-spin" />} Send Code
+                    </button>
+                    <button onClick={() => setSecFlow({ mode: 'idle' })} className="h-9 px-4 border border-border text-foreground-muted bg-card rounded-md text-sm font-semibold hover:bg-hover transition-colors">Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {secFlow.mode === 'update-email' && secFlow.step === 'otp' && (
+                <div className="max-w-md space-y-3 bg-muted p-4 rounded-lg border border-border">
+                  <h3 className="text-sm font-bold text-foreground">Enter Verification Code</h3>
+                  <p className="text-xs text-foreground-muted">We sent a 6-digit verification code to your email at <b>{secFlow.email}</b></p>
+                  <CodeFieldInput value={secFlow.otp} onChange={v => setSecFlow({ ...secFlow, otp: v })} />
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={runVerifyEmailOtp} disabled={secBusy || secFlow.otp.length < 6} className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:bg-primary-hover transition-colors">
+                      Verify & Save
+                    </button>
+                    <button onClick={() => setSecFlow({ mode: 'update-email', step: 'input', email: secFlow.email })} className="h-9 px-4 border border-border text-foreground-muted bg-card rounded-md text-sm font-semibold hover:bg-hover transition-colors">Back</button>
+                  </div>
+                </div>
+              )}
+
+              {secFlow.mode === 'enable-email-login' && secFlow.step === 'input' && (
+                <div className="max-w-md space-y-3 bg-muted p-4 rounded-lg border border-border">
+                  <h3 className="text-sm font-bold text-foreground">Setup Password Access</h3>
+                  <div className="space-y-2">
+                    <input type="email" placeholder="Your Email Address" value={secFlow.email} onChange={e => setSecFlow({ ...secFlow, email: e.target.value })} className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none" />
+                    <input type="password" placeholder="Create Password (Min 8 characters)" value={secFlow.password} onChange={e => setSecFlow({ ...secFlow, password: e.target.value })} className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none" />
+                    <input type="password" placeholder="Confirm Password" value={secFlow.confirm} onChange={e => setSecFlow({ ...secFlow, confirm: e.target.value })} className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none" />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={runEnableEmailLogin} disabled={secBusy} className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:bg-primary-hover transition-colors">Continue Setup</button>
+                    <button onClick={() => setSecFlow({ mode: 'idle' })} className="h-9 px-4 border border-border text-foreground-muted bg-card rounded-md text-sm font-semibold hover:bg-hover transition-colors">Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {secFlow.mode === 'enable-email-login' && secFlow.step === 'otp' && (
+                <div className="max-w-md space-y-3 bg-muted p-4 rounded-lg border border-border">
+                  <h3 className="text-sm font-bold text-foreground">Confirm Email Code</h3>
+                  <CodeFieldInput value={secFlow.otp} onChange={v => setSecFlow({ ...secFlow, otp: v })} />
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={runVerifyEmailLogin} disabled={secBusy || secFlow.otp.length < 6} className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:bg-primary-hover transition-colors">Turn On Password</button>
+                    <button onClick={() => setSecFlow({ mode: 'idle' })} className="h-9 px-4 border border-border text-foreground-muted bg-card rounded-md text-sm font-semibold hover:bg-hover transition-colors">Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {secFlow.mode === 'change-password' && (
+                <div className="max-w-md space-y-3 bg-muted p-4 rounded-lg border border-border">
+                  <h3 className="text-sm font-bold text-foreground">Change Password</h3>
+                  <div className="space-y-2">
+                    <input type="password" placeholder="Current Password" value={secFlow.current} onChange={e => setSecFlow({ ...secFlow, current: e.target.value })} className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none" />
+                    <input type="password" placeholder="New Password" value={secFlow.next} onChange={e => setSecFlow({ ...secFlow, next: e.target.value })} className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none" />
+                    <input type="password" placeholder="Confirm New Password" value={secFlow.confirm} onChange={e => setSecFlow({ ...secFlow, confirm: e.target.value })} className="w-full h-10 px-3 text-sm rounded-md border border-border bg-input outline-none" />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={runChangePassword} disabled={secBusy} className="h-9 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold hover:bg-primary-hover transition-colors">Update Password</button>
+                    <button onClick={() => setSecFlow({ mode: 'idle' })} className="h-9 px-4 border border-border text-foreground-muted bg-card rounded-md text-sm font-semibold hover:bg-hover transition-colors">Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: SIGNED IN SESSIONS */}
+          {activeTab === 'sessions' && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border/60 pb-4 gap-2">
+                <div>
+                  <h3 className="text-sm font-bold tracking-tight">Active Devices</h3>
+                  <p className="text-xs text-foreground-muted mt-0.5">These devices are currently logged into your account.</p>
+                </div>
+                {sessions && sessions.length > 0 && (
+                  <button
+                    onClick={handleLogoutAll}
+                    disabled={logoutAllBusy}
+                    className="h-8 px-3 rounded-md border border-error text-error hover:bg-error-light text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                  >
+                    {logoutAllBusy ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />} Sign Out All Other Devices
+                  </button>
+                )}
+              </div>
+
+              {sessLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 size={24} className="animate-spin text-foreground-subtle" />
+                </div>
+              ) : sessError ? (
+                <div className="flex flex-col sm:flex-row items-center gap-3 p-4 bg-muted rounded-lg border border-border">
+                  <p className="text-sm text-foreground-muted font-medium grow">{sessError}</p>
+                  <button onClick={loadSessions} className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-primary-hover transition-colors"><RefreshCw size={12} /> Retry</button>
+                </div>
+              ) : sessions && sessions.length > 0 ? (
+                <div className="space-y-2">
+                  {sessions.map(sess => {
+                    const DeviceIcon = sess.deviceType === 'mobile' ? Smartphone : Monitor;
+                    const isBusy = loggingOut === sess.deviceId;
+                    return (
+                      <div key={sess.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border border-border/60 bg-input gap-3">
+                        <div className="flex items-start gap-3.5 min-w-0">
+                          <div className="w-10 h-10 rounded-md bg-card border border-border flex items-center justify-center text-foreground-muted shrink-0 shadow-sm">
+                            <DeviceIcon size={16} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-semibold text-foreground truncate">{sess.deviceName ?? (sess.deviceType === 'mobile' ? 'Mobile Phone' : 'Laptop / Desktop')}</h4>
+                              {sess.isActive && <span className="inline-block w-1.5 h-1.5 rounded-full bg-success ring-4 ring-success/10 shrink-0" />}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-foreground-muted font-medium mt-0.5">
+                              {sess.ipAddress && <span className="font-mono">{sess.ipAddress}</span>}
+                              <span className="text-border-strong">•</span>
+                              <span className="inline-flex items-center gap-1"><Clock size={11} /> {timeAgo(sess.lastSeen)}</span>
+                              {sess.isActive && <span className="text-success font-bold text-[10px] uppercase tracking-wider ml-1">This Device</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleLogoutSession(sess.deviceId)}
+                          disabled={isBusy}
+                          className="h-8 px-3 rounded-md border border-border text-foreground-muted bg-card hover:bg-hover text-xs font-semibold inline-flex items-center justify-center gap-1 self-end sm:self-center shrink-0 transition-colors"
+                        >
+                          {isBusy ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />} Log Out Device
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12 border border-dashed border-border rounded-xl">
+                  <p className="text-sm text-foreground-subtle">No other device sessions found.</p>
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
 
       </div>
-
-      {/* ══ MODALS ═══════════════════════════════════════════════════════════ */}
-
-      {/* Update / Add email — input */}
-      {emailModal?.mode === 'update-email' && emailModal.step === 'input' && (
-        <Modal
-          title={user.email ? 'Change email address' : 'Add email address'}
-          subtitle="We'll send a 6-digit OTP to verify ownership."
-          onClose={closeModal}
-        >
-          {modalAlert && <div className="mb-4"><InfoAlert type={modalAlert.type} msg={modalAlert.msg} /></div>}
-          <Field label="New email address">
-            <TextInput type="email" value={emailModal.email}
-              onChange={v => setEmailModal({ ...emailModal, email: v })} placeholder="you@example.com" />
-          </Field>
-          <div className="flex gap-2 mt-4">
-            <BtnPrimary onClick={handleSendEmailOtp} loading={modalBusy} disabled={modalBusy}>
-              <ChevronRight size={13} /> Send OTP
-            </BtnPrimary>
-            <BtnGhost onClick={closeModal}>Cancel</BtnGhost>
-          </div>
-        </Modal>
-      )}
-
-      {/* Update email — OTP */}
-      {emailModal?.mode === 'update-email' && emailModal.step === 'otp' && (
-        <Modal
-          title="Verify your email"
-          subtitle={`Enter the 6-digit OTP sent to ${emailModal.email}`}
-          onClose={closeModal}
-        >
-          {modalAlert && <div className="mb-2"><InfoAlert type={modalAlert.type} msg={modalAlert.msg} /></div>}
-          <OtpInput value={emailModal.otp} onChange={v => setEmailModal({ ...emailModal, otp: v })} />
-          <div className="flex gap-2 mt-2">
-            <BtnPrimary onClick={handleVerifyEmailOtp} loading={modalBusy}
-              disabled={modalBusy || emailModal.otp.length < 6}>
-              <Check size={13} /> Verify &amp; save
-            </BtnPrimary>
-            <BtnGhost onClick={() => setEmailModal({ mode: 'update-email', step: 'input', email: emailModal.email })}>
-              Back
-            </BtnGhost>
-          </div>
-          <p className="text-xs text-foreground-subtle mt-3">
-            Didn&apos;t receive it?{' '}
-            <button onClick={handleSendEmailOtp} disabled={modalBusy}
-              className="text-primary font-semibold hover:underline disabled:opacity-50">
-              Resend OTP
-            </button>
-          </p>
-        </Modal>
-      )}
-
-      {/* Resend verification */}
-      {emailModal?.mode === 'resend-verify' && (
-        <Modal title="Verify email address" subtitle={`A verification link will be sent to ${user.email}`} onClose={closeModal}>
-          {modalAlert && <div className="mb-4"><InfoAlert type={modalAlert.type} msg={modalAlert.msg} /></div>}
-          <div className="flex gap-2">
-            <BtnPrimary onClick={handleResendVerify} loading={modalBusy} disabled={modalBusy}>
-              <Mail size={13} /> Send verification email
-            </BtnPrimary>
-            <BtnGhost onClick={closeModal}>Cancel</BtnGhost>
-          </div>
-        </Modal>
-      )}
-
-      {/* Enable / disable email login — input */}
-      {emailModal?.mode === 'enable-email-login' && emailModal.step === 'input' && (
-        <Modal
-          title={user.enableEmailLogin ? 'Disable email login' : 'Enable email login'}
-          subtitle={user.enableEmailLogin
-            ? 'This will remove password-based access to your account.'
-            : 'Set a password to allow signing in with your email.'}
-          onClose={closeModal}
-        >
-          {modalAlert && <div className="mb-4"><InfoAlert type={modalAlert.type} msg={modalAlert.msg} /></div>}
-          {user.enableEmailLogin ? (
-            <div className="flex gap-2">
-              <BtnPrimary onClick={handleDisableEmailLogin} loading={modalBusy} disabled={modalBusy}
-                className="!bg-error hover:!bg-error">
-                Confirm disable
-              </BtnPrimary>
-              <BtnGhost onClick={closeModal}>Cancel</BtnGhost>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <Field label="Email">
-                <TextInput type="email" value={emailModal.email}
-                  onChange={v => setEmailModal({ ...emailModal, email: v })} placeholder="you@example.com" />
-              </Field>
-              <Field label="Password">
-                <TextInput type="password" value={emailModal.password}
-                  onChange={v => setEmailModal({ ...emailModal, password: v })} placeholder="Min. 8 characters" />
-              </Field>
-              <Field label="Confirm password">
-                <TextInput type="password" value={emailModal.confirm}
-                  onChange={v => setEmailModal({ ...emailModal, confirm: v })} placeholder="Re-enter password" />
-              </Field>
-              <div className="flex gap-2 mt-1">
-                <BtnPrimary onClick={handleEnableEmailLogin} loading={modalBusy} disabled={modalBusy}>
-                  <ChevronRight size={13} /> Continue
-                </BtnPrimary>
-                <BtnGhost onClick={closeModal}>Cancel</BtnGhost>
-              </div>
-            </div>
-          )}
-        </Modal>
-      )}
-
-      {/* Enable email login — OTP */}
-      {emailModal?.mode === 'enable-email-login' && emailModal.step === 'otp' && (
-        <Modal title="Verify your email" subtitle={`Enter the 6-digit OTP sent to ${emailModal.email}`} onClose={closeModal}>
-          {modalAlert && <div className="mb-2"><InfoAlert type={modalAlert.type} msg={modalAlert.msg} /></div>}
-          <OtpInput value={emailModal.otp} onChange={v => setEmailModal({ ...emailModal, otp: v })} />
-          <div className="flex gap-2 mt-2">
-            <BtnPrimary onClick={handleVerifyEmailLogin} loading={modalBusy}
-              disabled={modalBusy || emailModal.otp.length < 6}>
-              <Check size={13} /> Verify &amp; enable
-            </BtnPrimary>
-            <BtnGhost onClick={() => setEmailModal({ mode: 'enable-email-login', step: 'input', email: emailModal.email, password: '', confirm: '' })}>
-              Back
-            </BtnGhost>
-          </div>
-        </Modal>
-      )}
-
-      {/* Change password */}
-      {emailModal?.mode === 'change-password' && (
-        <Modal title="Change password" subtitle="Enter your current password and choose a new one." onClose={closeModal}>
-          {modalAlert && <div className="mb-4"><InfoAlert type={modalAlert.type} msg={modalAlert.msg} /></div>}
-          <div className="flex flex-col gap-3">
-            <Field label="Current password">
-              <TextInput type="password" value={emailModal.current}
-                onChange={v => setEmailModal({ ...emailModal, current: v })} placeholder="••••••••" />
-            </Field>
-            <Field label="New password">
-              <TextInput type="password" value={emailModal.next}
-                onChange={v => setEmailModal({ ...emailModal, next: v })} placeholder="Min. 8 characters" />
-            </Field>
-            <Field label="Confirm new password">
-              <TextInput type="password" value={emailModal.confirm}
-                onChange={v => setEmailModal({ ...emailModal, confirm: v })} placeholder="Re-enter new password" />
-            </Field>
-            <div className="flex gap-2 mt-1">
-              <BtnPrimary onClick={handleChangePassword} loading={modalBusy} disabled={modalBusy}>
-                <Check size={13} /> Update password
-              </BtnPrimary>
-              <BtnGhost onClick={closeModal}>Cancel</BtnGhost>
-            </div>
-          </div>
-        </Modal>
-      )}
-    </>
+    </div>
   );
 }
