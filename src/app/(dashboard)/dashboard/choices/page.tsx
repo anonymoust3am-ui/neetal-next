@@ -21,7 +21,7 @@ import {
 import type { ChoiceListSummary, ChoiceListDetail } from '@/lib/api';
 
 
-const INST_API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const INST_API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 /* ─── cn ─────────────────────────────────────────────────────────────── */
 function cn(...cls: (string | false | null | undefined)[]) {
   return cls.filter(Boolean).join(' ');
