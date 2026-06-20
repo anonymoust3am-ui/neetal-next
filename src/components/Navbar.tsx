@@ -176,13 +176,25 @@ export function Navbar() {
                         )}
                     </div>
 
-                    {/* ─── Mobile Menu Button ─── */}
-                    <button
-                        onClick={() => setIsOpen(!isOpen)}
-                        className="lg:hidden p-2 text-foreground"
-                    >
-                        {isOpen ? <X /> : <Menu />}
-                    </button>
+                    {/* ─── Mobile Icons ─── */}
+                    <div className="lg:hidden flex items-center gap-1">
+                        {/* Dashboard icon — only when logged in */}
+                        {user && (
+                            <Link
+                                href="/dashboard"
+                                className="p-2 text-foreground hover:bg-muted rounded-lg transition-colors"
+                            >
+                                <LayoutDashboard className="w-5 h-5" />
+                            </Link>
+                        )}
+                        {/* Menu Button */}
+                        <button
+                            onClick={() => setIsOpen(!isOpen)}
+                            className="p-2 text-foreground"
+                        >
+                            {isOpen ? <X /> : <Menu />}
+                        </button>
+                    </div>
 
                 </div>
             </div>

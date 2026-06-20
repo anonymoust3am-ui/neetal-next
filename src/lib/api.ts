@@ -305,6 +305,7 @@ export interface ChoiceListDetail {
   quota: string;
   catagory: string;
   insertAt: number;
+  closingRanks?: Record<string, Record<string, number>> | null;
   createdAt: string;
   updatedAt: string;
 }

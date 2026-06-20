@@ -207,18 +207,24 @@ function AddChoiceModal({ defaultCaunselling, choiceCount, counsellingOpts, onCl
   const [course, setCourse]               = useState('');
   const [loadingCourses, setLoadingCourses] = useState(false);
 
-  /* load institutes on mount */
+  /* load institutes on mount and when counselling changes, filtered by counselling */
   useEffect(() => {
-    fetch(`${INST_API}/institutes?page=1`)
+    setLoadingInsts(true);
+    const params = new URLSearchParams();
+    params.set('page', '1');
+    if (caunselling) {
+      params.set('counselling', caunselling);
+    }
+    fetch(`${INST_API}/institutes?${params.toString()}`)
       .then(r => r.json())
       .then(j => setAllInsts(
         (j.data?.institutes ?? []).map((i: { id: number; name: string; state: string }) => ({
           id: i.id, name: i.name, state: i.state,
         }))
       ))
-      .catch(() => {})
+      .catch(() => setAllInsts([]))
       .finally(() => setLoadingInsts(false));
-  }, []);
+  }, [caunselling]);
 
   /* load courses when institute is selected */
   useEffect(() => {
@@ -288,7 +294,7 @@ function AddChoiceModal({ defaultCaunselling, choiceCount, counsellingOpts, onCl
         {err && <ModalError msg={err} />}
 
         <FormField label="Counselling">
-          <select value={caunselling} onChange={e => setCaunselling(e.target.value)} className={selectCls}>
+          <select value={caunselling} onChange={e => { setCaunselling(e.target.value); setInstSearch(''); setSelectedInstId(null); setCourses([]); setCourse(''); setErr(''); }} className={selectCls}>
             {counsellingOpts.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
         </FormField>
@@ -305,8 +311,8 @@ function AddChoiceModal({ defaultCaunselling, choiceCount, counsellingOpts, onCl
               className={inputCls}
             />
             {instDropOpen && filteredInsts.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg max-h-48 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-                {filteredInsts.slice(0, 30).map(inst => (
+              <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg max-h-64 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                {filteredInsts.map(inst => (
                   <button
                     key={inst.id}
                     type="button"
@@ -1001,16 +1007,25 @@ export default function ChoiceListPage() {
                               </td>
                             ))}
 
-                            {/* CR cols — empty for API data */}
+                            {/* CR cols — closing ranks from API */}
                             {CR_YEAR_ROUNDS.map(([year, rounds]) =>
-                              Array.from({ length: rounds }, (_, i) => (
-                                <td
-                                  key={`cr_${year}_${i + 1}`}
-                                  className="border-b border-border px-2 py-2 text-center whitespace-nowrap"
-                                >
-                                  <span className="text-xs text-foreground-subtle/30">—</span>
-                                </td>
-                              ))
+                              Array.from({ length: rounds }, (_, i) => {
+                                const numKey = String(i + 1);
+                                const roundKey = `R${i + 1}`;
+                                const closingRank = detail.closingRanks?.[year]?.[numKey] ?? detail.closingRanks?.[year]?.[roundKey];
+                                return (
+                                  <td
+                                    key={`cr_${year}_${i + 1}`}
+                                    className="border-b border-border px-2 py-2 text-center whitespace-nowrap"
+                                  >
+                                    {closingRank ? (
+                                      <span className="text-xs font-medium text-foreground">{closingRank}</span>
+                                    ) : (
+                                      <span className="text-xs text-foreground-subtle/30">—</span>
+                                    )}
+                                  </td>
+                                );
+                              })
                             )}
 
                             {/* Delete */}
