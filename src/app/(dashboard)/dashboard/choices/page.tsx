@@ -3,7 +3,8 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import {
   Plus, Pencil, Trash2, Check, X, SlidersHorizontal,
-  GripVertical, ListChecks, FolderOpen, ChevronRight, Loader2,
+  GripVertical, ListChecks, FolderOpen, ChevronRight, ChevronLeft,
+  ChevronUp, ChevronDown, Loader2,
 } from 'lucide-react';
 import { HEADER_H } from '@/contexts/SidebarContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,8 +21,8 @@ import {
 } from '@/lib/api';
 import type { ChoiceListSummary, ChoiceListDetail } from '@/lib/api';
 
-
 const INST_API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
 /* ─── cn ─────────────────────────────────────────────────────────────── */
 function cn(...cls: (string | false | null | undefined)[]) {
   return cls.filter(Boolean).join(' ');
@@ -29,17 +30,19 @@ function cn(...cls: (string | false | null | undefined)[]) {
 
 /* ─── Column definitions ─────────────────────────────────────────────── */
 const DATA_COLS: Array<{ key: keyof ChoiceListDetail | string; label: string; w: number }> = [
-  { key: 'course',    label: 'Course',   w: 110 },
-  { key: 'quota',     label: 'Quota',    w: 80  },
-  { key: 'catagory',  label: 'Category', w: 90  },
+  { key: 'course', label: 'Course', w: 80 },
+  { key: 'quota', label: 'Quota', w: 40 },
+  { key: 'catagory', label: 'Category', w: 40 },
 ];
 
 const CR_YEAR_ROUNDS: Array<[string, number]> = [
   ['2022', 6], ['2023', 6], ['2024', 7], ['2025', 6],
 ];
+const LATEST_YEAR = CR_YEAR_ROUNDS[CR_YEAR_ROUNDS.length - 1][0];
+const LATEST_ROUNDS = CR_YEAR_ROUNDS[CR_YEAR_ROUNDS.length - 1][1];
 
 /* ─── Hardcoded filter options (quota / category for filter chips) ───── */
-const QUOTA_OPTS    = ['AIQ', 'State Quota', 'NRI', 'Institutional', 'Management', 'PwD'];
+const QUOTA_OPTS = ['AIQ', 'State Quota', 'NRI', 'Institutional', 'Management', 'PwD'];
 const CATEGORY_OPTS = ['General', 'OBC-NCL', 'SC', 'ST', 'EWS', 'PwD-General', 'PwD-OBC', 'PwD-SC', 'PwD-ST', 'PwD-EWS'];
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
@@ -49,24 +52,36 @@ interface FilterState {
 }
 
 type InsertAt = 'top' | 'bottom' | 'custom';
+type MobilePanel = 'lists' | 'detail';
 
 /* ─── Shared input styles ────────────────────────────────────────────── */
 const inputCls =
-  'h-9 px-3 text-sm w-full rounded-lg outline-none ' +
+  'h-10 px-3 text-sm w-full rounded-lg outline-none ' +
   'bg-muted border border-border text-foreground placeholder:text-foreground-subtle ' +
   'focus:border-border-focus focus:bg-card transition-colors';
 
 const selectCls = inputCls + ' appearance-none cursor-pointer';
 
-/* ─── Modal wrapper ──────────────────────────────────────────────────── */
-function Modal({ title, children, onClose, width = 'max-w-md' }: {
+/* ─── Modal wrapper (bottom sheet on mobile, centered on desktop) ────── */
+function Modal({ title, children, onClose, width = 'sm:max-w-md' }: {
   title: string; children: React.ReactNode; onClose: () => void; width?: string;
 }) {
   return (
-    <div className="fixed inset-0 z-modal-backdrop flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-modal-backdrop flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-overlay/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={cn('relative z-modal w-full bg-card border border-border rounded-2xl shadow-lg', width)}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+      <div
+        className={cn(
+          'relative z-modal w-full bg-card border border-border shadow-lg flex flex-col',
+          'rounded-t-2xl sm:rounded-2xl',
+          'max-h-[88vh] sm:max-h-[85vh]',
+          'mb-16 sm:mb-0',
+          width,
+        )}
+      >
+        <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0">
+          <div className="w-9 h-1 rounded-full bg-border" />
+        </div>
+        <div className="flex items-center justify-between px-5 py-3.5 sm:py-4 border-b border-border shrink-0">
           <h2 className="text-sm font-semibold text-foreground">{title}</h2>
           <button
             onClick={onClose}
@@ -76,7 +91,7 @@ function Modal({ title, children, onClose, width = 'max-w-md' }: {
             <X size={15} />
           </button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className="p-5 overflow-y-auto">{children}</div>
       </div>
     </div>
   );
@@ -109,14 +124,14 @@ function CreateListModal({ counsellingOpts, onClose, onCreate }: {
   onClose: () => void;
   onCreate: (name: string, caunselling: string) => Promise<void>;
 }) {
-  const [name, setCounsellingName] = useState('');
+  const [name, setName] = useState('');
   const [caunselling, setCaunselling] = useState('');
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
-    if (!name.trim())  { setErr('List name is required'); return; }
-    if (!caunselling)  { setErr('Please select a counselling type'); return; }
+    if (!name.trim()) { setErr('List name is required'); return; }
+    if (!caunselling) { setErr('Please select a counselling type'); return; }
     setSaving(true);
     try {
       await onCreate(name.trim(), caunselling);
@@ -148,7 +163,7 @@ function CreateListModal({ counsellingOpts, onClose, onCreate }: {
           <input
             autoFocus
             value={name}
-            onChange={e => { setCounsellingName(e.target.value); setErr(''); }}
+            onChange={e => { setName(e.target.value); setErr(''); }}
             onKeyDown={e => e.key === 'Enter' && submit()}
             placeholder="e.g. AIQ Round 1 — Main List"
             className={inputCls}
@@ -159,7 +174,7 @@ function CreateListModal({ counsellingOpts, onClose, onCreate }: {
           <button
             onClick={submit}
             disabled={saving}
-            className="flex-1 h-9 bg-primary text-primary-foreground rounded-lg
+            className="flex-1 h-10 bg-primary text-primary-foreground rounded-lg
               text-sm font-semibold hover:bg-primary-hover transition-colors
               disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
@@ -168,7 +183,7 @@ function CreateListModal({ counsellingOpts, onClose, onCreate }: {
           </button>
           <button
             onClick={onClose}
-            className="h-9 px-4 rounded-lg border border-border text-sm font-medium
+            className="h-10 px-4 rounded-lg border border-border text-sm font-medium
               text-foreground-muted hover:bg-hover transition-colors"
           >
             Cancel
@@ -188,41 +203,94 @@ function AddChoiceModal({ defaultCaunselling, choiceCount, counsellingOpts, onCl
   onAdd: (entry: { caunselling: string; institute: string; course: string; quota: string; category: string }, insertAt: 'top' | 'bottom' | number) => Promise<void>;
 }) {
   const [caunselling, setCaunselling] = useState(defaultCaunselling);
-  const [quota, setQuota]             = useState('');
-  const [category, setCategory]       = useState('');
-  const [insertAt, setInsertAt]       = useState<InsertAt>('bottom');
-  const [customPos, setCustomPos]     = useState('');
-  const [err, setErr]                 = useState('');
-  const [saving, setSaving]           = useState(false);
+  const [quota, setQuota] = useState('');
+  const [category, setCategory] = useState('');
+  const [err, setErr] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  /* institute dropdown */
-  const [allInsts, setAllInsts]           = useState<{ id: number; name: string; state: string }[]>([]);
+  /* institute select */
+  const [allInsts, setAllInsts] = useState<{ id: number; name: string; state: string }[]>([]);
   const [selectedInstId, setSelectedInstId] = useState<number | null>(null);
-  const [instDropOpen, setInstDropOpen]   = useState(false);
-  const [loadingInsts, setLoadingInsts]   = useState(true);
+  const [instDropOpen, setInstDropOpen] = useState(false);
+  const [loadingInsts, setLoadingInsts] = useState(true);
 
   /* course dropdown */
-  const [courses, setCourses]             = useState<string[]>([]);
-  const [course, setCourse]               = useState('');
+  const [courses, setCourses] = useState<string[]>([]);
+  const [course, setCourse] = useState('');
   const [loadingCourses, setLoadingCourses] = useState(false);
 
-  /* load institutes on mount and when counselling changes, filtered by counselling */
+  /* load institutes on mount and when counselling changes */
   useEffect(() => {
-    setLoadingInsts(true);
-    const params = new URLSearchParams();
-    params.set('page', '1');
-    if (caunselling) {
-      params.set('counselling', caunselling);
+    if (!caunselling) {
+      setAllInsts([]);
+      setSelectedInstId(null);
+      setLoadingInsts(false);
+      return;
     }
-    fetch(`${INST_API}/institutes?${params.toString()}`)
-      .then(r => r.json())
-      .then(j => setAllInsts(
-        (j.data?.institutes ?? []).map((i: { id: number; name: string; state: string }) => ({
-          id: i.id, name: i.name, state: i.state,
-        }))
-      ))
-      .catch(() => setAllInsts([]))
-      .finally(() => setLoadingInsts(false));
+
+    const controller = new AbortController();
+
+    // Immediately show loading state
+    setLoadingInsts(true);
+
+    // Clear previous data
+    setAllInsts([]);
+    setSelectedInstId(null);
+    setCourses([]);
+    setCourse('');
+
+    const loadInstitutes = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set('page', '1');
+        params.set('counselling', caunselling);
+
+        const response = await fetch(
+          `${INST_API}/institutes?${params.toString()}`,
+          {
+            signal: controller.signal,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch institutes');
+        }
+
+        const json = await response.json();
+
+        // Ignore if request was aborted
+        if (controller.signal.aborted) return;
+
+        setAllInsts(
+          (json.data?.institutes ?? []).map(
+            (i: { id: number; name: string; state: string }) => ({
+              id: i.id,
+              name: i.name,
+              state: i.state,
+            })
+          )
+        );
+      } catch (err: unknown) {
+        if (
+          err instanceof Error &&
+          err.name !== 'AbortError'
+        ) {
+          console.error('Institute fetch failed:', err);
+          setAllInsts([]);
+        }
+      } finally {
+        // Don't update loading state for aborted requests
+        if (!controller.signal.aborted) {
+          setLoadingInsts(false);
+        }
+      }
+    };
+
+    loadInstitutes();
+
+    return () => {
+      controller.abort();
+    };
   }, [caunselling]);
 
   /* load courses when institute is selected */
@@ -246,24 +314,15 @@ function AddChoiceModal({ defaultCaunselling, choiceCount, counsellingOpts, onCl
   const selectedInst = allInsts.find(i => i.id === selectedInstId);
 
   const submit = async () => {
-    if (!selectedInstId) { setErr('Institute is required'); return; }
     const instituteName = selectedInst?.name ?? '';
     if (!instituteName) { setErr('Institute is required'); return; }
     if (!course.trim()) { setErr('Course is required'); return; }
-    if (!quota)         { setErr('Please select quota'); return; }
-    if (!category)      { setErr('Please select category'); return; }
-
-    let pos: 'top' | 'bottom' | number =
-      insertAt === 'top' ? 'top' : insertAt === 'bottom' ? 'bottom' : parseInt(customPos, 10);
-    if (insertAt === 'custom') {
-      const n = Number(customPos);
-      if (!n || n < 1) { setErr('Enter a valid choice number'); return; }
-      pos = n;
-    }
+    if (!quota) { setErr('Please select quota'); return; }
+    if (!category) { setErr('Please select category'); return; }
 
     setSaving(true);
     try {
-      await onAdd({ caunselling, institute: instituteName, course: course.trim(), quota, category }, pos);
+      await onAdd({ caunselling, institute: instituteName, course: course.trim(), quota, category }, 'bottom');
       onClose();
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : 'Failed to add choice');
@@ -272,24 +331,21 @@ function AddChoiceModal({ defaultCaunselling, choiceCount, counsellingOpts, onCl
     }
   };
 
-  const radioOpts: Array<{ val: InsertAt; label: string; sub: string }> = [
-    { val: 'top',    label: 'Top',    sub: 'Insert at position 1' },
-    { val: 'bottom', label: 'Bottom', sub: `Insert at position ${choiceCount + 1}` },
-    { val: 'custom', label: 'Custom', sub: 'Enter a specific position' },
-  ];
-
   return (
-    <Modal title="Add to Choice List" onClose={onClose} width="max-w-lg">
+    <Modal title="Add to Choice List" onClose={onClose} width="sm:max-w-lg">
       <div className="flex flex-col gap-3.5">
         {err && <ModalError msg={err} />}
 
         <FormField label="Counselling">
-          <select value={caunselling} onChange={e => { setCaunselling(e.target.value); setSelectedInstId(null); setCourses([]); setCourse(''); setErr(''); }} className={selectCls}>
+          <select
+            value={caunselling}
+            onChange={e => { setCaunselling(e.target.value); setSelectedInstId(null); setCourses([]); setCourse(''); setErr(''); }}
+            className={selectCls}
+          >
             {counsellingOpts.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
         </FormField>
 
-        {/* Institute dropdown — custom styled */}
         <FormField label="Institute" required>
           <div className="relative">
             <button
@@ -303,9 +359,14 @@ function AddChoiceModal({ defaultCaunselling, choiceCount, counsellingOpts, onCl
               )}
             >
               <span className={selectedInstId ? 'text-foreground' : 'text-foreground-subtle'}>
-                {loadingInsts ? 'Loading institutes…' : (selectedInst?.name ?? 'Select institute…')}
+                {loadingInsts ? (
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 size={12} className="animate-spin" />
+                    Loading institutes…
+                  </span>
+                ) : (selectedInst?.name ?? 'Select institute…')}
               </span>
-              <ChevronRight size={14} className={cn('shrink-0 transition-transform', instDropOpen && 'rotate-90')} />
+              <ChevronDown size={14} className={cn('shrink-0 transition-transform', instDropOpen && 'rotate-180')} />
             </button>
             {instDropOpen && !loadingInsts && allInsts.length > 0 && (
               <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg max-h-64 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
@@ -336,7 +397,6 @@ function AddChoiceModal({ defaultCaunselling, choiceCount, counsellingOpts, onCl
           </div>
         </FormField>
 
-        {/* Course dropdown */}
         <FormField label="Course" required>
           {loadingCourses ? (
             <div className={cn(inputCls, 'flex items-center gap-2 text-foreground-subtle')}>
@@ -372,45 +432,18 @@ function AddChoiceModal({ defaultCaunselling, choiceCount, counsellingOpts, onCl
           </FormField>
         </div>
 
-        {/* <FormField label="Insert at">
-          <div className="flex flex-col gap-2">
-            {radioOpts.map(({ val, label, sub }) => (
-              <label
-                key={val}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors',
-                  insertAt === val ? 'border-primary/40 bg-primary-light' : 'border-border bg-muted hover:bg-hover',
-                )}
-              >
-                <div className={cn(
-                  'w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0',
-                  insertAt === val ? 'border-primary' : 'border-border-strong',
-                )}>
-                  {insertAt === val && <div className="w-2 h-2 rounded-full bg-primary" />}
-                </div>
-                <input type="radio" name="insertAt" value={val} checked={insertAt === val}
-                  onChange={() => { setInsertAt(val); setErr(''); }} className="sr-only" />
-                <div>
-                  <p className={cn('text-sm font-medium', insertAt === val ? 'text-primary' : 'text-foreground')}>{label}</p>
-                  <p className="text-xs text-foreground-muted">{sub}</p>
-                </div>
-              </label>
-            ))}
-            {insertAt === 'custom' && (
-              <input type="number" min={1} max={choiceCount + 1} value={customPos}
-                onChange={e => { setCustomPos(e.target.value); setErr(''); }}
-                placeholder="Enter choice number" className={cn(inputCls, 'mt-0.5')} />
-            )}
-          </div>
-        </FormField> */}
-
         <div className="flex gap-2 pt-1 border-t border-border">
-          <button onClick={onClose}
-            className="h-9 px-4 rounded-lg border border-border text-sm font-medium text-foreground-muted hover:bg-hover transition-colors">
+          <button
+            onClick={onClose}
+            className="h-10 px-4 rounded-lg border border-border text-sm font-medium text-foreground-muted hover:bg-hover transition-colors"
+          >
             Cancel
           </button>
-          <button onClick={submit} disabled={saving}
-            className="flex-1 h-9 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          <button
+            onClick={submit}
+            disabled={saving}
+            className="flex-1 h-10 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
             {saving && <Loader2 size={13} className="animate-spin" />}
             Add to Choice List
           </button>
@@ -448,7 +481,7 @@ function FilterModal({ filter, onApply, onClose }: {
                 key={opt}
                 onClick={() => toggle(fKey, opt)}
                 className={cn(
-                  'px-2.5 py-1 rounded-full text-xs font-medium border transition-colors',
+                  'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
                   active
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-muted text-foreground-muted border-border hover:border-primary/40 hover:text-primary',
@@ -464,22 +497,22 @@ function FilterModal({ filter, onApply, onClose }: {
   }
 
   return (
-    <Modal title="Filter choices" onClose={onClose} width="max-w-sm">
+    <Modal title="Filter choices" onClose={onClose} width="sm:max-w-sm">
       <div className="flex flex-col gap-4">
-        <Group title="Quota"    opts={QUOTA_OPTS}    fKey="quotas" />
+        <Group title="Quota" opts={QUOTA_OPTS} fKey="quotas" />
         <Group title="Category" opts={CATEGORY_OPTS} fKey="categories" />
 
         <div className="flex gap-2 pt-2 border-t border-border">
           <button
             onClick={() => setLocal({ quotas: [], categories: [] })}
-            className="h-9 px-4 rounded-lg border border-border text-sm font-medium
+            className="h-10 px-4 rounded-lg border border-border text-sm font-medium
               text-foreground-muted hover:bg-hover transition-colors"
           >
             Clear all
           </button>
           <button
             onClick={() => { onApply(local); onClose(); }}
-            className="flex-1 h-9 bg-primary text-primary-foreground rounded-lg
+            className="flex-1 h-10 bg-primary text-primary-foreground rounded-lg
               text-sm font-semibold hover:bg-primary-hover transition-colors"
           >
             Apply{activeCount > 0 ? ` (${activeCount})` : ''}
@@ -490,32 +523,138 @@ function FilterModal({ filter, onApply, onClose }: {
   );
 }
 
+/* ─── Choice card (mobile / tablet) ──────────────────────────────────── */
+function ChoiceCard({ detail, idx, total, canReorder, onRemove, onMove }: {
+  detail: ChoiceListDetail;
+  idx: number;
+  total: number;
+  canReorder: boolean;
+  onRemove: (id: string) => void;
+  onMove: (idx: number, dir: -1 | 1) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const latestRanks = Array.from({ length: LATEST_ROUNDS }, (_, i) => {
+    const numKey = String(i + 1);
+    const roundKey = `R${i + 1}`;
+    return detail.closingRanks?.[LATEST_YEAR]?.[numKey] ?? detail.closingRanks?.[LATEST_YEAR]?.[roundKey];
+  }).filter(Boolean);
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <div className="flex items-start gap-2.5">
+        <span className={cn(
+          'shrink-0 mt-0.5 w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold',
+          idx < 3 ? 'bg-primary-light text-primary' : 'bg-muted text-foreground-muted',
+        )}>
+          {idx + 1}
+        </span>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground leading-snug">{detail.institute}</p>
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            <span className="px-1.5 py-0.5 rounded-md bg-muted text-foreground-muted text-xs font-medium">{detail.course || '—'}</span>
+            <span className="px-1.5 py-0.5 rounded-md bg-muted text-foreground-muted text-xs font-medium">{detail.quota || '—'}</span>
+            <span className="px-1.5 py-0.5 rounded-md bg-muted text-foreground-muted text-xs font-medium">{detail.catagory || '—'}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-0.5 shrink-0">
+          {canReorder && (
+            <div className="flex flex-col">
+              <button
+                onClick={() => onMove(idx, -1)}
+                disabled={idx === 0}
+                className="w-6 h-5 flex items-center justify-center text-foreground-subtle disabled:opacity-20 hover:text-primary transition-colors"
+              >
+                <ChevronUp size={12} />
+              </button>
+              <button
+                onClick={() => onMove(idx, 1)}
+                disabled={idx === total - 1}
+                className="w-6 h-5 flex items-center justify-center text-foreground-subtle disabled:opacity-20 hover:text-primary transition-colors"
+              >
+                <ChevronDown size={12} />
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => onRemove(detail.id)}
+            className="w-7 h-7 flex items-center justify-center rounded-md text-foreground-subtle hover:text-error hover:bg-error-light transition-colors"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      </div>
+
+      {/* <button
+        onClick={() => setExpanded(e => !e)}
+        className="mt-2.5 w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-muted text-xs font-medium text-foreground-muted hover:bg-hover transition-colors"
+      >
+        <span>{LATEST_YEAR} ranks: {latestRanks.length ? latestRanks.join(', ') : '—'}</span>
+        <ChevronRight size={12} className={cn('transition-transform shrink-0 ml-2', expanded && 'rotate-90')} />
+      </button>
+
+       {expanded && (
+        <div className="mt-2 flex flex-col gap-2">
+          {CR_YEAR_ROUNDS.map(([year, rounds]) => (
+            <div key={year}>
+              <p className="text-xs font-semibold text-foreground-subtle mb-1">{year}</p>
+              <div className="flex flex-wrap gap-1">
+                {Array.from({ length: rounds }, (_, i) => {
+                  const numKey = String(i + 1);
+                  const roundKey = `R${i + 1}`;
+                  const cr = detail.closingRanks?.[year]?.[numKey] ?? detail.closingRanks?.[year]?.[roundKey];
+                  return (
+                    <span
+                      key={`${year}_${i}`}
+                      className={cn(
+                        'px-1.5 py-0.5 rounded-md text-xs font-medium',
+                        cr ? 'bg-primary-light text-primary' : 'bg-muted text-foreground-subtle/40',
+                      )}
+                    >
+                      R{i + 1}: {cr ?? '—'}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )} */}
+    </div>
+  );
+}
+
 /* ─── Page ───────────────────────────────────────────────────────────── */
 export default function ChoiceListPage() {
   const { firebaseUser } = useAuth();
 
-  const [lists, setLists]                     = useState<ChoiceListSummary[]>([]);
-  const [activeId, setActiveId]               = useState<string | null>(null);
-  const [details, setDetails]                 = useState<ChoiceListDetail[]>([]);
+  const [lists, setLists] = useState<ChoiceListSummary[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [details, setDetails] = useState<ChoiceListDetail[]>([]);
   const [counsellingOpts, setCounsellingOpts] = useState<string[]>([]);
-  const [loadingLists, setLoadingLists]       = useState(true);
-  const [loadingDetails, setLoadingDetails]   = useState(false);
+  const [loadingLists, setLoadingLists] = useState(true);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  /* mobile master/detail navigation */
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>('lists');
 
   /* sidebar inline interactions */
-  const [editingId, setEditingId]             = useState<string | null>(null);
-  const [editName, setEditName]               = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   /* modals */
   const [showCreate, setShowCreate] = useState(false);
-  const [showAdd, setShowAdd]       = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
 
   /* filter */
   const [filter, setFilter] = useState<FilterState>({ quotas: [], categories: [] });
 
-  /* drag */
-  const dragSrcIdx  = useRef<number | null>(null);
+  /* drag (desktop table) */
+  const dragSrcIdx = useRef<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
   /* ── Token helper ─────────────────────────────────────────────── */
@@ -547,7 +686,7 @@ export default function ChoiceListPage() {
         const names = opts.flatMap(o => o.bodies.map(b => b.name));
         setCounsellingOpts(names);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -573,18 +712,29 @@ export default function ChoiceListPage() {
     else setDetails([]);
   }, [activeId, fetchDetails]);
 
+  /* ── Keep mobile nav in sync ──────────────────────────────────── */
+  useEffect(() => {
+    if (!activeId) setMobilePanel('lists');
+  }, [activeId]);
+
   /* ── Derived ──────────────────────────────────────────────────── */
-  const activeList  = lists.find(l => l.id === activeId) ?? null;
+  const activeList = lists.find(l => l.id === activeId) ?? null;
   const filterCount = filter.quotas.length + filter.categories.length;
 
   const filteredDetails = useMemo(() => {
     if (!filterCount) return details;
     return details.filter(d => {
-      if (filter.quotas.length     && !filter.quotas.includes(d.quota))      return false;
+      if (filter.quotas.length && !filter.quotas.includes(d.quota)) return false;
       if (filter.categories.length && !filter.categories.includes(d.catagory)) return false;
       return true;
     });
   }, [details, filter, filterCount]);
+
+  /* ── Navigation ───────────────────────────────────────────────── */
+  const selectList = (id: string) => {
+    setActiveId(id);
+    setMobilePanel('detail');
+  };
 
   /* ── List CRUD ────────────────────────────────────────────────── */
   const handleCreateList = async (name: string, caunselling: string) => {
@@ -592,6 +742,7 @@ export default function ChoiceListPage() {
     const created = await createChoiceList(token, { name, caunselling });
     await fetchLists();
     setActiveId(created.id);
+    setMobilePanel('detail');
   };
 
   const handleDeleteList = async (id: string) => {
@@ -620,9 +771,9 @@ export default function ChoiceListPage() {
     if (!activeId) return;
     const token = await getToken();
     const numInsertAt =
-      insertAt === 'top'    ? 0 :
-      insertAt === 'bottom' ? details.length :
-      (insertAt as number) - 1;
+      insertAt === 'top' ? 0 :
+        insertAt === 'bottom' ? details.length :
+          (insertAt as number) - 1;
 
     await addChoiceListDetail(token, activeId, {
       name: `${entry.institute} – ${entry.course}`,
@@ -645,7 +796,7 @@ export default function ChoiceListPage() {
     setLists(ls => ls.map(l => l.id === activeId ? { ...l, detailsCount: Math.max(0, l.detailsCount - 1) } : l));
   };
 
-  /* ── Drag-to-reorder ──────────────────────────────────────────── */
+  /* ── Reorder: drag (desktop table) ────────────────────────────── */
   const onDragStart = (idx: number) => {
     if (filterCount > 0) return;
     dragSrcIdx.current = idx;
@@ -658,6 +809,16 @@ export default function ChoiceListPage() {
   };
 
   const onDragLeave = () => setDragOverIdx(null);
+
+  const persistOrder = async (reordered: ChoiceListDetail[]) => {
+    if (!activeId) return;
+    try {
+      const token = await getToken();
+      await reorderChoiceListDetails(token, activeId, reordered.map(d => d.id));
+    } catch {
+      await fetchDetails(activeId);
+    }
+  };
 
   const onDrop = async (e: React.DragEvent, targetIdx: number) => {
     e.preventDefault();
@@ -672,33 +833,43 @@ export default function ChoiceListPage() {
     setDetails(reordered);
     dragSrcIdx.current = null;
     setDragOverIdx(null);
+    await persistOrder(reordered);
+  };
 
-    try {
-      const token = await getToken();
-      await reorderChoiceListDetails(token, activeId, reordered.map(d => d.id));
-    } catch {
-      /* revert on failure */
-      await fetchDetails(activeId);
-    }
+  /* ── Reorder: up/down buttons (mobile cards) ──────────────────── */
+  const moveDetail = async (idx: number, dir: -1 | 1) => {
+    if (!activeId || filterCount > 0) return;
+    const targetIdx = idx + dir;
+    if (targetIdx < 0 || targetIdx >= details.length) return;
+    const reordered = [...details];
+    [reordered[idx], reordered[targetIdx]] = [reordered[targetIdx], reordered[idx]];
+    setDetails(reordered);
+    await persistOrder(reordered);
   };
 
   /* ── Render ───────────────────────────────────────────────────── */
   return (
     <>
       <div
-        className="fixed left-0 right-0 bottom-0 flex overflow-hidden"
+        className="fixed left-0 right-0 bottom-0 flex overflow-hidden bg-background"
         style={{ top: HEADER_H }}
       >
-        {/* ── Sidebar ───────────────────────────────────────── */}
-        <aside className="w-60 shrink-0 border-r border-border bg-card flex flex-col overflow-hidden">
-
-          <div className="px-4 py-3 border-b border-border shrink-0">
-            <div className="flex items-center gap-2">
-              <ListChecks size={14} className="text-primary shrink-0" />
-              <span className="text-sm font-semibold text-foreground">Choice Lists</span>
-              <span className="ml-auto text-xs font-bold px-1.5 py-px rounded-full bg-primary-light text-primary">
-                {lists.length}
-              </span>
+        {/* ── Sidebar / Lists panel ────────────────────────────── */}
+        <aside
+          className={cn(
+            'flex flex-col h-full w-full md:w-72 shrink-0 border-r border-border bg-card overflow-hidden',
+            mobilePanel === 'detail' && 'hidden md:flex',
+          )}
+        >
+          <div className="px-4 py-3.5 border-b border-border shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-primary-light flex items-center justify-center shrink-0">
+                <ListChecks size={15} className="text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground leading-tight">Choice Lists</p>
+                <p className="text-xs text-foreground-subtle">{lists.length} {lists.length === 1 ? 'list' : 'lists'}</p>
+              </div>
             </div>
           </div>
 
@@ -713,7 +884,8 @@ export default function ChoiceListPage() {
               lists.map(list => {
                 if (editingId === list.id) {
                   return (
-                    <div key={list.id}
+                    <div
+                      key={list.id}
                       className="flex items-center gap-1.5 px-2 py-2 rounded-lg bg-primary-light
                         border border-primary/30 mb-0.5"
                     >
@@ -722,7 +894,7 @@ export default function ChoiceListPage() {
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
                         onKeyDown={e => {
-                          if (e.key === 'Enter')  handleSaveListName(list.id);
+                          if (e.key === 'Enter') handleSaveListName(list.id);
                           if (e.key === 'Escape') setEditingId(null);
                         }}
                         className="flex-1 min-w-0 text-xs bg-transparent outline-none text-primary font-medium"
@@ -765,9 +937,9 @@ export default function ChoiceListPage() {
                 return (
                   <div
                     key={list.id}
-                    onClick={() => setActiveId(list.id)}
+                    onClick={() => selectList(list.id)}
                     className={cn(
-                      'flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer group transition-colors mb-0.5',
+                      'flex items-center gap-2 px-2.5 py-2.5 rounded-lg cursor-pointer group transition-colors mb-0.5',
                       isActive
                         ? 'bg-primary-light border border-primary/20'
                         : 'border border-transparent hover:bg-hover',
@@ -788,7 +960,7 @@ export default function ChoiceListPage() {
                         {list.detailsCount} choices · {list.caunselling.split(' ').slice(0, 2).join(' ')}
                       </p>
                     </div>
-                    <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-0.5 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={e => { e.stopPropagation(); setEditName(list.name); setEditingId(list.id); setDeleteConfirmId(null); }}
                         className="w-6 h-6 flex items-center justify-center rounded text-foreground-muted hover:text-primary hover:bg-primary/10"
@@ -811,7 +983,7 @@ export default function ChoiceListPage() {
           <div className="p-3 border-t border-border shrink-0">
             <button
               onClick={() => setShowCreate(true)}
-              className="w-full h-9 flex items-center justify-center gap-1.5 rounded-lg
+              className="w-full h-10 flex items-center justify-center gap-1.5 rounded-lg
                 bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover transition-colors"
             >
               <Plus size={13} /> Create new list
@@ -819,9 +991,13 @@ export default function ChoiceListPage() {
           </div>
         </aside>
 
-        {/* ── Main area ─────────────────────────────────────── */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-background min-w-0">
-
+        {/* ── Main / Detail panel ──────────────────────────────── */}
+        <main
+          className={cn(
+            'flex-1 flex flex-col overflow-hidden bg-background min-w-0',
+            mobilePanel === 'lists' && 'hidden md:flex',
+          )}
+        >
           {!activeList ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center p-8">
               <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
@@ -842,10 +1018,17 @@ export default function ChoiceListPage() {
           ) : (
             <>
               {/* Top bar */}
-              <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0 gap-4">
-                <div className="min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 border-b border-border bg-card shrink-0">
+                <button
+                  onClick={() => setMobilePanel('lists')}
+                  className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-foreground-muted hover:bg-hover shrink-0"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                <div className="min-w-0 flex-1">
                   <h1 className="text-sm font-semibold text-foreground truncate">{activeList.name}</h1>
-                  <p className="text-xs text-foreground-muted mt-px">
+                  <p className="text-xs text-foreground-muted mt-px truncate">
                     {activeList.caunselling} ·{' '}
                     <span className="font-medium">{details.length} choices</span>
                     {filterCount > 0 && (
@@ -853,18 +1036,19 @@ export default function ChoiceListPage() {
                     )}
                   </p>
                 </div>
+
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => setShowFilter(true)}
                     className={cn(
-                      'flex items-center gap-1.5 h-8 px-3 rounded-lg border text-xs font-medium transition-colors',
+                      'flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-lg border text-xs font-medium transition-colors',
                       filterCount > 0
                         ? 'border-primary/40 bg-primary-light text-primary'
                         : 'border-border text-foreground-muted hover:bg-hover hover:text-foreground',
                     )}
                   >
                     <SlidersHorizontal size={13} />
-                    Filter
+                    <span className="hidden sm:inline">Filter</span>
                     {filterCount > 0 && (
                       <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
                         {filterCount}
@@ -873,15 +1057,16 @@ export default function ChoiceListPage() {
                   </button>
                   <button
                     onClick={() => setShowAdd(true)}
-                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-lg bg-primary
+                    className="flex items-center gap-1.5 h-9 px-3 sm:px-3.5 rounded-lg bg-primary
                       text-primary-foreground text-xs font-semibold hover:bg-primary-hover transition-colors"
                   >
-                    <Plus size={13} /> Add choice
+                    <Plus size={13} />
+                    <span className="hidden sm:inline">Add choice</span>
                   </button>
                 </div>
               </div>
 
-              {/* Table or empty / loading */}
+              {/* Content */}
               {loadingDetails ? (
                 <div className="flex-1 flex items-center justify-center">
                   <Loader2 size={22} className="animate-spin text-foreground-subtle" />
@@ -896,163 +1081,182 @@ export default function ChoiceListPage() {
                       {filterCount > 0 ? 'No matches' : 'No choices yet'}
                     </p>
                     <p className="text-xs text-foreground-muted">
-                      {filterCount > 0 ? 'Try adjusting your filters.' : 'Click "Add choice" to start building your list.'}
+                      {filterCount > 0 ? 'Try adjusting your filters.' : 'Tap "Add choice" to start building your list.'}
                     </p>
                   </div>
                   {filterCount > 0 && (
                     <button
                       onClick={() => setFilter({ quotas: [], categories: [] })}
-                      className="h-8 px-3 rounded-lg border border-border text-xs font-medium text-foreground-muted hover:bg-hover transition-colors"
+                      className="h-9 px-3 rounded-lg border border-border text-xs font-medium text-foreground-muted hover:bg-hover transition-colors"
                     >
                       Clear filters
                     </button>
                   )}
                 </div>
               ) : (
-                <div className="flex-1 overflow-auto">
-                  <table className="border-collapse text-xs leading-none" style={{ minWidth: 1400 }}>
-                    <thead>
-                      <tr>
-                        <th
-                          className="sticky top-0 z-30 bg-muted border-b border-r border-border
-                            px-2 py-2.5 text-center whitespace-nowrap
-                            font-semibold uppercase tracking-widest text-foreground-subtle"
-                          style={{ left: 0, width: 52 }}
-                        >
-                          Order
-                        </th>
-                        <th
-                          className="sticky top-0 z-30 bg-muted border-b border-r border-border
-                            px-3 py-2.5 text-left whitespace-nowrap
-                            font-semibold uppercase tracking-widest text-foreground-subtle"
-                          style={{ left: 52, width: 200 }}
-                        >
-                          Institute
-                        </th>
-                        {DATA_COLS.map(col => (
+                <>
+                  {/* Desktop / large screen table */}
+                  <div className="hidden lg:block flex-1 overflow-auto">
+                    <table
+                      className="table-fixed border-collapse text-xs leading-none"
+                      style={{
+                        width: '100%',
+                        tableLayout: 'fixed',
+                      }}
+                    >
+                      <thead>
+                        <tr>
                           <th
-                            key={col.key}
-                            style={{ minWidth: col.w }}
-                            className="sticky top-0 z-20 bg-muted border-b border-border
+                            className="sticky top-0 z-30 bg-muted border-b border-r border-border
+                              px-2 py-2.5 text-center whitespace-nowrap
+                              font-semibold uppercase tracking-widest text-foreground-subtle"
+                            style={{ left: 0, width: 42 }}
+                          >
+                            Order
+                          </th>
+                          <th
+                            className="sticky top-0 z-30 bg-muted border-b border-r border-border
                               px-3 py-2.5 text-left whitespace-nowrap
                               font-semibold uppercase tracking-widest text-foreground-subtle"
+                            style={{ left: 52, width: 150 }}
                           >
-                            {col.label}
+                            Institute
                           </th>
-                        ))}
-                        {CR_YEAR_ROUNDS.map(([year, rounds]) =>
-                          Array.from({ length: rounds }, (_, i) => (
+                          {DATA_COLS.map(col => (
                             <th
-                              key={`cr_${year}_${i + 1}`}
+                              key={col.key}
+                              style={{ width: col.w }}
                               className="sticky top-0 z-20 bg-muted border-b border-border
-                                px-2 py-1.5 text-center whitespace-nowrap text-foreground-subtle"
-                              style={{ width: 70 }}
+                                px-3 py-2.5 text-left whitespace-nowrap
+                                font-semibold uppercase tracking-widest text-foreground-subtle"
                             >
-                              <span className="block text-xs text-foreground-subtle/60 font-medium">{year}</span>
-                              <span className="font-semibold uppercase tracking-widest">R{i + 1}</span>
+                              {col.label}
                             </th>
-                          ))
-                        )}
-                        <th className="sticky top-0 z-20 bg-muted border-b border-border" style={{ width: 40 }} />
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {filteredDetails.map((detail, idx) => {
-                        const isOver  = dragOverIdx === idx;
-                        const evenRow = idx % 2 === 0;
-                        const cellBg  = evenRow ? 'bg-card' : 'bg-background';
-
-                        return (
-                          <tr
-                            key={detail.id}
-                            draggable={filterCount === 0}
-                            onDragStart={() => onDragStart(idx)}
-                            onDragOver={e => onDragOver(e, idx)}
-                            onDrop={e => onDrop(e, idx)}
-                            onDragLeave={onDragLeave}
-                            className={cn(
-                              'group transition-colors',
-                              isOver
-                                ? 'ring-2 ring-inset ring-primary/40 bg-primary-light/40'
-                                : 'hover:bg-primary-light/20',
-                            )}
-                          >
-                            {/* Order — sticky */}
-                            <td
-                              className={cn('sticky z-10 border-b border-r border-border px-1.5 py-2 text-center', cellBg)}
-                              style={{ left: 0 }}
-                            >
-                              <div className="flex items-center justify-center gap-0.5">
-                                <GripVertical
-                                  size={12}
-                                  className={cn(
-                                    'text-foreground-subtle shrink-0',
-                                    filterCount === 0 ? 'cursor-grab active:cursor-grabbing' : 'opacity-30',
-                                  )}
-                                />
-                                <span className={cn(
-                                  'text-xs font-bold flex items-center justify-center shrink-0 rounded-md w-6 h-6',
-                                  idx < 3 ? 'bg-primary-light text-primary' : 'bg-muted text-foreground-muted',
-                                )}>
-                                  {idx + 1}
-                                </span>
-                              </div>
-                            </td>
-
-                            {/* Institute — sticky */}
-                            <td
-                              className={cn('sticky z-10 border-b border-r border-border px-3 py-2 font-medium text-foreground', cellBg)}
-                              style={{ left: 52 }}
-                            >
-                              <span className="line-clamp-1 block" style={{ maxWidth: 196 }}>{detail.institute}</span>
-                            </td>
-
-                            {/* Data cols */}
-                            {DATA_COLS.map(col => (
-                              <td key={col.key} className="border-b border-border px-3 py-2 text-foreground-muted whitespace-nowrap">
-                                {(detail as unknown as Record<string, string>)[col.key] || '—'}
-                              </td>
-                            ))}
-
-                            {/* CR cols — closing ranks from API */}
-                            {CR_YEAR_ROUNDS.map(([year, rounds]) =>
-                              Array.from({ length: rounds }, (_, i) => {
-                                const numKey = String(i + 1);
-                                const roundKey = `R${i + 1}`;
-                                const closingRank = detail.closingRanks?.[year]?.[numKey] ?? detail.closingRanks?.[year]?.[roundKey];
-                                return (
-                                  <td
-                                    key={`cr_${year}_${i + 1}`}
-                                    className="border-b border-border px-2 py-2 text-center whitespace-nowrap"
-                                  >
-                                    {closingRank ? (
-                                      <span className="text-xs font-medium text-foreground">{closingRank}</span>
-                                    ) : (
-                                      <span className="text-xs text-foreground-subtle/30">—</span>
-                                    )}
-                                  </td>
-                                );
-                              })
-                            )}
-
-                            {/* Delete */}
-                            <td className="border-b border-border px-1 py-2">
-                              <button
-                                onClick={() => handleRemoveChoice(detail.id)}
-                                className="w-6 h-6 flex items-center justify-center rounded-md mx-auto
-                                  text-foreground-subtle opacity-0 group-hover:opacity-100
-                                  hover:text-error hover:bg-error-light transition-all"
+                          ))}
+                          {/* {CR_YEAR_ROUNDS.map(([year, rounds]) =>
+                            Array.from({ length: rounds }, (_, i) => (
+                              <th
+                                key={`cr_${year}_${i + 1}`}
+                                className="sticky top-0 z-20 bg-muted border-b border-border
+                                  px-2 py-1.5 text-center whitespace-nowrap text-foreground-subtle"
+                                style={{ width: 70 }}
                               >
-                                <X size={12} />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                                <span className="block text-xs text-foreground-subtle/60 font-medium">{year}</span>
+                                <span className="font-semibold uppercase tracking-widest">R{i + 1}</span>
+                              </th>
+                            ))
+                          )} */}
+                          <th className="sticky top-0 z-20 bg-muted border-b border-border" style={{ width: 20 }} />
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {filteredDetails.map((detail, idx) => {
+                          const isOver = dragOverIdx === idx;
+                          const evenRow = idx % 2 === 0;
+                          const cellBg = evenRow ? 'bg-card' : 'bg-background';
+
+                          return (
+                            <tr
+                              key={detail.id}
+                              draggable={filterCount === 0}
+                              onDragStart={() => onDragStart(idx)}
+                              onDragOver={e => onDragOver(e, idx)}
+                              onDrop={e => onDrop(e, idx)}
+                              onDragLeave={onDragLeave}
+                              className={cn(
+                                'group transition-colors',
+                                isOver
+                                  ? 'ring-2 ring-inset ring-primary/40 bg-primary-light/40'
+                                  : 'hover:bg-primary-light/20',
+                              )}
+                            >
+                              <td
+                                className={cn('sticky z-10 border-b border-r border-border px-1.5 py-2 text-center', cellBg)}
+                                style={{ left: 0 }}
+                              >
+                                <div className="flex items-center justify-center gap-0.5">
+                                  <GripVertical
+                                    size={12}
+                                    className={cn(
+                                      'text-foreground-subtle shrink-0',
+                                      filterCount === 0 ? 'cursor-grab active:cursor-grabbing' : 'opacity-30',
+                                    )}
+                                  />
+                                  <span className={cn(
+                                    'text-xs font-bold flex items-center justify-center shrink-0 rounded-md w-6 h-6',
+                                    idx < 3 ? 'bg-primary-light text-primary' : 'bg-muted text-foreground-muted',
+                                  )}>
+                                    {idx + 1}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td
+                                className={cn('sticky z-10 border-b border-r border-border px-3 py-2 font-medium text-foreground', cellBg)}
+                                style={{ left: 52 }}
+                              >
+                                <span className="line-clamp-1 block" >{detail.institute}</span>
+                              </td>
+
+                              {DATA_COLS.map(col => (
+                                <td key={col.key} className="border-b border-border px-3 py-2 text-foreground-muted whitespace-nowrap">
+                                  {(detail as unknown as Record<string, string>)[col.key] || '—'}
+                                </td>
+                              ))}
+
+                              {/* {CR_YEAR_ROUNDS.map(([year, rounds]) =>
+                                Array.from({ length: rounds }, (_, i) => {
+                                  const numKey = String(i + 1);
+                                  const roundKey = `R${i + 1}`;
+                                  const closingRank = detail.closingRanks?.[year]?.[numKey] ?? detail.closingRanks?.[year]?.[roundKey];
+                                  return (
+                                    <td
+                                      key={`cr_${year}_${i + 1}`}
+                                      className="border-b border-border px-2 py-2 text-center whitespace-nowrap"
+                                    >
+                                      {closingRank ? (
+                                        <span className="text-xs font-medium text-foreground">{closingRank}</span>
+                                      ) : (
+                                        <span className="text-xs text-foreground-subtle/30">—</span>
+                                      )}
+                                    </td>
+                                  );
+                                })
+                              )} */}
+
+                              <td className="border-b border-border px-1 py-2">
+                                <button
+                                  onClick={() => handleRemoveChoice(detail.id)}
+                                  className="w-6 h-6 flex items-center justify-center rounded-md mx-auto
+                                    text-foreground-subtle opacity-0 group-hover:opacity-100
+                                    hover:text-error hover:bg-error-light transition-all"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile / tablet cards */}
+                  <div className="lg:hidden flex-1 overflow-y-auto p-3 space-y-2">
+                    {filteredDetails.map((detail, idx) => (
+                      <ChoiceCard
+                        key={detail.id}
+                        detail={detail}
+                        idx={idx}
+                        total={filteredDetails.length}
+                        canReorder={filterCount === 0}
+                        onRemove={handleRemoveChoice}
+                        onMove={moveDetail}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
             </>
           )}
