@@ -195,11 +195,10 @@ function AddChoiceModal({ defaultCaunselling, choiceCount, counsellingOpts, onCl
   const [err, setErr]                 = useState('');
   const [saving, setSaving]           = useState(false);
 
-  /* institute search */
-  const [instSearch, setInstSearch]       = useState('');
+  /* institute dropdown */
   const [allInsts, setAllInsts]           = useState<{ id: number; name: string; state: string }[]>([]);
-  const [instDropOpen, setInstDropOpen]   = useState(false);
   const [selectedInstId, setSelectedInstId] = useState<number | null>(null);
+  const [instDropOpen, setInstDropOpen]   = useState(false);
   const [loadingInsts, setLoadingInsts]   = useState(true);
 
   /* course dropdown */
@@ -244,21 +243,12 @@ function AddChoiceModal({ defaultCaunselling, choiceCount, counsellingOpts, onCl
       .finally(() => setLoadingCourses(false));
   }, [selectedInstId]);
 
-  const filteredInsts = instSearch.trim()
-    ? allInsts.filter(i => i.name.toLowerCase().includes(instSearch.toLowerCase()))
-    : allInsts;
-
-  const selectInst = (inst: { id: number; name: string }) => {
-    setInstSearch(inst.name);
-    setSelectedInstId(inst.id);
-    setCourse('');
-    setInstDropOpen(false);
-    setErr('');
-  };
+  const selectedInst = allInsts.find(i => i.id === selectedInstId);
 
   const submit = async () => {
-    const instituteName = instSearch.trim();
-    if (!instituteName) { setErr('Institute name is required'); return; }
+    if (!selectedInstId) { setErr('Institute is required'); return; }
+    const instituteName = selectedInst?.name ?? '';
+    if (!instituteName) { setErr('Institute is required'); return; }
     if (!course.trim()) { setErr('Course is required'); return; }
     if (!quota)         { setErr('Please select quota'); return; }
     if (!category)      { setErr('Please select category'); return; }
@@ -294,33 +284,51 @@ function AddChoiceModal({ defaultCaunselling, choiceCount, counsellingOpts, onCl
         {err && <ModalError msg={err} />}
 
         <FormField label="Counselling">
-          <select value={caunselling} onChange={e => { setCaunselling(e.target.value); setInstSearch(''); setSelectedInstId(null); setCourses([]); setCourse(''); setErr(''); }} className={selectCls}>
+          <select value={caunselling} onChange={e => { setCaunselling(e.target.value); setSelectedInstId(null); setCourses([]); setCourse(''); setErr(''); }} className={selectCls}>
             {counsellingOpts.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
         </FormField>
 
-        {/* Institute searchable dropdown */}
+        {/* Institute dropdown — custom styled */}
         <FormField label="Institute" required>
           <div className="relative">
-            <input
-              autoFocus
-              value={instSearch}
-              onChange={e => { setInstSearch(e.target.value); setInstDropOpen(true); setSelectedInstId(null); setCourses([]); setCourse(''); setErr(''); }}
-              onFocus={() => setInstDropOpen(true)}
-              placeholder={loadingInsts ? 'Loading institutes…' : 'Search institute…'}
-              className={inputCls}
-            />
-            {instDropOpen && filteredInsts.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setInstDropOpen(!instDropOpen)}
+              disabled={loadingInsts}
+              className={cn(
+                selectCls,
+                'flex items-center justify-between text-left',
+                loadingInsts && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              <span className={selectedInstId ? 'text-foreground' : 'text-foreground-subtle'}>
+                {loadingInsts ? 'Loading institutes…' : (selectedInst?.name ?? 'Select institute…')}
+              </span>
+              <ChevronRight size={14} className={cn('shrink-0 transition-transform', instDropOpen && 'rotate-90')} />
+            </button>
+            {instDropOpen && !loadingInsts && allInsts.length > 0 && (
               <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg max-h-64 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-                {filteredInsts.map(inst => (
+                {allInsts.map(inst => (
                   <button
                     key={inst.id}
                     type="button"
-                    onMouseDown={() => selectInst(inst)}
-                    className="w-full flex flex-col items-start px-3 py-2 text-left hover:bg-muted transition-colors"
+                    onClick={() => {
+                      setSelectedInstId(inst.id);
+                      setInstDropOpen(false);
+                      setCourse('');
+                      setErr('');
+                    }}
+                    className={cn(
+                      'w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors border-b border-border last:border-b-0',
+                      selectedInstId === inst.id ? 'bg-primary-light' : 'hover:bg-muted'
+                    )}
                   >
-                    <span className="text-xs font-semibold text-foreground">{inst.name}</span>
-                    <span className="text-[10px] text-foreground-subtle">{inst.state}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{inst.name}</p>
+                      <p className="text-[10px] text-foreground-muted mt-0.5">{inst.state}</p>
+                    </div>
+                    {selectedInstId === inst.id && <Check size={14} className="text-primary shrink-0 ml-2" />}
                   </button>
                 ))}
               </div>
