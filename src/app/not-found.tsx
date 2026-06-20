@@ -358,7 +358,7 @@ export default function NotFound() {
         </p>
 
         {/* Completed Search Mechanism Integration */}
-        <form 
+        {/* <form 
           onSubmit={handleSearchSubmit} 
           className={`relative w-full rounded-lg bg-input border transition-all duration-200 flex items-center px-3 mb-6 ${focused ? 'border-border-focus ring-1 ring-border-focus shadow-sm' : 'border-border'}`}
         >
@@ -372,7 +372,7 @@ export default function NotFound() {
             onChange={e => setSearch(e.target.value)}
             className="w-full h-10 px-2 bg-transparent text-sm text-foreground placeholder:text-foreground-subtle outline-none border-none"
           />
-        </form>
+        </form> */}
 
         {/* Control Interactions Elements Frame Layer */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 w-full">

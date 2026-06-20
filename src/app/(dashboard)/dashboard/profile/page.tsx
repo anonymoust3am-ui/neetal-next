@@ -460,10 +460,10 @@ export default function ProfilePage() {
                 <div className="divide-y divide-border/50">
                   <div className="flex items-center justify-between py-4 first:pt-0">
                     <div>
-                      <h4 className="text-sm font-bold text-foreground">Phone Number Login</h4>
+                      <h4 className="text-sm font-bold text-foreground">Phone Number</h4>
                       <p className="text-xs text-foreground-muted mt-0.5">{user.phone}</p>
                     </div>
-                    <StatusBadge variant="success">Verified Primary Method</StatusBadge>
+                    {/* <StatusBadge variant="success">Verified Primary Method</StatusBadge> */}
                   </div>
 
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between py-4 gap-2">
