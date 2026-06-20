@@ -984,7 +984,7 @@ export default function ChoiceListPage() {
             <button
               onClick={() => setShowCreate(true)}
               className="w-full h-10 flex items-center justify-center gap-1.5 rounded-lg
-                bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover transition-colors"
+                bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover transition-colors mb-24"
             >
               <Plus size={13} /> Create new list
             </button>
