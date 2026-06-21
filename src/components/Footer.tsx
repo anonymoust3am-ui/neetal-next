@@ -2,6 +2,14 @@
 
 import { Mail, Phone, MapPin } from 'lucide-react';
 import Link from 'next/link';
+import { socialProfileUrls } from '@/lib/seo';
+
+const socialLinks = [
+  { label: 'Instagram', href: socialProfileUrls[0] },
+  { label: 'Facebook', href: socialProfileUrls[1] },
+  { label: 'Quora', href: socialProfileUrls[2] },
+  { label: 'X', href: socialProfileUrls[3] },
+];
 
 export function Footer() {
   return (
@@ -28,17 +36,19 @@ export function Footer() {
             <p className="text-foreground-muted mb-6 leading-relaxed">
               Your trusted partner for NEET counselling guidance. Helping thousands of students achieve their dream of becoming doctors.
             </p>
-            {/* <div className="flex gap-3">
-              {[Facebook, Twitter, Instagram, Linkedin].map((Icon, index) => (
+            <div className="flex flex-wrap gap-2">
+              {socialLinks.map(link => (
                 <a
-                  key={index}
-                  href="#"
-                  className="w-10 h-10 rounded-full bg-card hover:bg-primary flex items-center justify-center transition-all duration-300 hover:text-primary-foreground text-foreground-muted"
+                  key={link.label}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground-muted transition-colors hover:border-primary hover:text-primary"
                 >
-                  <Icon className="w-5 h-5" />
+                  {link.label}
                 </a>
               ))}
-            </div> */}
+            </div>
           </div>
 
           <div>
@@ -93,7 +103,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-primary flex-shrink-0" />
-                <span className="text-sm text-foreground-muted">support@neetel.com</span>
+                <span className="text-sm text-foreground-muted">support@neetell.in</span>
               </li>
             </ul>
           </div>

@@ -23,6 +23,8 @@ jobs:
             source "$NVM_DIR/nvm.sh"
             export SITE_URL="https://neetell.in"
             export NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION="${{ secrets.GOOGLE_SITE_VERIFICATION }}"
+            export NEXT_PUBLIC_SCHEMA_RATING_VALUE="${{ secrets.SCHEMA_RATING_VALUE }}"
+            export NEXT_PUBLIC_SCHEMA_REVIEW_COUNT="${{ secrets.SCHEMA_REVIEW_COUNT }}"
 
             echo "Going to project folder..."
             cd /home/neetell/neetal-next

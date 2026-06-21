@@ -4,6 +4,13 @@ export const SITE_LOGO = `${SITE_URL}/logo-outline.png`;
 export const OG_ONE = `${SITE_URL}/og-one.png`;
 export const OG_TWO = `${SITE_URL}/og-two.png`;
 
+export const socialProfileUrls = [
+  'https://www.instagram.com/neetell/',
+  'https://www.facebook.com/NEETell/',
+  'https://neetellblog.quora.com/',
+  'https://x.com/NEETell_India',
+];
+
 export const siteDescription =
   'Neetell helps NEET aspirants make smarter counselling decisions with rank-aware college prediction, cutoff trends, fees, bonds, seat matrix, AIQ and state counselling guidance, and choice filling tools.';
 
@@ -72,7 +79,7 @@ export const organizationJsonLd = {
   logo: SITE_LOGO,
   email: 'support@neetell.in',
   description: siteDescription,
-  sameAs: [] as string[],
+  sameAs: socialProfileUrls,
 };
 
 export const websiteJsonLd = {
@@ -132,10 +139,40 @@ export const breadcrumbJsonLd = {
   ],
 };
 
+const ratingValue = process.env.NEXT_PUBLIC_SCHEMA_RATING_VALUE;
+const reviewCount = process.env.NEXT_PUBLIC_SCHEMA_REVIEW_COUNT;
+
+export const reviewJsonLd =
+  ratingValue && reviewCount
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'Service',
+        name: 'Neetell NEET Counselling Guidance',
+        serviceType: 'NEET counselling guidance and college prediction',
+        provider: {
+          '@type': 'Organization',
+          name: SITE_NAME,
+          url: SITE_URL,
+        },
+        areaServed: {
+          '@type': 'Country',
+          name: 'India',
+        },
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue,
+          reviewCount,
+          bestRating: '5',
+          worstRating: '1',
+        },
+      }
+    : null;
+
 export const rootJsonLd = [
   organizationJsonLd,
   websiteJsonLd,
   faqJsonLd,
   courseJsonLd,
   breadcrumbJsonLd,
+  ...(reviewJsonLd ? [reviewJsonLd] : []),
 ];
