@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { bottomNavItems } from './BottomNavConfig';
@@ -112,6 +112,9 @@ const labelBase: React.CSSProperties = {
 export function BottomNav() {
   const pathname = usePathname();
   const [isMobile, setIsMobile] = useState<boolean | null>(null);
+  const [navHidden, setNavHidden] = useState(false);
+  const lastScrollYRef = useRef(0);
+  const scrollStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Screen size detection hydration guard
   useEffect(() => {
@@ -123,6 +126,44 @@ export function BottomNav() {
     window.addEventListener('resize', checkScreenSize);
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setNavHidden(false);
+      return;
+    }
+
+    lastScrollYRef.current = window.scrollY;
+
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      const delta = currentY - lastScrollYRef.current;
+
+      if (scrollStopRef.current) clearTimeout(scrollStopRef.current);
+
+      if (currentY < 24) {
+        setNavHidden(false);
+      } else if (delta > 6) {
+        setNavHidden(true);
+      } else if (delta < -6) {
+        setNavHidden(false);
+      }
+
+      lastScrollYRef.current = currentY;
+      scrollStopRef.current = setTimeout(() => setNavHidden(false), 260);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollStopRef.current) clearTimeout(scrollStopRef.current);
+    };
+  }, [isMobile]);
+
+  useEffect(() => {
+    setNavHidden(false);
+  }, [pathname]);
 
   const isActive = (href: string) =>
     href === '/dashboard'
@@ -137,7 +178,12 @@ export function BottomNav() {
      ───────────────────────────────────────────────────────── */
   if (isMobile) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-[1200] bg-white border-t-2 border-slate-500 shadow-[0_-8px_30px_rgb(0,0,0,0.08)] rounded-t-[24px] px-2 pb-safe-bottom">
+      <div
+        className={cn(
+          'fixed bottom-0 left-0 right-0 z-[1200] bg-surface border-t border-border shadow-lg rounded-t-[24px] px-2 pb-safe-bottom transition-transform duration-300 ease-out',
+          navHidden && 'translate-y-[calc(100%+12px)] pointer-events-none'
+        )}
+      >
         <nav className="flex items-end justify-between w-full h-[72px] max-w-md mx-auto px-4">
           {bottomNavItems.map((item) => {
             const Icon = item.icon;
@@ -156,9 +202,9 @@ export function BottomNav() {
                     "flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
                     active
                       ? isCenter
-                        ? "w-12 h-12 rounded-2xl bg-teal-600 text-white shadow-[0_6px_16px_rgba(13,148,136,0.4)] -translate-y-4"
-                        : "w-12 h-12 rounded-2xl bg-teal-600 text-white shadow-[0_6px_16px_rgba(13,148,136,0.4)] -translate-y-4"
-                      : "w-10 h-10 text-slate-400 group-hover:text-slate-600"
+                        ? "w-12 h-12 rounded-2xl bg-primary text-primary-foreground shadow-md -translate-y-4"
+                        : "w-12 h-12 rounded-2xl bg-primary text-primary-foreground shadow-md -translate-y-4"
+                      : "w-10 h-10 text-icon-muted group-hover:text-foreground-muted"
                   )}
                 >
                   <Icon
@@ -175,7 +221,7 @@ export function BottomNav() {
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
                     opacity: active ? 1 : 0,
                     transform: active ? 'translateY(0) scale(1)' : 'translateY(4px) scale(0.9)',
-                    color: isCenter ? '#0d9488' : '#0d9488', // Teal color for active state text
+                    color: 'var(--color-primary)',
                   }}
                 >
                   {item.label}

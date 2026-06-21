@@ -17,8 +17,10 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
 
           script: |
-           export NVM_DIR="$HOME/.nvm"
+            export NVM_DIR="$HOME/.nvm"
             source "$NVM_DIR/nvm.sh"
+            export SITE_URL="https://neetell.in"
+            export NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION="${{ secrets.GOOGLE_SITE_VERIFICATION }}"
 
             echo "Going to project folder..."
             cd /home/neetell/neetal-next
@@ -31,6 +33,16 @@ jobs:
 
             echo "Building Next.js..."
             npm run build
+
+            echo "Verifying SEO files..."
+            test -f public/sitemap.xml
+            test -f public/sitemap-0.xml
+            test -f public/robots.txt
+            grep -q "https://neetell.in/sitemap-0.xml" public/sitemap.xml
+            grep -q "https://neetell.in/sitemap.xml" public/robots.txt
+            grep -q "https://neetell.in" public/sitemap-0.xml
+            grep -q "image:image" public/sitemap-0.xml
+            echo "SEO files generated successfully."
 
             echo "Restarting PM2..."
             pm2 restart neetall-next || pm2 start npm --name "neetall-next" -- start

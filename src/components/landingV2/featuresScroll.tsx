@@ -154,7 +154,7 @@ export function FeatureGrid() {
 
         // Changed px-4 layouts to custom full-bleed sizes
 
-        <div className="w-full bg-background px-4 sm:px-8 py-12 selection:bg-selection text-foreground">
+        <div id="features" className="w-full bg-background px-4 sm:px-8 py-12 selection:bg-selection text-foreground">
 
             <header className="max-w-3xl mx-auto text-center pb-6 pt-6">
 

@@ -44,11 +44,17 @@ export function Footer() {
           <div>
             <h3 className="text-foreground font-bold text-lg mb-6">Quick Links</h3>
             <ul className="space-y-3">
-              {['About Us', 'Features', 'Pricing', 'Success Stories', 'Blog', 'Contact'].map((link) => (
-                <li key={link}>
-                  <a href="#" className="hover:text-primary transition-colors">
-                    {link}
-                  </a>
+              {[
+                { label: 'Features', href: '/#features' },
+                { label: 'Pricing', href: '/#pricing' },
+                { label: 'FAQ', href: '/#faq' },
+                { label: 'Blog', href: '/news' },
+                { label: 'Author', href: '/authors/neetell' },
+              ].map((link) => (
+                <li key={link.label}>
+                  <Link href={link.href} className="hover:text-primary transition-colors">
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -57,11 +63,18 @@ export function Footer() {
           <div>
             <h3 className="text-foreground font-bold text-lg mb-6">Counselling</h3>
             <ul className="space-y-3">
-              {['NEET UG', 'NEET PG', 'NEET MDS', 'INICET', 'AIAPGET', 'State Counselling'].map((service) => (
-                <li key={service}>
-                  <a href="#" className="hover:text-primary transition-colors">
-                    {service}
-                  </a>
+              {[
+                { label: 'NEET UG', href: '/dashboard' },
+                { label: 'College Predictor', href: '/dashboard/predictor' },
+                { label: 'Medical Colleges', href: '/dashboard/colleges' },
+                { label: 'Compare Colleges', href: '/dashboard/compare' },
+                { label: 'Choice Filling', href: '/dashboard/choices' },
+                { label: 'State Counselling', href: '/dashboard/counselling' },
+              ].map((service) => (
+                <li key={service.label}>
+                  <Link href={service.href} className="hover:text-primary transition-colors">
+                    {service.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -92,15 +105,15 @@ export function Footer() {
               © 2026 NeeTell. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm">
-              <a href="#" className="text-foreground-muted hover:text-primary transition-colors">
+              <Link href="/privacy" className="text-foreground-muted hover:text-primary transition-colors">
                 Privacy Policy
-              </a>
-              <a href="#" className="text-foreground-muted hover:text-primary transition-colors">
+              </Link>
+              <Link href="/terms" className="text-foreground-muted hover:text-primary transition-colors">
                 Terms of Service
-              </a>
-              <a href="#" className="text-foreground-muted hover:text-primary transition-colors">
-                Cookie Policy
-              </a>
+              </Link>
+              <Link href="/authors/neetell" className="text-foreground-muted hover:text-primary transition-colors">
+                Authors
+              </Link>
             </div>
           </div>
         </div>

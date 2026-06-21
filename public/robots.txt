@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://neetell.in
+
+# Sitemaps
+Sitemap: https://neetell.in/sitemap.xml

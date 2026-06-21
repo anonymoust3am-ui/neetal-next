@@ -17,6 +17,7 @@ import ExamScroller from "@/components/ExamScroller";
 import { FeatureGrid } from "@/components/landingV2/featuresScroll";
 import { useEffect, useState } from "react";
 import { Hero } from "@/components/landingV2/HeroMobile";
+import { FAQSection } from "@/components/FAQSection";
 
 export default function Home() {
 
@@ -49,6 +50,7 @@ export default function Home() {
       {/* <FeatureGrid /> */}
       <FeatureGrid />
       <Testimonials />
+      <FAQSection />
       <section id="pricing">
         <PricingPlans />
       </section>
