@@ -49,4 +49,9 @@ jobs:
 
             pm2 save
 
+            echo "Checking live SEO endpoints..."
+            sleep 3
+            curl -fsS https://neetell.in/sitemap.xml | grep -q "https://neetell.in"
+            curl -fsS https://neetell.in/robots.txt | grep -q "Sitemap: https://neetell.in/sitemap.xml"
+
             echo "Deployment done 🚀"
