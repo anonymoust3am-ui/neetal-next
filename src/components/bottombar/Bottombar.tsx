@@ -178,10 +178,17 @@ export function BottomNav() {
     setNavHidden(false);
   }, [pathname]);
 
+  const isPathMatch = (href: string) =>
+    pathname === href || pathname.startsWith(href + '/');
+
+  const matchedNavItem = bottomNavItems.find((item) =>
+    item.href === '/dashboard' ? pathname === '/dashboard' : isPathMatch(item.href)
+  );
+
   const isActive = (href: string) =>
     href === '/dashboard'
-      ? pathname === '/dashboard'
-      : pathname === href || pathname.startsWith(href + '/');
+      ? pathname === '/dashboard' || (pathname.startsWith('/dashboard') && !matchedNavItem)
+      : isPathMatch(href);
 
   // Prevent flash of layout before hook runs on client mount
   if (isMobile === null) return null;

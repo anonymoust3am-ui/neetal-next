@@ -254,13 +254,14 @@ export function DashboardHeader() {
         <NavLink href="/dashboard/news" icon={Newspaper} label="Blogs & News" />
 
         {/* Notification bell (Responsive sizing) */}
-        <button
+        <Link
+          href="/dashboard/notifications"
           title="Updates & Notices"
           className="relative p-1.5 md:p-2 rounded-xl hover:bg-[var(--color-bg-hover)] text-[var(--color-icon-secondary)] hover:text-[var(--color-icon-primary)] transition-colors"
         >
           <Bell size={16} className="md:w-[18px] md:h-[18px]" />
           <span className="absolute top-1 right-1 md:top-1.5 md:right-1.5 w-1.5 h-1.5 md:w-2 md:h-2 bg-error rounded-full" />
-        </button>
+        </Link>
 
         {/* Small Expert Icon Button for Mobile */}
         <button 
