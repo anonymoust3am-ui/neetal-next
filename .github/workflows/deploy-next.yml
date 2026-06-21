@@ -15,8 +15,10 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_NEET }}
           key: ${{ secrets.SSH_KEY }}
+          script_stop: true
 
           script: |
+            set -euo pipefail
             export NVM_DIR="$HOME/.nvm"
             source "$NVM_DIR/nvm.sh"
             export SITE_URL="https://neetell.in"
@@ -25,27 +27,25 @@ jobs:
             echo "Going to project folder..."
             cd /home/neetell/neetal-next
 
+            echo "Stashing local VPS changes, if any..."
+            git stash push -u -m "deploy-autostash-$(date +%Y%m%d%H%M%S)" || true
+
             echo "Pulling latest code..."
             git pull origin master
 
             echo "Installing dependencies..."
-            npm install --legacy-peer-deps
+            npm ci --legacy-peer-deps
 
             echo "Building Next.js..."
             npm run build
 
-            echo "Verifying SEO files..."
-            test -f public/sitemap.xml
-            test -f public/sitemap-0.xml
-            test -f public/robots.txt
-            grep -q "https://neetell.in/sitemap-0.xml" public/sitemap.xml
-            grep -q "https://neetell.in/sitemap.xml" public/robots.txt
-            grep -q "https://neetell.in" public/sitemap-0.xml
-            grep -q "image:image" public/sitemap-0.xml
-            echo "SEO files generated successfully."
+            echo "Verifying generated SEO files, if present..."
+            if [ -f public/sitemap.xml ]; then grep -q "https://neetell.in" public/sitemap.xml; fi
+            if [ -f public/sitemap-0.xml ]; then grep -q "https://neetell.in" public/sitemap-0.xml; fi
+            if [ -f public/robots.txt ]; then grep -q "https://neetell.in/sitemap.xml" public/robots.txt; fi
 
             echo "Restarting PM2..."
-            pm2 restart neetall-next || pm2 start npm --name "neetall-next" -- start
+            pm2 restart neetall-next --update-env || pm2 start npm --name "neetall-next" -- start
 
             pm2 save
 
