@@ -412,6 +412,9 @@ export default function CollegesPage() {
   const [instType,   setInstType]   = useState('');
   const [uniId,      setUniId]      = useState<number | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [paginationHidden, setPaginationHidden] = useState(false);
+  const lastScrollYRef = useRef(0);
+  const scrollStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const PAGE_SIZE  = 50;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -454,6 +457,35 @@ export default function CollegesPage() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { setPage(1); }, [state, instType, uniId]);
+
+  useEffect(() => {
+    lastScrollYRef.current = window.scrollY;
+
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      const delta = currentY - lastScrollYRef.current;
+
+      if (scrollStopRef.current) clearTimeout(scrollStopRef.current);
+
+      if (currentY < 24) {
+        setPaginationHidden(false);
+      } else if (delta > 6) {
+        setPaginationHidden(true);
+      } else if (delta < -6) {
+        setPaginationHidden(false);
+      }
+
+      lastScrollYRef.current = currentY;
+      scrollStopRef.current = setTimeout(() => setPaginationHidden(false), 260);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollStopRef.current) clearTimeout(scrollStopRef.current);
+    };
+  }, []);
 
   const activeCount = [state, instType, uniId].filter(Boolean).length;
   const clearFilters = () => { setState(''); setInstType(''); setUniId(null); };
@@ -646,7 +678,11 @@ export default function CollegesPage() {
 
             {/* pagination */}
             {!dSearch && totalPages > 1 && !loading && (
-              <div className="fixed left-3 right-3 bottom-[92px] z-[1100] rounded-2xl border border-border bg-surface/95 p-2 shadow-2xl backdrop-blur lg:hidden">
+              <div
+                className={`fixed left-3 right-3 bottom-[92px] z-[1100] rounded-2xl border border-border bg-surface/95 p-2 shadow-2xl backdrop-blur transition-transform duration-300 ease-out lg:hidden ${
+                  paginationHidden ? 'translate-y-[calc(100%+116px)] pointer-events-none' : 'translate-y-0'
+                }`}
+              >
                 <PaginationControls
                   page={page}
                   totalPages={totalPages}

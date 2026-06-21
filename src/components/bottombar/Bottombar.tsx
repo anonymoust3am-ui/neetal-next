@@ -9,6 +9,18 @@ function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(' ');
 }
 
+const theme = {
+  primary: 'var(--color-primary)',
+  primaryForeground: 'var(--color-primary-foreground)',
+  primaryLight: 'var(--color-primary-light)',
+  surface: 'var(--color-bg-secondary)',
+  surfaceElevated: 'var(--color-bg-elevated)',
+  border: 'var(--color-border)',
+  text: 'var(--color-text-primary)',
+  textMuted: 'var(--color-text-muted)',
+  shadow: 'var(--shadow-lg)',
+};
+
 /* ── SVG glass distortion filter — kept for desktop ── */
 function GlassFilter() {
   return (
@@ -82,7 +94,8 @@ function GlassLayers({ borderRadius = 24 }: { borderRadius?: number }) {
         className="absolute inset-0 z-10"
         style={{
           borderRadius,
-          background: 'rgba(255,255,255,0.22)',
+          background: 'color-mix(in srgb, var(--color-bg-elevated) 82%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--color-border) 76%, transparent)',
         }}
       />
       <div
@@ -90,7 +103,7 @@ function GlassLayers({ borderRadius = 24 }: { borderRadius?: number }) {
         style={{
           borderRadius,
           boxShadow:
-            'inset 2px 2px 1px 0 rgba(255,255,255,0.55), inset -1px -1px 1px 1px rgba(255,255,255,0.45)',
+            'inset 1px 1px 0 color-mix(in srgb, var(--color-text-inverse) 32%, transparent), inset -1px -1px 0 color-mix(in srgb, var(--color-border-strong) 34%, transparent)',
         }}
       />
     </>
@@ -247,7 +260,7 @@ export function BottomNav() {
           style={{
             padding: 7,
             borderRadius: 32,
-            boxShadow: '0 6px 6px rgba(0,0,0,0.2), 0 0 20px rgba(0,0,0,0.1)',
+            boxShadow: theme.shadow,
             transitionTimingFunction: 'cubic-bezier(0.175,0.885,0.32,2.2)',
           }}
         >
@@ -276,9 +289,7 @@ export function BottomNav() {
                   transition:
                     'min-width 0.35s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.25s ease',
                   boxShadow: active
-                    ? isCenter
-                      ? '0 6px 6px rgba(0,0,0,0.18), 0 0 16px rgba(0,0,0,0.08)'
-                      : '0 4px 12px rgba(0,0,0,0.12), 0 0 10px rgba(0,0,0,0.06)'
+                    ? `0 8px 18px color-mix(in srgb, ${theme.primary} 28%, transparent)`
                     : 'none',
                   transitionTimingFunction: 'cubic-bezier(0.175,0.885,0.32,2.2)',
                 }}
@@ -299,8 +310,8 @@ export function BottomNav() {
                       style={{
                         borderRadius: br,
                         background: isCenter
-                          ? 'linear-gradient(155deg, rgba(13,180,165,0.88) 0%, rgba(9,138,126,0.92) 100%)'
-                          : 'rgba(255,255,255,0.38)',
+                          ? `linear-gradient(155deg, ${theme.primary} 0%, color-mix(in srgb, ${theme.primary} 86%, ${theme.surface} 14%) 100%)`
+                          : `color-mix(in srgb, ${theme.primaryLight} 86%, transparent)`,
                       }}
                     />
                     <div
@@ -308,7 +319,7 @@ export function BottomNav() {
                       style={{
                         borderRadius: br,
                         boxShadow:
-                          'inset 2px 2px 1px 0 rgba(255,255,255,0.55), inset -1px -1px 1px 1px rgba(255,255,255,0.45)',
+                          'inset 1px 1px 0 color-mix(in srgb, var(--color-primary-foreground) 38%, transparent), inset -1px -1px 0 color-mix(in srgb, var(--color-border-strong) 26%, transparent)',
                       }}
                     />
                   </>
@@ -329,7 +340,7 @@ export function BottomNav() {
                       className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                       style={{
                         borderRadius: br,
-                        background: 'rgba(255,255,255,0.18)',
+                        background: `color-mix(in srgb, ${theme.surfaceElevated} 72%, transparent)`,
                       }}
                     />
                     <div
@@ -337,7 +348,7 @@ export function BottomNav() {
                       style={{
                         borderRadius: br,
                         boxShadow:
-                          'inset 2px 2px 1px 0 rgba(255,255,255,0.4), inset -1px -1px 1px 1px rgba(255,255,255,0.35)',
+                          'inset 1px 1px 0 color-mix(in srgb, var(--color-text-inverse) 20%, transparent), inset -1px -1px 0 color-mix(in srgb, var(--color-border-strong) 22%, transparent)',
                       }}
                     />
                   </>
@@ -350,9 +361,9 @@ export function BottomNav() {
                   style={{
                     color: active
                       ? isCenter
-                        ? '#ffffff'
-                        : '#0d9488'
-                      : 'rgba(30,30,50,0.42)',
+                        ? theme.primaryForeground
+                        : theme.primary
+                      : theme.textMuted,
                     transitionTimingFunction: 'cubic-bezier(0.175,0.885,0.32,2.2)',
                   }}
                 />
@@ -366,9 +377,9 @@ export function BottomNav() {
                     marginLeft: active ? (isCenter ? 9 : 8) : 0,
                     color: active
                       ? isCenter
-                        ? 'rgba(255,255,255,0.95)'
-                        : '#0d9488'
-                      : 'rgba(30,30,50,0.60)',
+                        ? theme.primaryForeground
+                        : theme.primary
+                      : theme.textMuted,
                   }}
                 >
                   {item.label}

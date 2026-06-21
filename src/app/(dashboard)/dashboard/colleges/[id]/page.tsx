@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -9,7 +9,7 @@ import {
   Globe, CheckCircle2, Loader2, Home, Navigation,
   Plane, BookOpen, Languages, Video,
   CalendarDays, User, AlertCircle, ChevronRight,
-  ImageIcon, Info, Hotel,
+  ImageIcon, Info, Hotel, Heart, GitCompare,
 } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -243,20 +243,39 @@ function LinkList({ links }: { links?: { label?: string; url?: string }[] }) {
 }
 
 // ─── tab panels ──────────────────────────────────────────────────────────────
-function TabOverview({ data }: { data: InstituteDetail }) {
+function TabOverview({ data, mobile = false }: { data: InstituteDetail; mobile?: boolean }) {
+  const [aboutOpen, setAboutOpen] = useState(false);
   const feeMin = data.fee?.range?.min ?? 0;
   const feeMax = data.fee?.range?.max ?? 0;
   const courses = data.general_information?.courses ?? [];
   const languages = data.general_information?.languages ?? [];
+  const aboutText = data.about?.about_text;
+  const shouldClampAbout = mobile && !aboutOpen;
 
   return (
     <div className="space-y-5">
 
       {/* about */}
-      {data.about?.about_text && (
+      {aboutText && (
         <div className="bg-surface border border-border rounded-2xl p-5 shadow-sm">
-          <SectionTitle>About</SectionTitle>
-          <p className="text-sm text-foreground leading-relaxed">{data.about.about_text}</p>
+          <div className="flex items-center justify-between gap-3">
+            <SectionTitle>About</SectionTitle>
+            {mobile && (
+              <button
+                type="button"
+                onClick={() => setAboutOpen(v => !v)}
+                className="mb-4 shrink-0 text-[11px] font-bold text-primary"
+              >
+                {aboutOpen ? 'Show less' : 'Show more'}
+              </button>
+            )}
+          </div>
+          <div className={shouldClampAbout ? 'relative max-h-20 overflow-hidden' : ''}>
+            <p className="text-sm text-foreground leading-relaxed">{aboutText}</p>
+            {shouldClampAbout && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-surface to-transparent" />
+            )}
+          </div>
         </div>
       )}
 
@@ -297,8 +316,9 @@ function TabOverview({ data }: { data: InstituteDetail }) {
         {data.website?.url && (
           <InfoRow label="Website" value={
             <a href={data.website.url} target="_blank" rel="noreferrer"
-              className="flex items-center gap-1 text-primary hover:underline">
-              <Globe size={11} /> {data.website.url}
+              className={`flex items-center gap-1 text-primary hover:underline ${mobile ? 'min-w-0 max-w-full' : ''}`}>
+              <Globe size={11} className="shrink-0" />
+              <span className={mobile ? 'block min-w-0 max-w-[120px] truncate' : ''}>{data.website.url}</span>
             </a>
           } />
         )}
@@ -578,79 +598,392 @@ function TabMedia({ data }: { data: InstituteDetail }) {
   );
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
-export default function CollegeDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const [data, setData] = useState<InstituteDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [imgErr, setImgErr] = useState(false);
-  const [logoErr, setLogoErr] = useState(false);
-  const [tab, setTab] = useState('overview');
-  const [gallery, setGallery] = useState<string[]>([]);
-  const [galIdx, setGalIdx] = useState<number | null>(null);
+type DetailTabKey = typeof TABS[number]['key'];
+type DetailStat = {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  accent: string;
+};
 
-  useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    fetch(`${API}/institutes/${id}`)
-      .then(r => r.json())
-      .then(j => {
-        const d = j.data ?? j;
-        setData(d);
-        setGallery(d.image_urls ?? []);
-      })
-      .catch(() => { })
-      .finally(() => setLoading(false));
-  }, [id]);
+type DetailViewProps = {
+  data: InstituteDetail;
+  gallery: string[];
+  tab: DetailTabKey;
+  setTab: (tab: DetailTabKey) => void;
+  openGallery: (index: number) => void;
+  imgErr: boolean;
+  setImgErr: (value: boolean) => void;
+  logoErr: boolean;
+  setLogoErr: (value: boolean) => void;
+  style: { bg: string; text: string; dot: string };
+  grad: string;
+  statItems: DetailStat[];
+  seats?: number;
+  beds?: number;
+};
 
-  if (loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <Loader2 size={28} className="animate-spin text-primary" />
-        <p className="text-sm text-foreground-muted">Loading college details…</p>
+function DetailTabContent({ tab, data, mobile = false }: { tab: DetailTabKey; data: InstituteDetail; mobile?: boolean }) {
+  return (
+    <>
+      {tab === 'overview' && <TabOverview data={data} mobile={mobile} />}
+      {tab === 'location' && <TabLocation data={data} />}
+      {tab === 'accommodation' && <TabAccommodation data={data} />}
+      {tab === 'contact' && <TabContact data={data} />}
+      {tab === 'media' && <TabMedia data={data} />}
+    </>
+  );
+}
+
+function DetailLightbox({
+  gallery,
+  galIdx,
+  setGalIdx,
+}: {
+  gallery: string[];
+  galIdx: number | null;
+  setGalIdx: React.Dispatch<React.SetStateAction<number | null>>;
+}) {
+  if (galIdx === null) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+      onClick={() => setGalIdx(null)}
+    >
+      <div className="relative max-w-4xl w-full" onClick={e => e.stopPropagation()}>
+        <img
+          src={gallery[galIdx]}
+          alt=""
+          className="w-full max-h-[80vh] object-contain rounded-2xl"
+        />
+        <div className="flex items-center justify-between mt-3">
+          <button
+            onClick={() => setGalIdx(i => i! > 0 ? i! - 1 : gallery.length - 1)}
+            className="px-4 py-2 rounded-xl bg-white/10 text-white text-sm font-semibold hover:bg-white/20"
+          >
+            Prev
+          </button>
+          <span className="text-white/60 text-sm">{galIdx + 1} / {gallery.length}</span>
+          <button
+            onClick={() => setGalIdx(i => i! < gallery.length - 1 ? i! + 1 : 0)}
+            className="px-4 py-2 rounded-xl bg-white/10 text-white text-sm font-semibold hover:bg-white/20"
+          >
+            Next
+          </button>
+        </div>
+        <button
+          onClick={() => setGalIdx(null)}
+          className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white text-lg font-bold flex items-center justify-center"
+        >
+          ×
+        </button>
       </div>
     </div>
   );
+}
 
-  if (!data) return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-      <Building2 size={40} className="text-foreground-subtle" />
-      <p className="text-base font-bold text-foreground">College not found</p>
-      <Link href="/dashboard/colleges" className="text-sm text-primary font-semibold flex items-center gap-1">
-        <ArrowLeft size={14} /> Back to Colleges
-      </Link>
-    </div>
-  );
+// ─── MOBILE VIEW (reimagined) ─────────────────────────────────────────────────
+function MobileInstituteDetail({
+  data,
+  gallery,
+  tab,
+  setTab,
+  openGallery,
+  imgErr,
+  setImgErr,
+  logoErr,
+  setLogoErr,
+  style,
+  grad,
+  statItems,
+}: DetailViewProps) {
+  const [scrolled, setScrolled] = useState(false);
+  const [actionBarVisible, setActionBarVisible] = useState(true);
+  const [saved, setSaved] = useState(false);
+  const [galleryIdx, setGalleryIdx] = useState(0);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const lastScrollYRef = useRef(0);
+  const scrollStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const style = ts(str(data.institute_type));
-  const feeMin = data.fee?.range?.min ?? 0;
-  const feeMax = data.fee?.range?.max ?? 0;
-  const grad = GRAD[data.id % GRAD.length];
-  const seats = data.seats?.count;
-  const beds = data.beds?.count;
+  useEffect(() => {
+    lastScrollYRef.current = window.scrollY;
+
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      const scrollingDown = currentY > lastScrollYRef.current + 4;
+      const scrollingUp = currentY < lastScrollYRef.current - 4;
+
+      setScrolled(currentY > 180);
+
+      if (scrollingDown && currentY > 80) {
+        setActionBarVisible(false);
+      } else if (scrollingUp) {
+        setActionBarVisible(true);
+      }
+
+      lastScrollYRef.current = currentY;
+
+      if (scrollStopTimerRef.current) {
+        clearTimeout(scrollStopTimerRef.current);
+      }
+      scrollStopTimerRef.current = setTimeout(() => {
+        setActionBarVisible(true);
+      }, 180);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (scrollStopTimerRef.current) {
+        clearTimeout(scrollStopTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleGalleryScroll = () => {
+    const el = galleryRef.current;
+    if (!el || gallery.length <= 1) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (maxScroll <= 0) return;
+    const ratio = el.scrollLeft / maxScroll;
+    setGalleryIdx(Math.round(ratio * (gallery.length - 1)));
+  };
+
+  const instituteType = str(data.institute_type).replace(' (Institute of National Importance)', '');
+  const addressLine = [data.location?.address?.city, str(data.state)].filter(Boolean).join(', ');
 
   return (
-    <div className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background pb-32 lg:hidden">
 
-      {/* ── hero cover ── */}
-      <div className="relative h-52 sm:h-64 w-full overflow-hidden">
+      {/* compact header, slides in on scroll */}
+      <div
+        className={`fixed inset-x-0 top-0 z-40 flex items-center gap-3 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur transition-transform duration-300 ${scrolled ? 'translate-y-0' : '-translate-y-full'
+          }`}
+      >
+        <Link href="/dashboard/colleges" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
+          <ArrowLeft size={16} className="text-foreground" />
+        </Link>
+        <p className="flex-1 truncate text-sm font-bold text-foreground">{data.name}</p>
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ background: style.dot }}
+        />
+      </div>
+
+      {/* hero */}
+      <div className="relative h-[350px] overflow-hidden">
+        {!imgErr && data.cover_url ? (
+          <img
+            src={data.cover_url}
+            alt=""
+            className="absolute inset-x-0 top-0 h-60 w-full object-cover"
+            onError={() => setImgErr(true)}
+          />
+        ) : (
+          <div className="absolute inset-x-0 top-0 h-60" style={{ background: grad }} />
+        )}
+        <div className="absolute inset-x-0 top-0 h-60 bg-gradient-to-b from-black/50 via-black/10 to-background" />
+
+        <div className="absolute inset-x-4 top-4 z-10 flex items-center justify-between">
+          <Link
+            href="/dashboard/colleges"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/15 backdrop-blur"
+          >
+            <ArrowLeft size={16} className="text-white" />
+          </Link>
+          <button
+            onClick={() => setSaved(s => !s)}
+            className={`flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur transition-colors ${saved ? 'border-white/40 bg-white/30' : 'border-white/25 bg-white/15'
+              }`}
+          >
+            <Heart size={15} className={saved ? 'fill-white text-white' : 'text-white'} />
+          </button>
+        </div>
+
+        <div className="absolute inset-x-4 top-[118px] z-10 rounded-3xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur">
+          <div className="flex items-start gap-3">
+            <div className="h-[70px] w-[70px] shrink-0 overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+              {!logoErr && data.logo_url ? (
+                <img src={data.logo_url} alt="" className="h-full w-full object-contain p-1" onError={() => setLogoErr(true)} />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-muted">
+                  <Building2 size={22} className="text-foreground-subtle" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div
+                className="mb-2 flex w-fit max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold"
+                style={{ background: style.bg, color: style.text }}
+              >
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: style.dot }} />
+                <span className="truncate">{instituteType}</span>
+              </div>
+              <h1 className="text-lg font-black leading-tight text-foreground">{data.name}</h1>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {addressLine && (
+              <p className="flex items-center gap-1 text-xs font-semibold text-foreground-muted">
+                <MapPin size={12} /> {addressLine}
+              </p>
+            )}
+            {data.about?.institute_established_year && (
+              <p className="flex items-center gap-1 text-xs font-semibold text-foreground-muted">
+                <CalendarDays size={12} /> Est. {data.about.institute_established_year}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <section className="-mt-1 space-y-5 px-4">
+
+        {/* quick stats, 2x2 grid */}
+        <div className="grid grid-cols-2 gap-2.5">
+          {statItems.map(({ icon: Icon, label, value, accent }) => (
+            <div key={label} className="rounded-2xl border border-border bg-surface p-3 shadow-sm">
+              <div
+                className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl"
+                style={{ background: `color-mix(in srgb, ${accent} 14%, transparent)` }}
+              >
+                <Icon size={15} style={{ color: accent }} />
+              </div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-foreground-subtle">{label}</p>
+              <p className="mt-1 text-base font-black leading-none text-foreground tabular-nums">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* gallery carousel with scroll-synced dots */}
+        {gallery.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-foreground-subtle">
+                <ImageIcon size={14} /> Gallery
+              </p>
+              <span className="text-[11px] font-semibold text-foreground-subtle">{gallery.length} photos</span>
+            </div>
+            <div
+              ref={galleryRef}
+              onScroll={handleGalleryScroll}
+              className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 no-scrollbar"
+            >
+              {gallery.map((url, i) => (
+                <button
+                  key={i}
+                  onClick={() => openGallery(i)}
+                  className="h-44 w-[82%] shrink-0 snap-center overflow-hidden rounded-3xl border border-border bg-muted shadow-sm"
+                >
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+            {gallery.length > 1 && (
+              <div className="flex justify-center gap-1.5">
+                {gallery.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all ${i === galleryIdx ? 'w-5 bg-primary' : 'w-1.5 bg-border'
+                      }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* segmented tab control */}
+        <div className="sticky top-0 z-20 -mx-4 bg-background/95 px-4 py-2 backdrop-blur">
+          <div className="flex gap-1 overflow-x-auto rounded-2xl bg-muted p-1 no-scrollbar">
+            {TABS.map(t => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 text-xs font-black transition-all ${tab === t.key
+                    ? 'bg-surface text-foreground shadow-sm'
+                    : 'text-foreground-subtle'
+                  }`}
+              >
+                <t.icon size={13} />
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <DetailTabContent tab={tab} data={data} mobile />
+      </section>
+
+      {/* floating action bar */}
+      <div
+        className={`fixed inset-x-4 bottom-20 z-30 flex items-center gap-2 rounded-full border border-border bg-surface/95 p-2 shadow-[0_10px_30px_rgba(15,23,42,0.18)] backdrop-blur transition-all duration-300 lg:hidden ${actionBarVisible
+            ? 'translate-y-0 opacity-100'
+            : 'translate-y-8 opacity-0 pointer-events-none'
+          }`}
+      >
+        <Link
+          href="/dashboard/compare"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground-muted"
+        >
+          <GitCompare size={16} />
+        </Link>
+        <Link
+          href="/dashboard/shortlist"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground-muted"
+        >
+          <Heart size={16} />
+        </Link>
+        <Link
+          href="/dashboard/predictor"
+          className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-primary text-xs font-black text-primary-foreground shadow-sm"
+        >
+          Check My Chances <ChevronRight size={14} />
+        </Link>
+      </div>
+    </main>
+  );
+}
+
+function DesktopInstituteDetail({
+  data,
+  gallery,
+  tab,
+  setTab,
+  openGallery,
+  imgErr,
+  setImgErr,
+  logoErr,
+  setLogoErr,
+  style,
+  grad,
+  statItems,
+  seats,
+  beds,
+}: DetailViewProps) {
+  return (
+    <main className="hidden min-h-screen bg-background lg:block">
+      <div className="relative h-80 w-full overflow-hidden">
         {!imgErr && data.cover_url ? (
           <img
             src={data.cover_url} alt=""
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover scale-[1.02]"
             onError={() => setImgErr(true)}
           />
         ) : (
           <div className="w-full h-full" style={{ background: grad }} />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10" />
+        <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-background to-transparent" />
 
         <div className="absolute top-4 left-6 flex items-center gap-2 text-white/80 text-xs font-medium">
           <Link href="/dashboard" className="hover:text-white flex items-center gap-1"><Home size={12} /> Dashboard</Link>
           <span>/</span>
           <Link href="/dashboard/colleges" className="hover:text-white">Colleges</Link>
           <span>/</span>
-          <span className="text-white/60 truncate max-w-[160px]">{data.name}</span>
+          <span className="text-white/60 truncate max-w-[220px]">{data.name}</span>
         </div>
 
         <Link
@@ -661,11 +994,9 @@ export default function CollegeDetailPage() {
         </Link>
       </div>
 
-      <div className="px-4 sm:px-6 lg:px-10 max-w-[1200px] mx-auto -mt-10 relative z-10 pb-20">
-
-        {/* ── identity card ── */}
-        <div className="bg-surface border border-border rounded-2xl p-5 shadow-lg mb-5 flex items-start gap-4 flex-wrap">
-          <div className="w-16 h-16 rounded-2xl bg-white border-2 border-border shadow-md overflow-hidden shrink-0">
+      <div className="px-10 max-w-[1500px] mx-auto -mt-12 relative z-10 pb-24">
+        <div className="bg-surface/95 backdrop-blur border border-border rounded-2xl p-6 shadow-lg mb-5 flex items-start gap-4">
+          <div className="w-[72px] h-[72px] rounded-2xl bg-white border-2 border-border shadow-md overflow-hidden shrink-0">
             {!logoErr && data.logo_url ? (
               <img src={data.logo_url} alt="" className="w-full h-full object-contain p-1" onError={() => setLogoErr(true)} />
             ) : (
@@ -677,9 +1008,9 @@ export default function CollegeDetailPage() {
 
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-start gap-2 mb-1">
-              <h1 className="text-xl font-black text-foreground leading-snug flex-1">{data.name}</h1>
+              <h1 className="text-3xl font-black text-foreground leading-tight flex-1">{data.name}</h1>
               <div
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0"
+                className="flex w-fit items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0"
                 style={{ background: style.bg, color: style.text }}
               >
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: style.dot }} />
@@ -691,7 +1022,7 @@ export default function CollegeDetailPage() {
               <p className="text-sm text-foreground-muted mb-2">{typeof data.university === 'string' ? data.university : data.university.name}</p>
             )}
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mt-2">
               <span className="flex items-center gap-1 text-xs font-semibold text-foreground-muted bg-muted px-2.5 py-1 rounded-full border border-border">
                 <MapPin size={10} /> {str(data.state)}
               </span>
@@ -712,16 +1043,10 @@ export default function CollegeDetailPage() {
           </div>
         </div>
 
-        {/* ── key stats ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-          {[
-            { icon: Users, label: 'Total Seats', value: seats != null ? seats.toLocaleString() : '—', accent: '#0d9488' },
-            { icon: BedDouble, label: 'Hospital Beds', value: beds != null ? beds.toLocaleString() : '—', accent: '#7c3aed' },
-            { icon: Banknote, label: 'Min Fee / yr', value: fmtFee(feeMin), accent: '#0ea5e9' },
-            { icon: Banknote, label: 'Max Fee / yr', value: fmtFee(feeMax), accent: '#d97706' },
-          ].map(({ icon: Icon, label, value, accent }) => (
+        <div className="mb-5 grid grid-cols-4 gap-3">
+          {statItems.map(({ icon: Icon, label, value, accent }) => (
             <div key={label} className="flex flex-col gap-2 bg-surface border border-border rounded-2xl p-4 shadow-sm">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: accent + '18' }}>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `color-mix(in srgb, ${accent} 14%, transparent)` }}>
                 <Icon size={17} style={{ color: accent }} />
               </div>
               <div>
@@ -732,7 +1057,6 @@ export default function CollegeDetailPage() {
           ))}
         </div>
 
-        {/* ── photo gallery ── */}
         {gallery.length > 0 && (
           <div className="mb-5 bg-surface border border-border rounded-2xl p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
@@ -740,12 +1064,12 @@ export default function CollegeDetailPage() {
               <p className="text-xs font-bold text-foreground">Photo Gallery</p>
               <span className="text-[10px] text-foreground-subtle ml-auto">{gallery.length} photos</span>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-thin">
+            <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
               {gallery.map((url, i) => (
                 <button
                   key={i}
-                  onClick={() => setGalIdx(i)}
-                  className="shrink-0 w-40 h-28 rounded-xl overflow-hidden border border-border hover:border-primary transition-colors focus:outline-none"
+                  onClick={() => openGallery(i)}
+                  className="shrink-0 w-48 h-32 rounded-xl overflow-hidden border border-border hover:border-primary transition-colors focus:outline-none"
                 >
                   <img src={url} alt="" className="w-full h-full object-cover" />
                 </button>
@@ -754,17 +1078,14 @@ export default function CollegeDetailPage() {
           </div>
         )}
 
-        <div className="grid lg:grid-cols-[1fr_288px] gap-5">
-
-          {/* ── main content (tabs) ── */}
-          <div>
-            {/* tab bar */}
-            <div className="flex gap-1 bg-muted rounded-2xl p-1 mb-5 overflow-x-auto">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px] gap-5 lg:items-start">
+          <div className="min-w-0">
+            <div className="sticky top-[70px] z-20 flex gap-1 bg-muted/95 backdrop-blur rounded-2xl p-1 mb-5 overflow-x-auto no-scrollbar border border-border/60">
               {TABS.map(t => (
                 <button
                   key={t.key}
                   onClick={() => setTab(t.key)}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${tab === t.key
+                  className={`flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${tab === t.key
                       ? 'bg-surface text-foreground shadow-sm border border-border'
                       : 'text-foreground-subtle hover:text-foreground'
                     }`}
@@ -775,23 +1096,14 @@ export default function CollegeDetailPage() {
               ))}
             </div>
 
-            {/* tab content */}
-            {tab === 'overview' && <TabOverview data={data} />}
-            {tab === 'location' && <TabLocation data={data} />}
-            {tab === 'accommodation' && <TabAccommodation data={data} />}
-            {tab === 'contact' && <TabContact data={data} />}
-            {tab === 'media' && <TabMedia data={data} />}
+            <DetailTabContent tab={tab} data={data} />
           </div>
 
-          {/* ── right sidebar ── */}
-          <div className="space-y-4">
-
-            {/* CTA actions */}
+          <aside className="space-y-4 lg:sticky lg:top-[92px]">
             <div className="bg-surface border border-border rounded-2xl p-4 shadow-sm space-y-2">
               <p className="text-xs font-bold uppercase tracking-widest text-foreground-subtle mb-3">Actions</p>
               <Link href="/dashboard/shortlist"
-                className="flex items-center justify-center gap-2 h-10 w-full rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover transition-colors"
-                style={{ boxShadow: '0 2px 12px rgba(13,148,136,0.25)' }}>
+                className="flex items-center justify-center gap-2 h-10 w-full rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary-hover transition-colors shadow-sm">
                 + Add to Shortlist
               </Link>
               <Link href="/dashboard/compare"
@@ -810,7 +1122,6 @@ export default function CollegeDetailPage() {
               )}
             </div>
 
-            {/* quick facts */}
             <div className="bg-surface border border-border rounded-2xl p-5 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-widest text-foreground-subtle mb-3">Quick Facts</p>
               <div className="space-y-3">
@@ -838,12 +1149,11 @@ export default function CollegeDetailPage() {
               </div>
             </div>
 
-            {/* location peek */}
             {(data.location?.address?.city || data.location?.address?.address_line_1) && (
               <div className="bg-surface border border-border rounded-2xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-bold uppercase tracking-widest text-foreground-subtle">Location</p>
-                  <button onClick={() => setTab('location')} className="text-[10px] text-primary font-semibold">View →</button>
+                  <button onClick={() => setTab('location')} className="text-[10px] text-primary font-semibold">View</button>
                 </div>
                 <p className="text-xs text-foreground-muted leading-relaxed">
                   {[data.location.address?.address_line_1, data.location.address?.city, str(data.state)].filter(Boolean).join(', ')}
@@ -857,12 +1167,11 @@ export default function CollegeDetailPage() {
               </div>
             )}
 
-            {/* hostel peek */}
             {data.hostel && (
               <div className="bg-surface border border-border rounded-2xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-bold uppercase tracking-widest text-foreground-subtle">Hostel</p>
-                  <button onClick={() => setTab('accommodation')} className="text-[10px] text-primary font-semibold">Details →</button>
+                  <button onClick={() => setTab('accommodation')} className="text-[10px] text-primary font-semibold">Details</button>
                 </div>
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
@@ -877,48 +1186,107 @@ export default function CollegeDetailPage() {
               </div>
             )}
 
-            {/* back nav */}
             <Link
               href="/dashboard/colleges"
               className="flex items-center gap-2 text-sm font-semibold text-foreground-muted hover:text-foreground transition-colors px-1"
             >
               <ArrowLeft size={14} /> Back to all colleges
             </Link>
-          </div>
+          </aside>
         </div>
       </div>
+    </main>
+  );
+}
 
-      {/* ── lightbox ── */}
-      {galIdx !== null && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-          onClick={() => setGalIdx(null)}
-        >
-          <div className="relative max-w-4xl w-full" onClick={e => e.stopPropagation()}>
-            <img
-              src={gallery[galIdx]}
-              alt=""
-              className="w-full max-h-[80vh] object-contain rounded-2xl"
-            />
-            <div className="flex items-center justify-between mt-3">
-              <button
-                onClick={() => setGalIdx(i => i! > 0 ? i! - 1 : gallery.length - 1)}
-                className="px-4 py-2 rounded-xl bg-white/10 text-white text-sm font-semibold hover:bg-white/20"
-              >← Prev</button>
-              <span className="text-white/60 text-sm">{galIdx + 1} / {gallery.length}</span>
-              <button
-                onClick={() => setGalIdx(i => i! < gallery.length - 1 ? i! + 1 : 0)}
-                className="px-4 py-2 rounded-xl bg-white/10 text-white text-sm font-semibold hover:bg-white/20"
-              >Next →</button>
-            </div>
-            <button
-              onClick={() => setGalIdx(null)}
-              className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white text-lg font-bold flex items-center justify-center"
-            >×</button>
-          </div>
-        </div>
-      )}
+// ─── Page ────────────────────────────────────────────────────────────────────
+export default function CollegeDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const [data, setData] = useState<InstituteDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [imgErr, setImgErr] = useState(false);
+  const [logoErr, setLogoErr] = useState(false);
+  const [tab, setTab] = useState<DetailTabKey>('overview');
+  const [gallery, setGallery] = useState<string[]>([]);
+  const [galIdx, setGalIdx] = useState<number | null>(null);
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null);
 
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 1024px)');
+    const update = () => setIsDesktop(query.matches);
+
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    fetch(`${API}/institutes/${id}`)
+      .then(r => r.json())
+      .then(j => {
+        const d = j.data ?? j;
+        setData(d);
+        setGallery(d.image_urls ?? []);
+      })
+      .catch(() => { })
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading || isDesktop === null) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 size={28} className="animate-spin text-primary" />
+        <p className="text-sm text-foreground-muted">Loading college details...</p>
+      </div>
     </div>
+  );
+
+  if (!data) return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+      <Building2 size={40} className="text-foreground-subtle" />
+      <p className="text-base font-bold text-foreground">College not found</p>
+      <Link href="/dashboard/colleges" className="text-sm text-primary font-semibold flex items-center gap-1">
+        <ArrowLeft size={14} /> Back to Colleges
+      </Link>
+    </div>
+  );
+
+  const style = ts(str(data.institute_type));
+  const feeMin = data.fee?.range?.min ?? 0;
+  const feeMax = data.fee?.range?.max ?? 0;
+  const grad = GRAD[data.id % GRAD.length];
+  const seats = data.seats?.count;
+  const beds = data.beds?.count;
+  const statItems: DetailStat[] = [
+    { icon: Users, label: 'Total Seats', value: seats != null ? seats.toLocaleString() : '-', accent: 'var(--color-primary)' },
+    { icon: BedDouble, label: 'Hospital Beds', value: beds != null ? beds.toLocaleString() : '-', accent: 'var(--color-secondary)' },
+    { icon: Banknote, label: 'Min Fee / yr', value: fmtFee(feeMin), accent: 'var(--color-info)' },
+    { icon: Banknote, label: 'Max Fee / yr', value: fmtFee(feeMax), accent: 'var(--color-warning)' },
+  ];
+
+  const viewProps: DetailViewProps = {
+    data,
+    gallery,
+    tab,
+    setTab,
+    openGallery: setGalIdx,
+    imgErr,
+    setImgErr,
+    logoErr,
+    setLogoErr,
+    style,
+    grad,
+    statItems,
+    seats,
+    beds,
+  };
+
+  return (
+    <>
+      {isDesktop ? <DesktopInstituteDetail {...viewProps} /> : <MobileInstituteDetail {...viewProps} />}
+      <DetailLightbox gallery={gallery} galIdx={galIdx} setGalIdx={setGalIdx} />
+    </>
   );
 }
