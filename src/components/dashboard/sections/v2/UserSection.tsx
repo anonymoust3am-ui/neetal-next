@@ -22,14 +22,6 @@ export function UserSection() {
       .catch(() => {});
   }, [firebaseUser]);
 
-  /* dummy data — API doesn't support these yet */
-  const TOP_PICKS = [
-    { name: 'AIIMS Bhopal',      tag: 'Safe',   tagCls: 'bg-success-light text-success',     rank: 890  },
-    { name: 'JIPMER Puducherry', tag: 'Target', tagCls: 'bg-primary-light text-primary',     rank: 512  },
-    { name: 'MAMC Delhi',        tag: 'Target', tagCls: 'bg-primary-light text-primary',     rank: 1240 },
-    { name: 'Kasturba Manipal',  tag: 'Dream',  tagCls: 'bg-secondary-light text-secondary', rank: 290  },
-  ];
-
   const journey = [
     { label: 'Profile',  done: user?.isProfileComplete ?? false },
     { label: 'Shortlist', done: false },
@@ -45,7 +37,7 @@ export function UserSection() {
   return (
     <div className="space-y-4 pt-8">
       {!user?.isProfileComplete && (
-        <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-primary/10 border border-primary/30">
+        <div className="hidden sm:flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-primary/10 border border-primary/30">
           <div className="flex items-center gap-3 min-w-0">
             <UserCircle className="w-5 h-5 text-primary shrink-0" />
             <p className="text-sm text-foreground">
@@ -61,7 +53,132 @@ export function UserSection() {
           </Link>
         </div>
       )}
-    <div className="w-full">
+
+      {!user?.isProfileComplete && (
+        <div className="sm:hidden rounded-2xl border border-primary/25 bg-primary/10 p-3.5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15">
+              <UserCircle className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-foreground">Complete your profile</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-foreground-muted">
+                Unlock better recommendations and journey tracking.
+              </p>
+            </div>
+            <Link
+              href="/dashboard/profile"
+              className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground"
+            >
+              Start
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile */}
+      <div className="sm:hidden">
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-surface p-4 shadow-sm">
+          <div className="absolute -right-14 -top-16 h-40 w-40 rounded-full bg-primary/10 pointer-events-none" />
+          <div className="absolute -bottom-12 -left-12 h-36 w-36 rounded-full bg-secondary/10 pointer-events-none" />
+
+          <div className="relative">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle">
+                  Your dashboard
+                </p>
+                <h1 className="mt-1 truncate text-2xl font-black leading-tight text-foreground">
+                  {displayName}
+                </h1>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-full bg-primary-light px-2.5 py-1 text-[11px] font-bold text-primary">
+                    {categoryBadge}
+                  </span>
+                  <span className="rounded-full bg-secondary-light px-2.5 py-1 text-[11px] font-bold text-secondary">
+                    NEET UG 2025
+                  </span>
+                </div>
+              </div>
+
+              <div className="shrink-0 rounded-2xl border border-info-light bg-card px-4 py-3 text-center">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-primary">AIR</p>
+                <p className="mt-1 text-2xl font-semibold leading-none tabular-nums text-blue-800 dark:text-blue-300">
+                  {rank.toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-border bg-background/70 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-foreground-subtle">
+                  Score
+                </p>
+                <p className="mt-1 text-lg font-black leading-none text-foreground">650</p>
+              </div>
+              <div className="rounded-xl border border-border bg-background/70 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-foreground-subtle">
+                  Progress
+                </p>
+                <p className="mt-1 text-lg font-black leading-none text-primary">{progressPct}%</p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs font-bold text-foreground">Counselling Journey</p>
+                <span className="text-[11px] font-bold text-primary">{progressPct}% Complete</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-secondary transition-all duration-700"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <div className="mt-3 grid grid-cols-4 gap-1.5">
+                {journey.map(s => (
+                  <div
+                    key={s.label}
+                    className={`rounded-xl border px-2 py-2 text-center ${
+                      s.done
+                        ? 'border-success/30 bg-success-light text-success'
+                        : 'border-border bg-background/70 text-foreground-subtle'
+                    }`}
+                  >
+                    <div className="mx-auto mb-1 flex h-5 w-5 items-center justify-center rounded-full bg-surface">
+                      {s.done ? <CheckCircle2 size={13} /> : <Circle size={13} />}
+                    </div>
+                    <p className="truncate text-[10px] font-bold">{s.label}</p>
+                    {s.label === 'Choices' && choiceListCount !== null && choiceListCount > 0 && (
+                      <p className="mt-0.5 text-[9px] font-black">{choiceListCount}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-border bg-muted p-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Stethoscope size={17} className="text-primary" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-foreground-subtle">
+                  Target
+                </p>
+                <p className="truncate text-sm font-bold text-foreground">MBBS · Govt College</p>
+              </div>
+              <Link
+                href="/dashboard/predictor"
+                className="flex shrink-0 items-center gap-1 rounded-full bg-surface px-3 py-1.5 text-[11px] font-bold text-primary"
+              >
+                Predict <ArrowUpRight size={12} />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <div className="hidden sm:block w-full">
 
       {/* LEFT — greeting + rank + journey */}
       <div className="relative bg-surface border border-border rounded-2xl p-6 overflow-hidden shadow-sm">
