@@ -381,27 +381,27 @@ function MobileCompareView({
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 export default function ComparePage() {
-  const [slots, setSlots]       = useState<Slot[]>([null, null, null, null]);
+  const [slots, setSlots] = useState<Slot[]>([null, null, null, null]);
   const [addingTo, setAddingTo] = useState<number | null>(null);
-  const [search, setSearch]     = useState('');
+  const [search, setSearch] = useState('');
   const [mobileActiveIdx, setMobileActiveIdx] = useState(0);
 
   const activeCount = slots.filter(Boolean).length;
 
   /* ── Institute data: paginated, accumulating list ─────────────── */
   const [allColleges, setAllColleges] = useState<College[]>([]);
-  const [page, setPage]               = useState(1);
-  const [totalPages, setTotalPages]   = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState<number | null>(null);
   const [totalRecords, setTotalRecords] = useState<number | null>(null);
   const [loadingPage, setLoadingPage] = useState(false);
-  const [loadingAll, setLoadingAll]   = useState(false);
-  const [loadError, setLoadError]     = useState(false);
+  const [loadingAll, setLoadingAll] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   /* ── Filters (sourced from /institutes/filter-data) ───────────── */
-  const [stateOpts, setStateOpts]   = useState<string[]>([]);
-  const [typeOpts, setTypeOpts]     = useState<string[]>([]);
+  const [stateOpts, setStateOpts] = useState<string[]>([]);
+  const [typeOpts, setTypeOpts] = useState<string[]>([]);
   const [stateFilter, setStateFilter] = useState('');
-  const [typeFilter, setTypeFilter]   = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [filterDataLoaded, setFilterDataLoaded] = useState(false);
 
   const lastQueryKeyRef = useRef<string | null>(null);
@@ -413,7 +413,7 @@ export default function ComparePage() {
     const params = new URLSearchParams();
     params.set('page', String(pageNum));
     if (stateFilter) params.set('states', stateFilter);
-    if (typeFilter)  params.set('institute_type', typeFilter);
+    if (typeFilter) params.set('institute_type', typeFilter);
 
     const res = await fetch(`${INST_API}/institutes?${params.toString()}`);
     const j = await res.json();
@@ -478,7 +478,7 @@ export default function ComparePage() {
         setTypeOpts(j.data?.institute_types ?? []);
         setFilterDataLoaded(true);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [addingTo, filterDataLoaded]);
 
   /* ── Load next page / load everything remaining ────────────────── */
@@ -557,10 +557,10 @@ export default function ComparePage() {
       <div className="px-4 sm:px-6 lg:px-10 max-w-[1450px] mx-auto pt-6 sm:pt-10 space-y-5">
 
         {/* Page title */}
-        <div className="mb-3 sm:mb-5">
+        <div className="mb-3 sm:mb-10 mt-10">
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">Compare Colleges</h1>
-          <p className="text-sm sm:text-base text-foreground-muted mt-0.5">
-            Compare colleges side-by-side across key parameters like fees, AIQ cutoff, bond requirements, and more.
+          <p className="hidden sm:block text-sm sm:text-base text-foreground-muted mt-0.5">
+            Compare colleges by fees, AIQ cutoff, bond, and more.
           </p>
         </div>
 
