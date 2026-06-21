@@ -50,11 +50,11 @@ export default function Home() {
       {/* <FeatureGrid /> */}
       <FeatureGrid />
       <Testimonials />
-      <FAQSection />
       <section id="pricing">
         <PricingPlans />
       </section>
       <AppPreview />
+      <FAQSection />
       <Footer />
     </div>
   );
