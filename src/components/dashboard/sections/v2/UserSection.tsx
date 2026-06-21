@@ -61,7 +61,7 @@ export function UserSection() {
           </Link>
         </div>
       )}
-    <div className="grid lg:grid-cols-[1fr_340px] gap-4">
+    <div className="w-full">
 
       {/* LEFT — greeting + rank + journey */}
       <div className="relative bg-surface border border-border rounded-2xl p-6 overflow-hidden shadow-sm">
@@ -141,7 +141,7 @@ export function UserSection() {
       </div>
 
       {/* RIGHT — top picks (dummy) */}
-      <div className="flex flex-col gap-3">
+      {/* <div className="flex flex-col gap-3">
         <div className="bg-surface border border-border rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-foreground">Top Picks for You</h2>
@@ -160,7 +160,7 @@ export function UserSection() {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
     </div>
     </div>
   );

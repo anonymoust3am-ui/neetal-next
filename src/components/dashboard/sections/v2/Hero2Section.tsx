@@ -8,6 +8,7 @@ import {
 import ChoiceListPanel from './ChoiceListPanel';
 import { useCounselling } from '@/contexts/CounsellingContext';
 import type { CounsellingQuota } from '@/lib/api';
+import Link from 'next/link';
 
 /* ── Quota Modal ──────────────────────────────────────────────────── */
 function QuotaModal({ quotas, onClose }: { quotas: CounsellingQuota[]; onClose: () => void }) {
@@ -143,13 +144,20 @@ export function Hero2Section() {
   const [quotaOpen, setQuotaOpen] = useState(false);
 
   const body = selection?.body ?? null;
-  const opt  = selection?.counselling ?? null;
+  const opt = selection?.counselling ?? null;
+
+    const TOP_PICKS = [
+    { name: 'AIIMS Bhopal',      tag: 'Safe',   tagCls: 'bg-success-light text-success',     rank: 890  },
+    { name: 'JIPMER Puducherry', tag: 'Target', tagCls: 'bg-primary-light text-primary',     rank: 512  },
+    { name: 'MAMC Delhi',        tag: 'Target', tagCls: 'bg-primary-light text-primary',     rank: 1240 },
+    { name: 'Kasturba Manipal',  tag: 'Dream',  tagCls: 'bg-secondary-light text-secondary', rank: 290  },
+  ];
 
   const resources = body ? [
-    body.website_goto         && { label: 'Official Website', icon: Globe,    href: body.website_goto,         color: 'text-blue-500',   isButton: false },
-    body.website_registration && { label: 'Registration',     icon: UserPlus, href: body.website_registration, color: 'text-emerald-500', isButton: false },
-    body.website_prospectus   && { label: 'Prospectus',       icon: BookOpen, href: body.website_prospectus,   color: 'text-orange-500', isButton: false },
-    body.quotas.length > 0    && { label: 'Quota Details',    icon: PieChart, href: '#',                       color: 'text-purple-500', isButton: true  },
+    body.website_goto && { label: 'Official Website', icon: Globe, href: body.website_goto, color: 'text-blue-500', isButton: false },
+    body.website_registration && { label: 'Registration', icon: UserPlus, href: body.website_registration, color: 'text-emerald-500', isButton: false },
+    body.website_prospectus && { label: 'Prospectus', icon: BookOpen, href: body.website_prospectus, color: 'text-orange-500', isButton: false },
+    body.quotas.length > 0 && { label: 'Quota Details', icon: PieChart, href: '#', color: 'text-purple-500', isButton: true },
   ].filter(Boolean) as { label: string; icon: React.ElementType; href: string; color: string; isButton: boolean }[] : [];
 
   return (
@@ -230,9 +238,29 @@ export function Hero2Section() {
         </div>
 
         {/* RIGHT PANEL */}
-        <div className="w-full flex justify-center lg:justify-end">
+        {/* <div className="w-full flex justify-center lg:justify-end">
           <div className="w-full max-w-[320px]">
             <ChoiceListPanel />
+          </div>
+        </div> */}
+
+        <div className="flex flex-col gap-3 w-full max-w-[320px] h-full">
+          <div className="bg-surface border border-border rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-foreground">Top Picks for You</h2>
+            </div>
+            {TOP_PICKS.map((c, i) => (
+              <div key={i} className="flex items-center gap-2.5 py-2.5 border-b border-border last:border-0">
+                <div className="w-6 h-6 rounded-lg bg-primary-light flex items-center justify-center text-[10px] font-black text-primary shrink-0">
+                  {i + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-foreground truncate">{c.name}</p>
+                  <p className="text-[10px] text-foreground-subtle">Closing rank {c.rank.toLocaleString()}</p>
+                </div>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${c.tagCls}`}>{c.tag}</span>
+              </div>
+            ))}
           </div>
         </div>
 
