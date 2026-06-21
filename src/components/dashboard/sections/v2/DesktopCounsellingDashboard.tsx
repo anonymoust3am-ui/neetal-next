@@ -17,46 +17,50 @@ export default function DesktopCounsellingDashboard() {
         <div className="bg-surface border border-border rounded-2xl p-4 sm:p-8 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between gap-3 mb-5 sm:mb-10">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-primary sm:hidden">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-primary sm:hidden">
                 Live schedule
               </p>
-              <h2 className="text-base font-bold text-foreground">Counselling Timeline</h2>
+              <h2 className="text-sm font-bold text-foreground sm:text-base">Counselling Timeline</h2>
             </div>
-            <span className="sm:hidden shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">
+            <span className="sm:hidden shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-bold text-primary">
               Round 2
             </span>
           </div>
 
           {/* Mobile Timeline */}
           <div className="sm:hidden">
-            <div className="relative space-y-3">
-              <div className="absolute left-[18px] top-5 bottom-5 w-px bg-border" />
+            <div className="relative space-y-2">
+              <div className="absolute left-[14px] top-4 bottom-4 w-px bg-border" />
               {STEPS.map((step, idx) => {
                 const status = step.done ? 'Done' : step.active ? 'Now' : 'Next';
+                const shortLabel = step.label
+                  .replace('Registration', 'Reg.')
+                  .replace('Allotment', 'Allot.')
+                  .replace('Stray Vacancy', 'Stray');
                 return (
                   <div
                     key={idx}
-                    className={`relative flex gap-3 rounded-2xl border p-3.5 transition-colors ${
+                    className={`relative flex gap-2.5 rounded-xl border px-2.5 py-2.5 transition-colors ${
                       step.active
                         ? 'border-primary/40 bg-primary/5 shadow-sm'
                         : 'border-border bg-background/60'
                     }`}
                   >
                     <div
-                      className={`relative z-10 mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 ${
+                      className={`relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${
                         step.done
                           ? 'border-success bg-success text-white'
                           : step.active
-                          ? 'border-primary bg-primary text-white shadow-[0_0_0_4px_rgba(13,148,136,0.14)]'
+                          ? 'border-primary bg-primary text-white shadow-[0_0_0_3px_rgba(13,148,136,0.14)]'
                           : 'border-border bg-surface text-foreground-subtle'
                       }`}
                     >
                       {step.done ? (
-                        <CheckCircle2 size={17} />
+                        <CheckCircle2 size={14} />
                       ) : step.active ? (
-                        <div className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
+                        <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
                       ) : (
-                        <Circle size={16} />
+                        <Circle size={13} />
                       )}
                     </div>
 
@@ -64,7 +68,7 @@ export default function DesktopCounsellingDashboard() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p
-                            className={`text-sm font-bold leading-snug ${
+                            className={`text-xs font-bold leading-tight ${
                               step.active
                                 ? 'text-primary'
                                 : step.done
@@ -72,14 +76,14 @@ export default function DesktopCounsellingDashboard() {
                                 : 'text-foreground-muted'
                             }`}
                           >
-                            {step.label}
+                            {shortLabel}
                           </p>
-                          <p className="mt-1 text-xs font-medium text-foreground-muted">
+                          <p className="mt-0.5 text-[10px] font-medium text-foreground-muted">
                             {step.date}
                           </p>
                         </div>
                         <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
                             step.done
                               ? 'bg-success-light text-success'
                               : step.active
@@ -90,9 +94,11 @@ export default function DesktopCounsellingDashboard() {
                           {status}
                         </span>
                       </div>
-                      <p className="mt-2 text-xs leading-relaxed text-foreground-subtle">
-                        {step.sub}
-                      </p>
+                      {step.active && (
+                        <p className="mt-1 text-[10px] leading-snug text-foreground-subtle">
+                          {step.sub}
+                        </p>
+                      )}
                     </div>
                   </div>
                 );
