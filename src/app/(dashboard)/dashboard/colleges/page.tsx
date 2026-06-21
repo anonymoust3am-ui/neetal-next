@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -198,12 +198,100 @@ function CardSkeleton() {
   );
 }
 
+function SearchBox({
+  value,
+  onChange,
+  onClear,
+  className = '',
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onClear: () => void;
+  className?: string;
+}) {
+  return (
+    <div className={`relative ${className}`}>
+      <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-subtle pointer-events-none z-10" />
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="Search by name…"
+        className="h-10 pl-9 pr-9 w-full rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-foreground-subtle focus:outline-none focus:border-primary transition-colors shadow-sm"
+      />
+      {value && (
+        <button onClick={onClear}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-subtle hover:text-foreground">
+          <X size={13} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function PaginationControls({
+  page,
+  totalPages,
+  pageNums,
+  onPage,
+  compact = false,
+}: {
+  page: number;
+  totalPages: number;
+  pageNums: () => (number | '…')[];
+  onPage: (value: number | ((page: number) => number)) => void;
+  compact?: boolean;
+}) {
+  const navClass = compact ? 'h-8 w-[58px]' : 'h-9 w-[74px]';
+  const itemClass = compact ? 'h-8 w-8' : 'h-9 w-9';
+
+  return (
+    <div className={`grid grid-cols-[auto_1fr_auto] items-center ${compact ? 'gap-1' : 'gap-2'} w-full`}>
+      <button
+        onClick={() => onPage(p => Math.max(1, p - 1))}
+        disabled={page === 1}
+        className={`${navClass} flex items-center justify-center gap-1 rounded-xl border border-border bg-surface text-xs font-semibold text-foreground-muted hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all`}
+      >
+        <ChevronLeft size={13} /> Prev
+      </button>
+
+      <div className={`flex min-w-0 items-center ${compact ? 'gap-1' : 'gap-1.5'} justify-start overflow-x-auto no-scrollbar`}>
+        {pageNums().map((n, i) =>
+          n === '…' ? (
+            <span key={`e${i}`} className={`${itemClass} flex items-center justify-center text-foreground-subtle text-sm`}>…</span>
+          ) : (
+            <button
+              key={n}
+              onClick={() => onPage(n as number)}
+              className={`${itemClass} flex items-center justify-center rounded-xl text-xs font-bold transition-all ${
+                page === n
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'border border-border bg-surface text-foreground-muted hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              {n}
+            </button>
+          )
+        )}
+      </div>
+
+      <button
+        onClick={() => onPage(p => Math.min(totalPages, p + 1))}
+        disabled={page === totalPages}
+        className={`${navClass} flex items-center justify-center gap-1 rounded-xl border border-border bg-surface text-xs font-semibold text-foreground-muted hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all`}
+      >
+        Next <ChevronRight size={13} />
+      </button>
+    </div>
+  );
+}
+
 // ─── Filter Panel ─────────────────────────────────────────────────────────────
-function FilterPanel({ fd, state, instType, uniId, onState, onType, onUni, onClear, activeCount }: {
+function FilterPanel({ fd, state, instType, uniId, onState, onType, onUni, onClear, activeCount, children }: {
   fd: FilterData | null;
   state: string; instType: string; uniId: number | null;
   onState: (v: string) => void; onType: (v: string) => void; onUni: (v: number | null) => void;
   onClear: () => void; activeCount: number;
+  children?: ReactNode;
 }) {
   const [uniQ, setUniQ] = useState('');
   const unis = (fd?.universities ?? []).filter(u =>
@@ -211,9 +299,9 @@ function FilterPanel({ fd, state, instType, uniId, onState, onType, onUni, onCle
   );
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 lg:flex lg:h-full lg:flex-col">
       {/* header */}
-      <div className="flex items-center justify-between">
+      <div className="hidden lg:flex items-center justify-between">
         <div className="flex items-center gap-2">
           <SlidersHorizontal size={13} className="text-primary" />
           <p className="text-xs font-bold uppercase tracking-widest text-foreground">Filters</p>
@@ -238,10 +326,10 @@ function FilterPanel({ fd, state, instType, uniId, onState, onType, onUni, onCle
               <button
                 key={t}
                 onClick={() => onType(instType === t ? '' : t)}
-                className={`w-full text-left text-[11px] px-3 py-2 rounded-xl border font-medium leading-snug transition-all flex items-center gap-2 ${
+                className={`w-full text-left text-[11px] px-3 py-2.5 lg:py-2 rounded-xl border font-medium leading-snug transition-all flex items-center gap-2 ${
                   instType === t
-                    ? 'border-primary bg-primary-light text-primary'
-                    : 'border-border bg-surface text-foreground-muted hover:bg-muted hover:text-foreground'
+                    ? 'border-primary bg-primary-light text-primary shadow-sm'
+                    : 'border-border bg-background/70 lg:bg-surface text-foreground-muted hover:bg-muted hover:text-foreground'
                 }`}
               >
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.dot }} />
@@ -259,7 +347,7 @@ function FilterPanel({ fd, state, instType, uniId, onState, onType, onUni, onCle
           <select
             value={state}
             onChange={e => onState(e.target.value)}
-            className="w-full h-9 pl-3 pr-8 rounded-xl border border-border bg-surface text-xs text-foreground focus:outline-none focus:border-primary appearance-none cursor-pointer"
+            className="w-full h-10 lg:h-9 pl-3 pr-8 rounded-xl border border-border bg-background/70 lg:bg-surface text-xs text-foreground focus:outline-none focus:border-primary appearance-none cursor-pointer"
           >
             <option value="">All States</option>
             {fd?.states.filter(s => s !== 'Unclassified').map(s => (
@@ -303,6 +391,7 @@ function FilterPanel({ fd, state, instType, uniId, onState, onType, onUni, onCle
           ))}
         </div>
       </div> */}
+      {children}
     </div>
   );
 }
@@ -368,6 +457,7 @@ export default function CollegesPage() {
 
   const activeCount = [state, instType, uniId].filter(Boolean).length;
   const clearFilters = () => { setState(''); setInstType(''); setUniId(null); };
+  const clearSearch = () => { setSearch(''); setDSearch(''); };
 
   const displayed = dSearch.trim()
     ? institutes.filter(i => i.name.toLowerCase().includes(dSearch.toLowerCase()))
@@ -375,43 +465,34 @@ export default function CollegesPage() {
 
   // pagination helper
   function pageNums(): (number | '…')[] {
-    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    if (page <= 4) return [1,2,3,4,5,'…', totalPages];
-    if (page >= totalPages - 3) return [1,'…', totalPages-4, totalPages-3, totalPages-2, totalPages-1, totalPages];
-    return [1,'…', page-1, page, page+1, '…', totalPages];
+    if (totalPages <= 4) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (page <= 3) return [1, 2, 3, '…', totalPages];
+    if (page >= totalPages - 2) return [1, '…', totalPages - 2, totalPages - 1, totalPages];
+    return [1, '…', page, '…', totalPages];
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="px-6 lg:px-8 py-6 max-w-[1500px] mx-auto pt-18">
+    <div className="min-h-screen bg-background lg:h-screen lg:overflow-hidden">
+      <div className="px-6 lg:px-8 py-6 max-w-[1500px] mx-auto pt-18 lg:h-full lg:flex lg:flex-col">
 
         {/* ── header ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 lg:shrink-0">
           <div>
             {/* <h1 className="text-2xl font-black text-foreground tracking-tight">Medical Colleges</h1> */}
             <p className="text-sm text-foreground-muted mt-0.5">
               {loading ? 'Loading…' : `${total.toLocaleString()} institutes across India`}
             </p>
           </div>
-          <div className="flex items-center gap-2.5">
-            <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-subtle pointer-events-none z-10" />
-              <input
-                value={search}
-                onChange={e => handleSearch(e.target.value)}
-                placeholder="Search by name…"
-                className="h-10 pl-9 pr-9 w-60 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-foreground-subtle focus:outline-none focus:border-primary transition-colors shadow-sm"
-              />
-              {search && (
-                <button onClick={() => { setSearch(''); setDSearch(''); }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-subtle hover:text-foreground">
-                  <X size={13} />
-                </button>
-              )}
-            </div>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <SearchBox
+              value={search}
+              onChange={handleSearch}
+              onClear={clearSearch}
+              className="flex-1 min-w-0 sm:w-60 sm:flex-none lg:hidden"
+            />
             <button
               onClick={() => setFilterOpen(o => !o)}
-              className={`lg:hidden flex items-center gap-1.5 h-10 px-4 rounded-xl border text-xs font-semibold transition-all ${
+              className={`lg:hidden shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-xl border text-xs font-semibold transition-all ${
                 filterOpen || activeCount > 0
                   ? 'border-primary bg-primary-light text-primary'
                   : 'border-border bg-surface text-foreground-muted hover:bg-muted'
@@ -425,7 +506,7 @@ export default function CollegesPage() {
 
         {/* ── active filter chips ── */}
         {activeCount > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-4 lg:shrink-0">
             {state && (
               <span className="flex items-center gap-1.5 text-xs font-semibold bg-primary-light text-primary px-3 py-1 rounded-full">
                 <MapPin size={10} />{state}
@@ -449,24 +530,83 @@ export default function CollegesPage() {
           </div>
         )}
 
-        <div className="flex gap-5 items-start">
+        <div className="flex gap-5 items-start lg:min-h-0 lg:flex-1">
 
           {/* ── filter sidebar ── */}
-          <aside className={`shrink-0 w-60 ${filterOpen ? 'block' : 'hidden'} lg:block`}>
+          <aside className={`fixed inset-0 z-[1300] ${filterOpen ? 'block' : 'hidden'} lg:static lg:z-auto lg:block lg:shrink-0 lg:w-80 lg:h-full`}>
+            <button
+              type="button"
+              aria-label="Close filters"
+              onClick={() => setFilterOpen(false)}
+              className="absolute inset-0 bg-black/45 backdrop-blur-[2px] lg:hidden"
+            />
             <div
-              className="sticky top-[76px] bg-surface border border-border rounded-2xl p-4 shadow-sm overflow-y-auto"
-              style={{ maxHeight: 'calc(100vh - 100px)', scrollbarWidth: 'thin' }}
+              className="fixed inset-x-0 bottom-0 z-[1301] max-h-[78vh] overflow-y-auto rounded-t-3xl border border-border bg-surface p-4 shadow-2xl lg:static lg:z-auto lg:h-full lg:max-h-none lg:overflow-hidden lg:rounded-2xl lg:shadow-sm lg:flex lg:flex-col"
             >
+              <div className="lg:hidden mb-4 flex items-start justify-between gap-3 border-b border-border pb-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Refine results</p>
+                  <h2 className="text-base font-black text-foreground">Filters</h2>
+                  <p className="text-xs text-foreground-muted mt-0.5">
+                    {activeCount > 0 ? `${activeCount} active filter${activeCount > 1 ? 's' : ''}` : 'Choose institute type or state'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setFilterOpen(false)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground-muted"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
               <FilterPanel
                 fd={fd} state={state} instType={instType} uniId={uniId}
                 onState={setState} onType={setInstType} onUni={setUniId}
                 onClear={clearFilters} activeCount={activeCount}
-              />
+              >
+                <div className="hidden lg:block border-t border-border pt-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle mb-2">Search by name</p>
+                  <SearchBox value={search} onChange={handleSearch} onClear={clearSearch} />
+                </div>
+
+                {!dSearch && totalPages > 1 && !loading && (
+                  <div className="hidden lg:block border-t border-border pt-4 mt-auto">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle">Pages</p>
+                      <span className="text-[11px] font-bold text-primary">{page} / {totalPages}</span>
+                    </div>
+                    <PaginationControls
+                      page={page}
+                      totalPages={totalPages}
+                      pageNums={pageNums}
+                      onPage={setPage}
+                      compact
+                    />
+                  </div>
+                )}
+
+                <div className="lg:hidden sticky bottom-0 -mx-4 mt-5 border-t border-border bg-surface/95 px-4 pt-3 pb-1 backdrop-blur">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={clearFilters}
+                      className="h-10 flex-1 rounded-xl border border-border bg-surface text-xs font-bold text-foreground-muted"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={() => setFilterOpen(false)}
+                      className="h-10 flex-[1.4] rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-sm"
+                    >
+                      Apply filters
+                    </button>
+                  </div>
+                </div>
+              </FilterPanel>
             </div>
           </aside>
 
           {/* ── main content ── */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pb-36 lg:h-full lg:overflow-y-auto lg:pr-1 lg:pb-0 no-scrollbar">
 
             {/* meta row */}
             <div className="flex items-center justify-between mb-4 min-h-[24px]">
@@ -506,40 +646,14 @@ export default function CollegesPage() {
 
             {/* pagination */}
             {!dSearch && totalPages > 1 && !loading && (
-              <div className="flex items-center justify-center gap-1.5 mt-8 flex-wrap">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="flex items-center gap-1 h-9 px-3.5 rounded-xl border border-border bg-surface text-xs font-semibold text-foreground-muted hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  <ChevronLeft size={13} /> Prev
-                </button>
-
-                {pageNums().map((n, i) =>
-                  n === '…' ? (
-                    <span key={`e${i}`} className="w-9 text-center text-foreground-subtle text-sm">…</span>
-                  ) : (
-                    <button
-                      key={n}
-                      onClick={() => setPage(n as number)}
-                      className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${
-                        page === n
-                          ? 'bg-primary text-white shadow-sm'
-                          : 'border border-border bg-surface text-foreground-muted hover:bg-muted hover:text-foreground'
-                      }`}
-                    >
-                      {n}
-                    </button>
-                  )
-                )}
-
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="flex items-center gap-1 h-9 px-3.5 rounded-xl border border-border bg-surface text-xs font-semibold text-foreground-muted hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  Next <ChevronRight size={13} />
-                </button>
+              <div className="fixed left-3 right-3 bottom-[92px] z-[1100] rounded-2xl border border-border bg-surface/95 p-2 shadow-2xl backdrop-blur lg:hidden">
+                <PaginationControls
+                  page={page}
+                  totalPages={totalPages}
+                  pageNums={pageNums}
+                  onPage={setPage}
+                  compact
+                />
               </div>
             )}
 
