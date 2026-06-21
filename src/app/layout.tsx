@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -17,6 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 const googleSiteVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
+const googleAnalyticsId = "G-NXTJGYHY3S";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -119,6 +121,18 @@ export default function RootLayout({
       <head>
         {/* Runs synchronously before paint — eliminates theme flash */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){window.dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${googleAnalyticsId}');
+          `}
+        </Script>
       </head>
       <body className="min-h-full flex flex-col">
         {rootJsonLd.map((schema, index) => (
