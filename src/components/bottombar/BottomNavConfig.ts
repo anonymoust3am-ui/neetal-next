@@ -10,6 +10,7 @@ import {
   Heart,
   LayoutGrid,
   BarChart3,
+  Bot,
 } from 'lucide-react';
 
 export interface BottomNavItem {
@@ -45,10 +46,10 @@ export const bottomNavItems: BottomNavItem[] = [
     href: '/dashboard',
   },
   {
-    key: 'closing-rank',
-    label: 'Closing Rank',
-    icon: BarChart3,
-    href: '/dashboard/insights',
+    key: 'neet-ai',
+    label: 'NEET AI',
+    icon: Bot,
+    href: '/dashboard/ai',
   },
   {
     key: 'allotment',

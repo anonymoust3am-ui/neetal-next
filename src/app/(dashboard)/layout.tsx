@@ -5,6 +5,7 @@ import { BottomNav } from '@/components/bottombar/Bottombar';
 import { DashboardHeader } from '@/components/header/DashboardHeader';
 import { AuthGuard } from './AuthGuard';
 import { CounsellingProvider } from '@/contexts/CounsellingContext';
+import { DashboardAiOrb } from '@/components/dashboard/DashboardAiOrb';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <DashboardHeader />
             <BottomNav />
             <BottomNavLayout>{children}</BottomNavLayout>
+            <DashboardAiOrb />
           </div>
         </BottomNavProvider>
       </CounsellingProvider>
