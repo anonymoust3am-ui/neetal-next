@@ -7,6 +7,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { FcmNotificationProvider } from "@/components/notifications/FcmNotificationProvider";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { OG_ONE, OG_TWO, rootJsonLd, seoKeywords, SITE_LOGO, SITE_NAME, SITE_URL, siteDescription } from "@/lib/seo";
+import FacebookPixel from "@/components/FacebookPixel";
+import SeoKeywords from "@/components/SeoKeywords";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -139,6 +141,8 @@ export default function RootLayout({
         {rootJsonLd.map((schema, index) => (
           <JsonLd key={index} data={schema} />
         ))}
+        <SeoKeywords />
+        <FacebookPixel />
         <ThemeProvider>
           <AuthProvider>
             <FcmNotificationProvider>{children}</FcmNotificationProvider>
