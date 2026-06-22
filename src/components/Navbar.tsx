@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from './ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { resolveApiAssetUrl } from '@/lib/api';
 
 export function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
@@ -28,6 +29,7 @@ export function Navbar() {
     const initials = user?.name
         ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
         : (user?.phone ?? '?').slice(-2);
+    const profilePicUrl = resolveApiAssetUrl(user?.profilePic);
 
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-navbar/80 backdrop-blur-xl border-b border-border">
@@ -98,7 +100,7 @@ export function Navbar() {
                                     onClick={() => setAvatarOpen(v => !v)}
                                     className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border border-border hover:border-primary bg-muted/40 hover:bg-muted transition-all"
                                 >
-                                    <Avatar initials={initials} />
+                                    <Avatar initials={initials} src={profilePicUrl} />
                                     <span className="text-sm font-medium text-foreground max-w-[100px] truncate">
                                         {(user.name ?? user.phone ?? '').split(' ')[0]}
                                     </span>
@@ -223,7 +225,7 @@ export function Navbar() {
                                 {user ? (
                                     <>
                                         <div className="flex min-w-0 flex-1 items-center justify-center gap-2 px-2">
-                                            <Avatar initials={initials} size="sm" />
+                                            <Avatar initials={initials} src={profilePicUrl} size="sm" />
                                             <span className="text-sm font-medium truncate">{user.name ?? user.phone}</span>
                                         </div>
                                         <button
@@ -298,11 +300,15 @@ function MobileLink({ href, children }: { href: string; children: React.ReactNod
     );
 }
 
-function Avatar({ initials, size = 'md' }: { initials: string; size?: 'sm' | 'md' }) {
+function Avatar({ initials, src, size = 'md' }: { initials: string; src?: string; size?: 'sm' | 'md' }) {
     const sz = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-8 h-8 text-sm';
     return (
-        <div className={`${sz} rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold shrink-0`}>
-            {initials}
+        <div className={`${sz} overflow-hidden rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold shrink-0`}>
+            {src ? (
+                <img src={src} alt="Profile" className="h-full w-full object-cover" />
+            ) : (
+                initials
+            )}
         </div>
     );
 }

@@ -28,9 +28,6 @@ import {
   type AiUiMessage,
 } from './aiApi';
 
-const CREDIT_USED = 10;
-const CREDIT_LIMIT = 50;
-
 function nowLabel() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
@@ -86,6 +83,9 @@ export function MobileAiChat() {
   const userName = useMemo(() => {
     return user?.name?.split(' ')[0] || user?.phone || 'You';
   }, [user]);
+  const creditUsed = user?.aiCredits ?? 0;
+  const creditLimit = user?.aiCreditLimit ?? 0;
+  const aiEnabled = user?.isAiEnabled === true;
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 1023px)');
@@ -213,6 +213,10 @@ export function MobileAiChat() {
   const sendMessage = async () => {
     const text = input.trim();
     if (!text || loading || !firebaseUser || !mobileActive) return;
+    if (!aiEnabled) {
+      setErrorMessage('Neetell AI is not enabled for your account. Please contact support or enable AI access before sending a message.');
+      return;
+    }
 
     const replyPrefix = replyTo ? `Replying to ${replyTo.role === 'user' ? userName : 'Neetell AI'}: "${replyTo.text}"\n\n` : '';
     const fileLine = attachedFile ? `\n\nAttached file noted: ${attachedFile}` : '';
@@ -283,7 +287,7 @@ export function MobileAiChat() {
           </button>
           <div className="text-center">
             <h1 className="text-[20px] font-black leading-tight text-foreground">Neetell AI</h1>
-            <p className="text-[10px] font-bold text-primary">{CREDIT_USED}/{CREDIT_LIMIT} credits</p>
+            <p className="text-[10px] font-bold text-primary">{creditUsed}/{creditLimit} credits</p>
           </div>
         </div>
       </header>
@@ -412,7 +416,7 @@ export function MobileAiChat() {
               </button>
               <div className="mt-2 rounded-lg border border-border bg-card px-2.5 py-1.5">
                 <p className="text-[9px] font-black uppercase tracking-wider text-foreground-subtle">Credit remaining</p>
-                <p className="mt-0.5 text-xs font-black text-foreground">{CREDIT_USED}/{CREDIT_LIMIT}</p>
+                <p className="mt-0.5 text-xs font-black text-foreground">{creditUsed}/{creditLimit}</p>
               </div>
             </div>
 

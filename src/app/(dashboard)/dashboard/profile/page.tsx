@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Phone, Mail, MapPin, Globe, Calendar, User,
   Monitor, Smartphone, LogOut, Edit3, Check, X,
-  Loader2, AlertCircle, Clock, Lock, Key, Shield, RefreshCw, ChevronRight, Bell, BellOff
+  Loader2, AlertCircle, Clock, Lock, Key, Shield, RefreshCw, ChevronRight, Bell, BellOff, Camera
 } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +13,8 @@ import {
   deregisterFcmToken, getSessions, logoutDevice, logoutRemote, registerFcmToken,
   sendEmailUpdateOtp, verifyEmailOtp, resendEmailVerification,
   enableEmailLogin, verifyEmailLogin, updatePassword, disableEmailLogin,
+  uploadProfileAvatar,
+  resolveApiAssetUrl,
   type SessionData,
 } from '@/lib/api';
 import {
@@ -162,6 +164,7 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<EditForm>({ name: '', state: '', city: '', country: '', gender: '', dob: '', alternatePhone: '' });
   const [saving, setSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [globalAlert, setGlobalAlert] = useState<AlertState>(null);
 
   /* Inline Flow States */
@@ -288,6 +291,21 @@ export default function ProfilePage() {
     } finally { setSaving(false); }
   };
 
+  const handleAvatarUpload = async (file?: File) => {
+    if (!file) return;
+    setAvatarUploading(true);
+    setGlobalAlert(null);
+    try {
+      await uploadProfileAvatar(await getToken(), file);
+      await refreshUser();
+      setGlobalAlert({ type: 'success', msg: 'Profile photo updated successfully!' });
+    } catch (e) {
+      setGlobalAlert({ type: 'error', msg: e instanceof Error ? e.message : 'Failed to upload profile photo.' });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const handleLogoutSession = async (deviceId: string) => {
     setLoggingOut(deviceId);
     try {
@@ -374,6 +392,7 @@ export default function ProfilePage() {
 
   if (!user) return null;
   const pct = calcPct(user);
+  const profilePicUrl = resolveApiAssetUrl(user.profilePic);
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors selection:bg-selection">
@@ -383,8 +402,26 @@ export default function ProfilePage() {
         <div className="bg-card border border-border rounded-xl p-5 sm:p-6 shadow-sm mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-lg flex items-center justify-center shrink-0 bg-primary text-primary-foreground font-bold text-lg shadow-sm">
-                {makeInitials(user.name, user.phone)}
+              <div className="group relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-primary text-primary-foreground shadow-sm">
+                {profilePicUrl ? (
+                  <img src={profilePicUrl} alt={user.name ?? 'Profile'} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-lg font-bold">
+                    {makeInitials(user?.name ?? 'User', user.phone)}
+                  </div>
+                )}
+                {activeTab === 'profile' && (
+                  <label className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/0 text-white opacity-0 transition-all group-hover:bg-black/35 group-hover:opacity-100">
+                    {avatarUploading ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={avatarUploading}
+                      onChange={event => handleAvatarUpload(event.target.files?.[0])}
+                    />
+                  </label>
+                )}
               </div>
               <div className="min-w-0">
                 <h1 className="text-xl font-bold tracking-tight truncate">{user.name ?? 'My Profile Account'}</h1>

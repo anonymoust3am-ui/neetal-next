@@ -18,6 +18,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { CounsellingDropdown } from './CounsellingDropDown';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { resolveApiAssetUrl } from '@/lib/api';
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(' ');
@@ -76,6 +77,7 @@ function ProfileMenu() {
   const initials = user?.name
     ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : '?';
+  const profilePicUrl = resolveApiAssetUrl(user?.profilePic);
 
   const handleLogout = async () => {
     setOpen(false);
@@ -92,8 +94,12 @@ function ProfileMenu() {
           open ? 'bg-[var(--color-bg-hover)]' : 'hover:bg-[var(--color-bg-hover)]'
         )}
       >
-        <div className="w-7 h-7 rounded-lg bg-[var(--color-primary-light)] flex items-center justify-center shrink-0 border border-[var(--color-primary)]/10">
-          <span className="text-[11px] font-bold text-primary">{initials}</span>
+        <div className="w-7 h-7 overflow-hidden rounded-lg bg-[var(--color-primary-light)] flex items-center justify-center shrink-0 border border-[var(--color-primary)]/10">
+          {profilePicUrl ? (
+            <img src={profilePicUrl} alt="Profile" className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-[11px] font-bold text-primary">{initials}</span>
+          )}
         </div>
         <ChevronDown
           size={12}

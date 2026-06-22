@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Check, GraduationCap } from 'lucide-react';
+import { Check } from 'lucide-react';
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -49,6 +49,7 @@ export default function AuthPage() {
 
   // ── Profile ───────────────────────────────────────────────────────────────
   const [pic, setPic] = useState<string | null>(null);
+  const [picFile, setPicFile] = useState<File | null>(null);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [stateVal, setStateVal] = useState('');
@@ -207,11 +208,15 @@ export default function AuthPage() {
     const e: Record<string, string> = {};
     if (!fullName.trim()) e.name = 'Full name is required';
     if (!stateVal) e.state = 'Please select your state';
+    if (!city.trim()) e.city = 'City is required';
     if (!exam) e.exam = 'Please select your target exam';
     if (!source) e.source = 'Please tell us how you found us';
     if (!role) e.role = 'Please select your role';
     setPErr(e);
-    if (Object.keys(e).length) return;
+    if (Object.keys(e).length) {
+      setGlobalErr('Please complete the required fields.');
+      return;
+    }
 
     const user = auth.currentUser;
     if (!user) {
@@ -227,10 +232,10 @@ export default function AuthPage() {
       await completeProfile(token, {
         name: fullName.trim(),
         state: stateVal,
-        city: city.trim() || undefined,
+        city: city.trim(),
         email: email.trim() || undefined,
         gender: gender || undefined,
-        // profilePic: would need to upload to storage first — skip for now
+        profilePic: picFile || undefined,
       });
       await refreshUser();
       router.push(redirectTo);
@@ -245,7 +250,7 @@ export default function AuthPage() {
   const stepN = step === 'phone' ? 0 : step === 'otp' ? 1 : 2;
 
   const profileProps: ProfileStepProps = {
-    phone, pic, setPic, fullName, setFullName,
+    phone, pic, setPic, setPicFile, fullName, setFullName,
     email, setEmail, stateVal, setStateVal, city, setCity,
     exam, setExam, source, setSource, role, setRole, gender, setGender,
     refCode, setRefCode, showRef, setShowRef, pErr, setPErr,
@@ -267,30 +272,30 @@ export default function AuthPage() {
       {/* Invisible reCAPTCHA mount point */}
       <div id="recaptcha-container" className='display-none' />
 
-      <div className="min-h-screen bg-background flex">
+      <div className="flex min-h-screen bg-background lg:h-screen lg:min-h-0 lg:overflow-hidden">
 
         {/* Left Swiper panel */}
         <LeftPanel />
 
         {/* Right form panel */}
-        <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-8 overflow-y-auto">
-          <div className="w-full max-w-[440px]">
+        <main className={`flex-1 flex flex-col items-center px-4 py-4 sm:px-6 sm:py-8 lg:h-screen lg:min-h-0 lg:overflow-y-auto ${step === 'profile' ? 'justify-start' : 'justify-center lg:justify-center'}`}>
+          <div className="w-full max-w-[390px] sm:max-w-[440px]">
 
             {/* Logo above steps */}
-            <Link href="/" className="shrink-0">
+            <Link href="/" className="mx-auto mb-1 flex w-fit shrink-0 sm:mb-0 lg:-mt-3">
               <img
                 src="/logo-nobg.png"
                 alt="Neetell Logo"
-                className="h-35 w-auto"
+                className="h-14 w-auto sm:h-35 lg:h-28"
               />
             </Link>
 
             {/* Step breadcrumb */}
-            <div className="flex items-center gap-1 sm:gap-2 mb-5">
+            <div className="mx-auto mb-4 flex max-w-[260px] items-center gap-2 sm:mb-5 sm:max-w-none">
               {['Phone', 'OTP', 'Profile'].map((lbl, i) => (
                 <React.Fragment key={lbl}>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all duration-300 ${i < stepN
+                  <div className="flex min-w-0 items-center justify-center gap-1.5 sm:justify-start">
+                    <div className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-black transition-all duration-300 sm:h-6 sm:w-6 sm:font-bold ${i < stepN
                         ? 'bg-primary text-primary-foreground'
                         : i === stepN
                           ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
@@ -298,7 +303,7 @@ export default function AuthPage() {
                       }`}>
                       {i < stepN ? <Check className="w-3.5 h-3.5" /> : i + 1}
                     </div>
-                    <span className={`text-xs font-medium hidden sm:block truncate transition-colors ${i === stepN ? 'text-foreground' : 'text-foreground-muted'
+                    <span className={`hidden text-xs font-medium sm:block truncate transition-colors ${i === stepN ? 'text-foreground' : 'text-foreground-muted'
                       }`}>{lbl}</span>
                   </div>
                   {i < 2 && (
@@ -312,15 +317,15 @@ export default function AuthPage() {
             </div>
 
             {/* Card */}
-            <div className="bg-card border border-border rounded-2xl shadow-md overflow-hidden">
-              <div className="h-0.5 bg-muted">
+            <div className="overflow-hidden rounded-2xl border-0 bg-transparent shadow-none sm:bg-card sm:border sm:border-border sm:shadow-md">
+              <div className="h-1 rounded-full bg-muted sm:h-0.5 sm:rounded-none">
                 <div
                   className="h-full bg-primary transition-all duration-700 ease-out"
                   style={{ width: `${((stepN + 1) / 3) * 100}%` }}
                 />
               </div>
 
-              <div className={step === 'profile' ? 'p-4' : 'p-5 sm:p-6'}>
+              <div className={step === 'profile' ? 'px-0 py-2.5 sm:p-4' : 'px-0 py-3.5 sm:p-6'}>
 
                 {/* Global error banner */}
                 {globalErr && (
@@ -331,8 +336,8 @@ export default function AuthPage() {
 
                 {step === 'phone' && (
                   <div>
-                    <h2 className="text-xl font-bold text-foreground mb-0.5">Enter your number</h2>
-                    <p className="text-foreground-muted text-sm mb-5">
+                    <h2 className="mb-0.5 text-center text-xl font-black tracking-tight text-foreground sm:mb-0.5 sm:text-left sm:font-bold">Welcome</h2>
+                    <p className="mb-3.5 text-center text-[11px] font-medium text-foreground-muted sm:mb-5 sm:text-left sm:text-sm">
                       Sign in or create an account with your mobile number.
                     </p>
                     <PhoneStep
@@ -372,7 +377,7 @@ export default function AuthPage() {
 
                 {step === 'profile' && (
                   <div>
-                    <h2 className="text-base font-bold text-foreground mb-3">Set up your profile</h2>
+                    <h2 className="mb-2 text-center text-base font-black text-foreground sm:mb-3 sm:text-left sm:font-bold">Set up your profile</h2>
                     <ProfileStep {...profileProps} />
                   </div>
                 )}
@@ -380,7 +385,7 @@ export default function AuthPage() {
               </div>
             </div>
 
-            <p className="text-center text-xs text-foreground-muted mt-4">
+            <p className="mt-3 hidden text-center text-xs text-foreground-muted sm:block">
               © {new Date().getFullYear()} NeeTell · All rights reserved
             </p>
           </div>

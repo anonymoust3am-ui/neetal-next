@@ -30,9 +30,6 @@ import {
   type AiUiMessage,
 } from './aiApi';
 
-const CREDIT_USED = 10;
-const CREDIT_LIMIT = 50;
-
 const starterPrompts = [
   'My rank is 85000, category OBC, state Bihar. Which colleges can I target?',
   'Rank 45000, EWS, All India, MBBS. Give safe and target options.',
@@ -188,7 +185,7 @@ function MessageRow({
 }
 
 export default function AIPage() {
-  const { firebaseUser } = useAuth();
+  const { user, firebaseUser } = useAuth();
   const [desktopActive, setDesktopActive] = useState(false);
   const [histories, setHistories] = useState<AiHistoryListItem[]>([]);
   const [activeChatHistoryId, setActiveChatHistoryId] = useState<string | null>(null);
@@ -206,6 +203,9 @@ export default function AIPage() {
   const hasUserMessages = messages.some(message => message.role === 'user');
   const activeHistory = histories.find(history => history.id === activeChatHistoryId) ?? null;
   const chatTitle = titleFromMessages(messages, activeHistory);
+  const creditUsed = user?.aiCredits ?? 0;
+  const creditLimit = user?.aiCreditLimit ?? 0;
+  const aiEnabled = user?.isAiEnabled === true;
 
   useEffect(() => {
     const media = window.matchMedia('(min-width: 1024px)');
@@ -236,8 +236,8 @@ export default function AIPage() {
       setHistoryLoading(true);
       setErrorMessage('');
       try {
-        const token = await firebaseUser?.getIdToken();
-        const list = await getAiHistories(token?token:'');
+        const token = await firebaseUser.getIdToken();
+        const list = await getAiHistories(token);
         if (cancelled) return;
 
         setHistories(list);
@@ -249,7 +249,7 @@ export default function AIPage() {
         }
 
         setActiveChatHistoryId(first.id);
-        const detail = await getAiHistory(token? token:'', first.id);
+        const detail = await getAiHistory(token, first.id);
         if (!cancelled) {
           setMessages(mapApiMessages(detail.messages));
         }
@@ -334,6 +334,10 @@ export default function AIPage() {
   const sendMessage = async (textFromPrompt?: string) => {
     const text = (textFromPrompt ?? input).trim();
     if (!text || loading || !firebaseUser || !desktopActive) return;
+    if (!aiEnabled) {
+      setErrorMessage('Neetell AI is not enabled for your account. Please contact support or enable AI access before sending a message.');
+      return;
+    }
 
     const outgoing: AiUiMessage = {
       id: createId(),
@@ -469,7 +473,7 @@ export default function AIPage() {
               </div>
             </div>
             <div className="shrink-0 rounded-full border border-border bg-card px-2 py-0.5 text-[10px] font-black text-foreground-subtle">
-              {CREDIT_USED}/{CREDIT_LIMIT}
+              {creditUsed}/{creditLimit}
             </div>
           </header>
 

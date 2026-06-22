@@ -1,16 +1,32 @@
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+export const API_BASE_URL = API;
+
+export function resolveApiAssetUrl(path?: string | null) {
+  if (!path) return undefined;
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+
+  let base = API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+  try {
+    base = new URL(API_BASE_URL).origin;
+  } catch {}
+
+  const cleanPath = path.replace(/^\/+/, '');
+  return `${base}/data/${cleanPath}`;
+}
+
 // ─── Core fetch wrapper ────────────────────────────────────────────────────
 
 async function request<T>(base: string, method: string, path: string, token?: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
-  if (body) headers['Content-Type'] = 'application/json';
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  if (body && !isFormData) headers['Content-Type'] = 'application/json';
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${base}${path}`, {
     method,
     headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body !== undefined ? (isFormData ? body : JSON.stringify(body)) : undefined,
   });
 
   const data = await res.json().catch(() => ({}));
@@ -26,23 +42,29 @@ function call<T>(method: string, path: string, token?: string, body?: unknown): 
 
 export interface UserProfile {
   id: string;
+  firebaseUid?: string;
   phone: string;
   phoneVerified: boolean;
-  email?: string;
+  email?: string | null;
   emailVerified: boolean;
-  name?: string;
-  state?: string;
-  city?: string;
-  country?: string;
-  gender?: string;
-  category?: string;
-  dob?: string;
-  profilePic?: string;
-  alternatePhone?: string;
+  name?: string | null;
+  state?: string | null;
+  city?: string | null;
+  country?: string | null;
+  gender?: string | null;
+  category?: string | null;
+  dob?: string | null;
+  profilePic?: string | null;
+  alternatePhone?: string | null;
   theme?: 'light' | 'dark';
   enableEmailLogin: boolean;
   emailLoginVerified: boolean;
   isProfileComplete: boolean;
+  aiCredits?: number;
+  aiCreditLimit?: number;
+  aiUserSummurry?: string | null;
+  isAiEnabled?: boolean;
+  isAiCreditSystem?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -50,20 +72,20 @@ export interface UserProfile {
 export interface CompleteProfileBody {
   name: string;
   state: string;
-  city?: string;
+  city: string;
   email?: string;
   country?: string;
   gender?: string;
   category?: string;
   dob?: string;
-  profilePic?: string;
+  profilePic?: string | File;
   alternatePhone?: string;
   theme?: 'light' | 'dark';
 }
 
 export interface UpdateProfileBody {
   name?: string;
-  profilePic?: string;
+  profilePic?: string | File;
   alternatePhone?: string;
   gender?: string;
   dob?: string;
@@ -72,6 +94,24 @@ export interface UpdateProfileBody {
   city?: string;
   category?: string;
   theme?: 'light' | 'dark';
+}
+
+type ProfileMutationResponse = {
+  message: string;
+  profile: UserProfile;
+  profileComplete: boolean;
+};
+
+function profileBodyToRequestBody(body: CompleteProfileBody | UpdateProfileBody) {
+  const hasFile = typeof File !== 'undefined' && body.profilePic instanceof File;
+  if (!hasFile) return body;
+
+  const formData = new FormData();
+  Object.entries(body).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    formData.append(key, value instanceof File ? value : String(value));
+  });
+  return formData;
 }
 
 // ─── Auth endpoints ─────────────────────────────────────────────────────────
@@ -117,17 +157,26 @@ export const logoutRemote = (token: string, deviceIds?: string[]) =>
 // ─── Profile endpoints ─────────────────────────────────────────────────────
 
 export const completeProfile = (token: string, body: CompleteProfileBody) =>
-  call<{ message: string; profile: UserProfile; profileComplete: boolean }>(
-    'POST', '/profile/complete', token, body,
+  call<ProfileMutationResponse>(
+    'POST', '/profile/complete', token, profileBodyToRequestBody(body),
   );
 
 export const getProfile = (token: string) =>
   call<UserProfile>('GET', '/profile', token);
 
+export const getProfileMe = (token: string) =>
+  call<UserProfile>('GET', '/profile/me', token);
+
 export const updateProfile = (token: string, body: UpdateProfileBody) =>
-  call<{ message: string; profile: UserProfile; profileComplete: boolean }>(
-    'PATCH', '/profile/update', token, body,
+  call<ProfileMutationResponse>(
+    'PATCH', '/profile/update', token, profileBodyToRequestBody(body),
   );
+
+export const uploadProfileAvatar = (token: string, profilePic: File) => {
+  const formData = new FormData();
+  formData.append('profilePic', profilePic);
+  return call<ProfileMutationResponse>('POST', '/profile/avatar', token, formData);
+};
 
 export const getProfileCompletionStatus = (token: string) =>
   call<{
