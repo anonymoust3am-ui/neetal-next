@@ -3,8 +3,13 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { getCurrentUser, logoutDevice } from '@/lib/api';
+import { deregisterFcmToken, getCurrentUser, logoutDevice } from '@/lib/api';
 import type { UserProfile } from '@/lib/api';
+import {
+  clearStoredFirebaseMessagingToken,
+  getStoredFirebaseMessagingToken,
+  setFcmEnabledPreference,
+} from '@/lib/firebaseMessaging';
 
 interface AuthContextValue {
   user: UserProfile | null;
@@ -62,6 +67,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (fbUser) {
       try {
         const token = await fbUser.getIdToken();
+        const fcmToken = getStoredFirebaseMessagingToken();
+        if (fcmToken) {
+          await deregisterFcmToken(token, fcmToken).catch(() => {});
+          clearStoredFirebaseMessagingToken();
+        }
+        setFcmEnabledPreference(false);
         await logoutDevice(token);
       } catch {}
     }

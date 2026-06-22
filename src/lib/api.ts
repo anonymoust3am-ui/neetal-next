@@ -138,6 +138,42 @@ export const getProfileCompletionStatus = (token: string) =>
     requiredFields: string[];
   }>('GET', '/profile/completion-status', token);
 
+// ─── FCM notification tokens ────────────────────────────────────────────────
+
+export interface FcmTokenRecord {
+  id: string;
+  userId: string;
+  token: string;
+  deviceType?: 'ios' | 'android' | 'web';
+  deviceName?: string;
+  deviceId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RegisterFcmTokenBody {
+  token: string;
+  deviceType?: 'ios' | 'android' | 'web';
+  deviceName?: string;
+  deviceId?: string;
+}
+
+export const registerFcmToken = (authToken: string, body: RegisterFcmTokenBody) =>
+  call<{ message: string; fcmToken: FcmTokenRecord }>(
+    'POST',
+    '/profile/fcm-token',
+    authToken,
+    body,
+  );
+
+export const deregisterFcmToken = (authToken: string, fcmToken: string) =>
+  call<{ message: string }>(
+    'DELETE',
+    '/profile/fcm-token',
+    authToken,
+    { token: fcmToken },
+  );
+
 // ─── Email endpoints ────────────────────────────────────────────────────────
 
 export const sendEmailUpdateOtp = (token: string, newEmail: string) =>

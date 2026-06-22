@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { FcmNotificationProvider } from "@/components/notifications/FcmNotificationProvider";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { OG_ONE, OG_TWO, rootJsonLd, seoKeywords, SITE_LOGO, SITE_NAME, SITE_URL, siteDescription } from "@/lib/seo";
 
@@ -139,7 +140,9 @@ export default function RootLayout({
           <JsonLd key={index} data={schema} />
         ))}
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <FcmNotificationProvider>{children}</FcmNotificationProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

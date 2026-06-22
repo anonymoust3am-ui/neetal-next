@@ -4,17 +4,28 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Phone, Mail, MapPin, Globe, Calendar, User,
   Monitor, Smartphone, LogOut, Edit3, Check, X,
-  Loader2, AlertCircle, Clock, Lock, Key, Shield, RefreshCw, ChevronRight
+  Loader2, AlertCircle, Clock, Lock, Key, Shield, RefreshCw, ChevronRight, Bell, BellOff
 } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   updateProfile as apiUpdateProfile,
-  getSessions, logoutDevice, logoutRemote,
+  deregisterFcmToken, getSessions, logoutDevice, logoutRemote, registerFcmToken,
   sendEmailUpdateOtp, verifyEmailOtp, resendEmailVerification,
   enableEmailLogin, verifyEmailLogin, updatePassword, disableEmailLogin,
   type SessionData,
 } from '@/lib/api';
+import {
+  clearFcmPermissionPromptSnooze,
+  clearStoredFirebaseMessagingToken,
+  getFcmEnabledPreference,
+  getOrCreateFcmDeviceId,
+  getStoredFcmDeviceId,
+  getStoredFirebaseMessagingToken,
+  getWebFcmDeviceMetadata,
+  requestFirebaseMessagingToken,
+  setFcmEnabledPreference,
+} from '@/lib/firebaseMessaging';
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 
@@ -45,7 +56,7 @@ type SecurityFlow =
   | { mode: 'enable-email-login'; step: 'otp'; email: string; otp: string }
   | { mode: 'change-password'; current: string; next: string; confirm: string };
 
-type TabType = 'profile' | 'security' | 'sessions';
+type TabType = 'profile' | 'security' | 'sessions' | 'notifications';
 
 /* ─── Helpers ────────────────────────────────────────────────────────────────── */
 
@@ -163,6 +174,10 @@ export default function ProfilePage() {
   const [sessError, setSessError] = useState('');
   const [loggingOut, setLoggingOut] = useState<string | null>(null);
   const [logoutAllBusy, setLogoutAllBusy] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean | null>(null);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
+  const [notificationBusy, setNotificationBusy] = useState(false);
+  const [browserDeviceId, setBrowserDeviceId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!user) return;
@@ -188,6 +203,66 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => { if (activeTab === 'sessions') loadSessions(); }, [activeTab, loadSessions]);
+
+  useEffect(() => {
+    setNotificationsEnabled(getFcmEnabledPreference());
+    setBrowserDeviceId(getStoredFcmDeviceId() ?? getOrCreateFcmDeviceId());
+    setNotificationPermission(
+      typeof window !== 'undefined' && 'Notification' in window
+        ? Notification.permission
+        : 'unsupported'
+    );
+  }, []);
+
+  const handleEnableNotifications = async () => {
+    setNotificationBusy(true);
+    setGlobalAlert(null);
+    try {
+      const fcmToken = await requestFirebaseMessagingToken();
+      setNotificationPermission(
+        typeof window !== 'undefined' && 'Notification' in window
+          ? Notification.permission
+          : 'unsupported'
+      );
+
+      if (!fcmToken) {
+        throw new Error('Notification permission was not granted or FCM token could not be created.');
+      }
+
+      await registerFcmToken(await getToken(), {
+        token: fcmToken,
+        ...getWebFcmDeviceMetadata(),
+      });
+      setBrowserDeviceId(getStoredFcmDeviceId());
+      setFcmEnabledPreference(true);
+      clearFcmPermissionPromptSnooze();
+      setNotificationsEnabled(true);
+      setGlobalAlert({ type: 'success', msg: 'Browser notifications enabled for this device.' });
+    } catch (e) {
+      setGlobalAlert({ type: 'error', msg: e instanceof Error ? e.message : 'Could not enable notifications.' });
+    } finally {
+      setNotificationBusy(false);
+    }
+  };
+
+  const handleDisableNotifications = async () => {
+    setNotificationBusy(true);
+    setGlobalAlert(null);
+    try {
+      const fcmToken = getStoredFirebaseMessagingToken();
+      if (fcmToken) {
+        await deregisterFcmToken(await getToken(), fcmToken);
+      }
+      clearStoredFirebaseMessagingToken();
+      setFcmEnabledPreference(false);
+      setNotificationsEnabled(false);
+      setGlobalAlert({ type: 'success', msg: 'Browser notifications disabled for this device.' });
+    } catch (e) {
+      setGlobalAlert({ type: 'error', msg: e instanceof Error ? e.message : 'Could not disable notifications.' });
+    } finally {
+      setNotificationBusy(false);
+    }
+  };
 
   const handleSaveProfile = async () => {
     if (!form.name.trim()) { setGlobalAlert({ type: 'error', msg: 'Please provide your name.' }); return; }
@@ -353,7 +428,8 @@ export default function ProfilePage() {
           {([
             { id: 'profile', label: 'My Details' },
             { id: 'security', label: 'Sign-in & Password' },
-            { id: 'sessions', label: 'Where You\'re Signed In' }
+            { id: 'sessions', label: 'Where You\'re Signed In' },
+            { id: 'notifications', label: 'Notifications' }
           ] as const).map(tab => (
             <button
               key={tab.id}
@@ -648,6 +724,78 @@ export default function ProfilePage() {
                 <div className="text-center py-12 border border-dashed border-border rounded-xl">
                   <p className="text-sm text-foreground-subtle">No other device sessions found.</p>
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 4: NOTIFICATION SETTINGS */}
+          {activeTab === 'notifications' && (
+            <div className="space-y-4">
+              <div className="flex flex-col gap-4 rounded-xl border border-border bg-input p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className={cn(
+                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border',
+                    notificationsEnabled
+                      ? 'border-success/20 bg-success-light text-success'
+                      : 'border-border bg-card text-foreground-subtle'
+                  )}>
+                    {notificationsEnabled ? <Bell size={17} /> : <BellOff size={17} />}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Browser Notifications</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-foreground-muted">
+                      Receive counselling deadlines, allotment updates, notices, and college data alerts on this browser.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <StatusBadge variant={notificationsEnabled ? 'success' : 'neutral'}>
+                        {notificationsEnabled ? 'Enabled in Neetell' : 'Disabled in Neetell'}
+                      </StatusBadge>
+                      <StatusBadge variant={notificationPermission === 'granted' ? 'success' : notificationPermission === 'denied' ? 'error' : 'warning'}>
+                        Browser: {notificationPermission}
+                      </StatusBadge>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={notificationsEnabled ? handleDisableNotifications : handleEnableNotifications}
+                  disabled={notificationBusy || notificationPermission === 'unsupported'}
+                  className={cn(
+                    'inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors disabled:opacity-60',
+                    notificationsEnabled
+                      ? 'border border-error text-error hover:bg-error-light'
+                      : 'bg-primary text-primary-foreground hover:bg-primary-hover'
+                  )}
+                >
+                  {notificationBusy && <Loader2 size={14} className="animate-spin" />}
+                  {notificationsEnabled ? 'Disable' : 'Enable'}
+                </button>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-foreground-subtle">Device tracking</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">Fixed browser device ID</p>
+                  <p className="mt-1 break-all font-mono text-[11px] text-foreground-muted">
+                    {browserDeviceId ?? 'Not available'}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-foreground-subtle">FCM token</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">
+                    {getStoredFirebaseMessagingToken() ? 'Stored for this browser' : 'Not registered yet'}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-foreground-muted">
+                    Tokens are registered with your account when notifications are enabled and removed when disabled.
+                  </p>
+                </div>
+              </div>
+
+              {notificationPermission === 'denied' && (
+                <MessageBox
+                  type="error"
+                  msg="Browser notifications are blocked. Enable notifications for this site from your browser settings, then come back and turn this on again."
+                />
               )}
             </div>
           )}
