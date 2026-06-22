@@ -12,8 +12,8 @@ export const socialProfileUrls = [
 ];
 
 export const siteDescription =
-  'Neetell helps NEET aspirants make smarter counselling decisions with rank-aware college prediction, cutoff trends, fees, bonds, seat matrix, AIQ and state counselling guidance, and choice filling tools.';
-
+  "Neetell helps NEET aspirants predict colleges, analyze cutoffs, compare MBBS fees, explore seat matrix, and make smarter AIQ & state counselling decisions.";
+  
 export const seoKeywords = [
   "Neetell",
   "NEET",
