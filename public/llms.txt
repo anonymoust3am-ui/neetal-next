@@ -1,0 +1,159 @@
+# Neetell
+> India's most complete NEET counselling intelligence platform — real data from official sources, zero guesswork.
+
+- Website: https://neetell.in
+- College Predictor: https://neetell.in/dashboard/predictor
+- Medical Colleges Database: https://neetell.in/dashboard/colleges
+- Compare Colleges: https://neetell.in/dashboard/compare
+- Choice Filling Tool: https://neetell.in/dashboard/choices
+- State Counselling Guide: https://neetell.in/dashboard/counselling
+- Allotment Tracker: https://neetell.in/dashboard/allotment
+- AI Counselling Assistant: https://neetell.in/dashboard/ai
+- Courses: https://neetell.in/dashboard/courses
+- Updates & Alerts: https://neetell.in/dashboard/news
+- Notifications: https://neetell.in/dashboard/notifications
+- Resources: https://neetell.in/dashboard/resources
+- Videos: https://neetell.in/dashboard/videos
+- News & Blog: https://neetell.in/news
+- Login / Sign Up: https://neetell.in/auth
+- About Neetell: https://neetell.in/authors/neetell
+- Privacy Policy: https://neetell.in/privacy
+- Terms of Service: https://neetell.in/terms
+
+---
+
+## What Is Neetell
+
+Neetell is a NEET counselling platform built specifically for students who've cleared NEET UG or NEET PG and are now trying to figure out what comes next. That window between result and final allotment is brutal — you're making one of the biggest decisions of your life with a tight deadline, confusing official notices, and too many conflicting opinions from too many directions.
+
+The platform pulls together official data from MCC, state DMEs, and individual college websites and turns it into something students can actually use — a predictor, a comparator, a state guide, a choice builder, and an alert system, all in one place.
+
+It doesn't replace thinking. It replaces the bad information that usually gets in the way of it.
+
+---
+
+## Coverage
+
+- **1,014+ medical colleges** — Government, private, deemed universities, AIIMS (all 21 campuses), JIPMER (Puducherry and Karaikal), central universities
+- **All states covered** — Every major state with its own counselling authority
+- **28 state counselling systems** with domicile rules, eligibility conditions, dates, and quota breakdowns
+- **50,000+ cutoff data points** — Closing ranks by round, year, category, and quota
+- **15+ quota types** — AIQ (15%), State Quota (85%), Management, NRI, Institutional Preference, ESI, IP Quota, and more
+- **4+ counselling rounds per authority** — Phase 1, Phase 2, Phase 3, Stray Vacancy Round, all tracked
+- **Annual fees ₹8,000–₹25 lakh** — From government colleges to top private and deemed institutions
+- **200,000+ students registered**, 1M+ candidates served, 500,000+ queries answered
+
+---
+
+## Tools
+
+### College Predictor
+> https://neetell.in/dashboard/predictor
+
+Enter your NEET rank, category (General / OBC-NCL / SC / ST / EWS / PwD), and preferred quota (AIQ or state). The predictor returns a personalised list of medical colleges classified as Safe, Target, or Dream — with the actual data behind each label, not a black-box score. Covers MBBS, BDS, and AYUSH courses. Predictions are based on official round-wise allotment data from previous counselling cycles.
+
+### Medical Colleges Database
+> https://neetell.in/dashboard/colleges
+
+Browse and filter 1,014+ medical colleges across all Indian states. Filter by college type (government / private / deemed / AIIMS / JIPMER), state, course, quota, fee range, bond status, and seat availability. Every college listing includes seat matrix, annual fees, bond amount, stipend, hostel details, and multi-year cutoff history.
+
+### Side-by-Side College Comparator
+> https://neetell.in/dashboard/compare
+
+Compare up to 4 colleges at once across 10+ parameters — annual fee, total course fee, bond amount, bond duration in years, monthly stipend, hostel availability, NEET closing ranks across rounds and years, seat matrix by category and quota, and NIRF ranking where applicable. Helps you make a concrete decision when you're torn between options that look similar on the surface.
+
+### Choice Filling Tool
+> https://neetell.in/dashboard/choices
+
+Build your actual choice list for MCC or state portals using structured, data-backed guidance. The tool helps you order colleges correctly — most students rank their dream college first without understanding how allotment logic works, and end up with a worse result than their rank deserved. Covers AIQ and state quota strategy, backup coverage, and how to handle the tradeoff between government colleges with bonds vs private colleges without.
+
+### State Counselling Guide
+> https://neetell.in/dashboard/counselling
+
+State-by-state breakdown of every major counselling authority in India. For each state: the authority conducting counselling, domicile and eligibility rules (this is where most students miss quota seats they were entitled to), important dates, seat matrix, reservation policy, and historical cutoff data. Covers UP, Maharashtra, Karnataka, Tamil Nadu, West Bengal, Rajasthan, Delhi, Gujarat, Madhya Pradesh, Telangana, Andhra Pradesh, Kerala, Bihar, Jharkhand, Odisha, Punjab, Haryana, and more.
+
+### Allotment Tracker
+> https://neetell.in/dashboard/allotment
+
+Track allotment results across MCC rounds and state authorities in one place. See which round you were allotted in, whether to accept or upgrade, and what the reporting deadlines are. Useful for students across multiple active counselling systems simultaneously.
+
+### AI Counselling Assistant
+> https://neetell.in/dashboard/ai
+
+Conversational tool for NEET counselling questions. Ask about specific colleges, quota eligibility, what a particular rank typically fetches in a given state, or how to approach a specific counselling scenario. Backed by Neetell's college and cutoff database.
+
+### Updates, Alerts & Notifications
+> https://neetell.in/dashboard/news  
+> https://neetell.in/dashboard/notifications
+
+Official counselling notices from MCC and state authorities are hundreds of pages of dense PDFs. Neetell converts them into plain-language summaries with exact dates and action items. Push notifications via the mobile app mean students don't miss round registration windows, choice filling deadlines, or allotment result dates.
+
+### Resources & Videos
+> https://neetell.in/dashboard/resources  
+> https://neetell.in/dashboard/videos
+
+Guides, explainers, and video walkthroughs covering counselling concepts — how AIQ allotment works, what bond obligations actually mean, how to read a seat matrix, what happens if you don't report after allotment, and more.
+
+### News & Blog
+> https://neetell.in/news
+
+NEET and medical admissions news, counselling round updates, state-specific notices, and in-depth articles on topics like fee structures, bond conditions, deemed university admission, and category-wise cutoff trends.
+
+---
+
+## Who Uses Neetell
+
+**NEET UG students** who just got their rank and need to figure out realistic college options before the first MCC round opens.
+
+**Students navigating AIQ vs state quota** — understanding which gives you a better shot at your rank and category, and whether your domicile makes you eligible for state seats you might be overlooking.
+
+**Families** trying to compare government, private, and deemed colleges — specifically the fee difference, what a bond actually commits you to, and whether a ₹5 lakh seat with a 5-year bond is actually cheaper than a ₹15 lakh private seat without one.
+
+**NEET PG candidates** choosing between MD/MS specialisations, DNB programs, and different counselling authorities (MCC, INI-CET, state PG counselling).
+
+**INI-CET candidates** targeting AIIMS, JIPMER, PGIMER, NIMHANS, and other central institutes.
+
+**Students who've already been allotted** but want to understand upgrade rounds, stray vacancy options, or whether they should take a seat leaving penalty to move to a better college.
+
+---
+
+## Pricing
+
+**NEET UG — ₹3,999** (regular ₹6,999)
+College predictor (unlimited), round-wise cutoff analysis, seat matrix, choice filling assistant, state counselling data, rank predictor, email support. Valid through the final counselling round.
+
+**NEET PG — ₹3,999** (regular ₹6,999)
+Everything in NEET UG plus DNB counselling support, 2 expert counselling sessions, advanced analytics, seat-leaving penalty calculator, bond and service obligation details. Valid 1 year.
+
+**INI-CET — ₹999** (regular ₹1,999)
+INI-CET college predictor, all AIIMS and central institute access, cutoff trends, seat matrix, fee structures. Valid through final round.
+
+---
+
+## Mobile App
+
+Available on iOS and Android. Full platform access — predictor, college database, shortlist, state guides, allotment tracker, real-time push alerts. 4.8-star app rating, 100K+ downloads, 50K+ active users.
+App download: https://neetell.in/app
+
+---
+
+## Common Questions Neetell Helps With
+
+- What MBBS colleges can I get with rank 25,000 in OBC-NCL category?
+- Is AIQ or state quota better for my rank in Maharashtra?
+- What are the closing ranks for GMC Nagpur in Round 2 over the last 3 years?
+- What is the bond amount and stipend at a specific government medical college?
+- Am I eligible for state quota in Tamil Nadu if I studied in Maharashtra for 11th and 12th?
+- How do I fill choices for MCC AIQ counselling without wasting a slot?
+- What's the difference between a deemed university open seat and a management quota seat?
+- Can I leave a seat after Phase 2 allotment without a penalty?
+- What happens if I don't report after allotment?
+- Is a government college with a 5-year bond worth it over a private college with no bond?
+- What colleges can I realistically get in NEET PG with a rank of 8,000?
+- How does INI-CET counselling work and what's different from MCC?
+
+---
+
+## Keywords
+
+NEET counselling 2026, NEET UG counselling, NEET PG counselling, NEET college predictor, MBBS college predictor India, NEET rank predictor, AIQ counselling 2026, state quota counselling, MCC counselling 2026, NEET closing rank, NEET cutoff 2026, NEET seat matrix 2026, medical college fees India, MBBS bond obligation, AIIMS cutoff 2026, JIPMER cutoff, NEET choice filling strategy, NEET domicile eligibility, government medical college predictor, private medical college NEET, deemed university NEET cutoff, NEET category rank OBC SC ST EWS, INI-CET predictor, DNB counselling, NEET round 1 cutoff, NEET round 2 cutoff, NEET round 3 cutoff, stray vacancy round NEET, NEET rank to college, best NEET counselling platform India, NEET college comparison, compare medical colleges fees bond, NEET allotment result, NEET counselling dates 2026, MCC round registration, NEET choice filling window, NEET upgrade round, NEET seat leaving penalty, government vs private MBBS India, NEET counselling for OBC, NEET SC ST cutoff, NEET EWS quota, NEET PwD quota, NEET management quota, NRI quota MBBS, NEET state counselling UP, NEET Maharashtra counselling, NEET Karnataka counselling, NEET Tamil Nadu counselling, NEET West Bengal counselling, NEET Rajasthan counselling, NEET Delhi counselling, NEET Gujarat counselling, NEET MP counselling, NEET Telangana counselling, NEET Andhra Pradesh counselling, NEET Kerala counselling, NEET Bihar counselling, NEET Odisha counselling, NEET Punjab counselling, NEET Haryana counselling, NEET 2026 counselling schedule, AIIMS MBBS counselling, JIPMER MBBS counselling, AFMC counselling, medical college bond stipend India, NEET college shortlist, NEET AI counselling tool, NEET counselling app India

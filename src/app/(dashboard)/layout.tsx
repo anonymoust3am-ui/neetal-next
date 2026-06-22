@@ -5,9 +5,12 @@ import { BottomNav } from '@/components/bottombar/Bottombar';
 import { DashboardHeader } from '@/components/header/DashboardHeader';
 import { AuthGuard } from './AuthGuard';
 import { CounsellingProvider } from '@/contexts/CounsellingContext';
+import SeoKeywords from '@/components/SeoKeywords';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
+    <>
+    <SeoKeywords />
     <AuthGuard>
       <CounsellingProvider>
         <BottomNavProvider>
@@ -20,5 +23,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </BottomNavProvider>
       </CounsellingProvider>
     </AuthGuard>
+    </>
   );
 }
