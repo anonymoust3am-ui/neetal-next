@@ -24,6 +24,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import MobilePredictor from './MobilePredictor';
 
 type InputMode = 'marks' | 'rank';
 type Scope = 'ai' | string;
@@ -392,7 +393,12 @@ export default function PredictorPage() {
   };
 
   return (
-    <div className="no-scrollbar h-screen min-h-screen min-w-[1180px] overflow-hidden overscroll-none bg-background text-foreground pt-20 pb-4">
+    <>
+    <div className="lg:hidden">
+      <MobilePredictor />
+    </div>
+
+    <div className="no-scrollbar hidden h-screen min-h-screen min-w-[1180px] overflow-hidden overscroll-none bg-background text-foreground pt-20 pb-4 lg:block">
       <main className="mx-auto h-[calc(100vh-6rem)] w-full max-w-[1520px] overflow-hidden px-8">
         {/* <section className="mb-5 grid grid-cols-[minmax(0,1fr)_360px] gap-4">
           <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
@@ -590,6 +596,7 @@ export default function PredictorPage() {
         </section>
       </main>
     </div>
+    </>
   );
 }
 
