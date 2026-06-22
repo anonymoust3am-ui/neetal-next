@@ -4,11 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import {
     Menu, X, ChevronDown, LayoutDashboard,
-    Smartphone, LogOut, User, Settings, BookOpen,
+    Smartphone, LogOut, User,
     Download,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from '@/hooks/useTheme';
 import { ThemeToggle } from './ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -16,7 +15,6 @@ import { useRouter } from 'next/navigation';
 export function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [avatarOpen, setAvatarOpen] = useState(false);
-    const { toggleTheme } = useTheme();
     const { user, logout } = useAuth();
     const router = useRouter();
 
@@ -42,7 +40,7 @@ export function Navbar() {
                         <img
                             src="/logo-nobg.png"
                             alt="Neetell Logo"
-                            className="h-35 w-auto"
+                            className="h-16 w-auto lg:h-35"
                         />
                     </Link>
 
@@ -81,7 +79,7 @@ export function Navbar() {
                                 href="/dashboard"
                                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-foreground hover:text-primary hover:bg-muted transition-colors"
                             >
-                                <LayoutDashboard className="w-4 h-4" />
+                                <LayoutDashboard className="h-4 w-4" />
                                 Dashboard
                             </Link>
                         )}
@@ -178,19 +176,11 @@ export function Navbar() {
 
                     {/* ─── Mobile Icons ─── */}
                     <div className="lg:hidden flex items-center gap-1">
-                        {/* Dashboard icon — only when logged in */}
-                        {user && (
-                            <Link
-                                href="/dashboard"
-                                className="p-2 text-foreground hover:bg-muted rounded-lg transition-colors"
-                            >
-                                <LayoutDashboard className="w-5 h-5" />
-                            </Link>
-                        )}
                         {/* Menu Button */}
                         <button
                             onClick={() => setIsOpen(!isOpen)}
-                            className="p-2 text-foreground"
+                            className="rounded-lg p-2 text-foreground hover:bg-muted transition-colors"
+                            aria-label="Toggle navigation menu"
                         >
                             {isOpen ? <X /> : <Menu />}
                         </button>
@@ -210,6 +200,13 @@ export function Navbar() {
                     >
                         <div className="px-4 py-5 space-y-1">
 
+                            {user && (
+                                <MobileLink href="/dashboard">
+                                    <LayoutDashboard className="h-4 w-4 shrink-0" />
+                                    Dashboard
+                                </MobileLink>
+                            )}
+
                             <MobileLink href="/explore/institutes">Institutes</MobileLink>
                             <MobileLink href="/explore/colleges">Colleges</MobileLink>
                             <MobileLink href="/counselling/neet-ug">NEET UG</MobileLink>
@@ -218,21 +215,14 @@ export function Navbar() {
                             <MobileLink href="/pricing">Pricing</MobileLink>
                             <MobileLink href="/news">Blogs & News</MobileLink>
 
-                            {user && (
-                                <MobileLink href="/dashboard">
-                                    <LayoutDashboard className="w-4 h-4 inline mr-1.5" />
-                                    Dashboard
-                                </MobileLink>
-                            )}
-
-                            <div className="pt-4 flex items-center gap-2 border-t border-border">
-                                <button onClick={toggleTheme} className="p-2 bg-muted rounded-lg shrink-0">
-                                    <ThemeToggle showLabel={false} height={20} width={20} />
-                                </button>
+                            <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-4">
+                                <div className="shrink-0">
+                                    <ThemeToggle showLabel={false} height={34} width={34} />
+                                </div>
 
                                 {user ? (
                                     <>
-                                        <div className="flex items-center gap-2 flex-1">
+                                        <div className="flex min-w-0 flex-1 items-center justify-center gap-2 px-2">
                                             <Avatar initials={initials} size="sm" />
                                             <span className="text-sm font-medium truncate">{user.name ?? user.phone}</span>
                                         </div>
@@ -300,8 +290,10 @@ function DropItem({ href, icon, children }: { href: string; icon?: React.ReactNo
 
 function MobileLink({ href, children }: { href: string; children: React.ReactNode }) {
     return (
-        <Link href={href} className="block px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors">
-            {children}
+        <Link href={href} className="flex h-12 items-center rounded-lg px-3 text-sm font-medium leading-none text-foreground hover:bg-muted transition-colors">
+            <span className="flex h-full items-center gap-2.5 leading-none">
+                {children}
+            </span>
         </Link>
     );
 }

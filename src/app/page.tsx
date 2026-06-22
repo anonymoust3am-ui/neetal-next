@@ -20,7 +20,7 @@ import { useEffect, useRef, useState } from "react";
 import { Hero } from "@/components/landingV2/HeroMobile";
 import { FAQSection } from "@/components/FAQSection";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowRight, ArrowUp } from "lucide-react";
+import { ArrowRight, ArrowUp, LayoutDashboard, Sparkles } from "lucide-react";
 
 function LandingFloatingActions({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) {
   const { user, loading } = useAuth();
@@ -49,6 +49,7 @@ function LandingFloatingActions({ heroRef }: { heroRef: React.RefObject<HTMLDivE
 
   const href = user ? "/dashboard" : "/auth";
   const label = user ? "Dashboard" : "Get Started";
+  const FloatingIcon = user ? LayoutDashboard : Sparkles;
   const radius = 22;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference * (1 - progress);
@@ -58,13 +59,14 @@ function LandingFloatingActions({ heroRef }: { heroRef: React.RefObject<HTMLDivE
       <Link
         href={href}
         aria-hidden={!show}
-        className={`fixed bottom-5 left-1/2 z-40 flex h-12 -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-primary px-5 text-sm font-black text-primary-foreground shadow-[0_12px_35px_rgba(15,23,42,0.22)] transition-all duration-300 md:hidden ${show
+        className={`fixed bottom-5 left-1/2 z-40 flex h-12 -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-primary px-5 text-sm text-primary-foreground shadow-[0_12px_35px_rgba(15,23,42,0.22)] transition-all duration-300 md:hidden ${show
             ? "translate-y-0 opacity-100"
             : "translate-y-8 opacity-0 pointer-events-none"
           }`}
       >
-        {loading ? "Loading..." : label}
-        <ArrowRight size={16} />
+        {!loading && <FloatingIcon size={16} className="shrink-0" />}
+        <span className="shrink-0">{loading ? "Loading..." : label}</span>
+        <ArrowRight size={16} className="shrink-0" />
       </Link>
 
       <button
