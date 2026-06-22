@@ -1,550 +1,627 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  AlertCircle,
+  ArrowRight,
+  BarChart3,
+  Building2,
+  CheckCircle2,
+  ChevronDown,
+  ChevronsUpDown,
+  CircleOff,
+  Database,
+  Filter,
+  GraduationCap,
+  Info,
+  Loader2,
+  MapPin,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  TrendingUp,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-function formatRank(n: any) {
-  if (n === null || n === undefined || n === '' || Number.isNaN(Number(n))) return '-';
-  return Number(n).toLocaleString('en-IN');
-}
-
-function escapeHtml(value: any) {
-  if (value === null || value === undefined) return '';
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function bucketLabel(bucket: string) {
-  if (bucket === 'safe') return 'Safe';
-  if (bucket === 'target') return 'Target';
-  if (bucket === 'dream') return 'Dream';
-  return 'Unknown';
-}
+type InputMode = 'marks' | 'rank';
+type Scope = 'ai' | string;
+type Bucket = 'safe' | 'target' | 'dream';
 
 interface PredictionResponse {
   success: boolean;
-  data: any[];
-  summary: any;
+  data: PredictionCollege[];
+  summary: PredictionSummary;
   mode: string;
   message?: string;
 }
 
 interface OptionsResponse {
   success: boolean;
-  data: {
-    rounds: Array<{ round_no: string; label: string }>;
-    courses: Array<{ course_code: string }>;
-    categories: Array<{ candidate_category_code: string }>;
-    quotas: Array<{ quota_code: string }>;
-    institutes?: Array<{ institute_name: string }>;
-  };
+  data: PredictorOptions;
   message?: string;
 }
 
+interface PredictorOptions {
+  rounds: Array<{ round_no: string; label: string }>;
+  courses: Array<{ course_code: string }>;
+  categories: Array<{ candidate_category_code: string }>;
+  quotas: Array<{ quota_code: string }>;
+  institutes?: Array<{ institute_name: string }>;
+}
+
+interface PredictionSummary {
+  title?: string;
+  userRank?: number | string;
+  nearbyRange?: number | string;
+  rankRange?: number | string;
+  safe?: number;
+  target?: number;
+  dream?: number;
+}
+
+interface PredictionCollege {
+  name?: string;
+  shortName?: string;
+  courseName?: string;
+  course?: string;
+  courseCode?: string;
+  instituteCode?: string;
+  collegeCode?: string;
+  rounds?: string;
+  state?: string;
+  bucket?: Bucket | string;
+  quotaCodes?: string;
+  candidateCategoryCodes?: string;
+  allottedCategoryCodes?: string;
+  openingRank?: number | string;
+  closingRank?: number | string;
+  inputRank?: number | string;
+  rankGap?: number | string;
+  seats?: number | string;
+  image?: string;
+  logoUrl?: string;
+  logoColor?: string;
+  similarCandidates?: Array<{
+    rank_num?: number | string;
+    round_no?: number | string;
+    candidate_category_code?: string;
+    allotted_category_code?: string;
+    quota_code?: string;
+    candidate_category_raw?: string;
+    quota_raw?: string;
+    rankDist?: number | string;
+  }>;
+}
+
+const EMPTY_OPTIONS: PredictorOptions = {
+  rounds: [],
+  courses: [],
+  categories: [],
+  quotas: [],
+  institutes: [],
+};
+
+const INDIAN_STATES = [
+  'Andhra Pradesh',
+  'Assam',
+  'Bihar',
+  'Chhattisgarh',
+  'Delhi NCR',
+  'Goa',
+  'Gujarat',
+  'Haryana',
+  'Himachal Pradesh',
+  'Jharkhand',
+  'Karnataka',
+  'Kerala',
+  'Madhya Pradesh',
+  'Maharashtra',
+  'Odisha',
+  'Puducherry',
+  'Punjab',
+  'Rajasthan',
+  'Tamil Nadu',
+  'Telangana',
+  'Uttar Pradesh',
+  'Uttarakhand',
+  'West Bengal',
+];
+
+const RANGE_OPTIONS = [
+  { value: '10000', label: '+/- 10K ranks' },
+  { value: '25000', label: '+/- 25K ranks' },
+  { value: '50000', label: '+/- 50K ranks' },
+  { value: '100000', label: '+/- 100K ranks' },
+];
+
+const BUCKET_META: Record<Bucket, { label: string; icon: LucideIcon; tone: string; text: string; border: string }> = {
+  safe: {
+    label: 'Safe',
+    icon: ShieldCheck,
+    tone: 'bg-success-light',
+    text: 'text-success',
+    border: 'border-success/30',
+  },
+  target: {
+    label: 'Target',
+    icon: Target,
+    tone: 'bg-warning-light',
+    text: 'text-warning',
+    border: 'border-warning/30',
+  },
+  dream: {
+    label: 'Dream',
+    icon: Sparkles,
+    tone: 'bg-secondary-light',
+    text: 'text-secondary',
+    border: 'border-secondary/30',
+  },
+};
+
+function apiBaseUrl() {
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+}
+
+function stateSlug(state: string) {
+  return state.toLowerCase().replace(/\s+/g, '-');
+}
+
+function stateNameFromScope(scope: Scope) {
+  if (scope === 'ai') return 'All India MCC';
+  return INDIAN_STATES.find(state => stateSlug(state) === scope) ?? scope;
+}
+
+function formatRank(value: unknown) {
+  if (value === null || value === undefined || value === '' || Number.isNaN(Number(value))) return '-';
+  return Number(value).toLocaleString('en-IN');
+}
+
+function formatGap(value: unknown) {
+  const formatted = formatRank(value);
+  return formatted === '-' ? '-' : `+${formatted}`;
+}
+
+function bucketLabel(bucket?: string) {
+  if (bucket === 'safe' || bucket === 'target' || bucket === 'dream') return BUCKET_META[bucket].label;
+  return 'Review';
+}
+
+function optionValue(option: Record<string, string>) {
+  return option.round_no ?? option.course_code ?? option.candidate_category_code ?? option.quota_code ?? option.institute_name ?? '';
+}
+
+function optionLabel(option: Record<string, string>) {
+  return option.label ?? optionValue(option);
+}
+
+function getCollegeInitials(college: PredictionCollege) {
+  return (college.shortName || college.name || 'College')
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word[0])
+    .join('')
+    .slice(0, 3)
+    .toUpperCase();
+}
+
+function normalizeAssetUrl(value?: string) {
+  if (!value) return undefined;
+  const baseUrl = apiBaseUrl().replace('/api', '');
+  if (value.includes('/data')) {
+    const match = value.match(/url\(['"]?([^'")]+)['"]?\)/);
+    if (match?.[1]) return `url('${baseUrl}${match[1]}')`;
+    if (value.startsWith('/data')) return `url('${baseUrl}${value}')`;
+  }
+  if (value.startsWith('linear-gradient') || value.startsWith('radial-gradient') || value.startsWith('url(')) return value;
+  if (value.startsWith('http')) return `url('${value}')`;
+  return value;
+}
+
 export default function PredictorPage() {
-  const [inputMode, setInputMode] = useState<'marks' | 'rank'>('marks');
-  const [currentScope, setCurrentScope] = useState('ai');
-  const [marksInput, setMarksInput] = useState('');
-  const [rankInput, setRankInput] = useState('');
+  const [inputMode, setInputMode] = useState<InputMode>('marks');
+  const [scope, setScope] = useState<Scope>('ai');
+  const [marks, setMarks] = useState('');
+  const [rank, setRank] = useState('');
 
-  const [aiRoundSelect, setAiRoundSelect] = useState('');
-  const [aiCourseSelect, setAiCourseSelect] = useState('');
-  const [aiCategorySelect, setAiCategorySelect] = useState('');
-  const [aiQuotaSelect, setAiQuotaSelect] = useState('');
-  const [aiRangeSelect, setAiRangeSelect] = useState('25000');
-  const [aiLimitInput, setAiLimitInput] = useState('30');
+  const [aiRound, setAiRound] = useState('');
+  const [aiCourse, setAiCourse] = useState('');
+  const [aiCategory, setAiCategory] = useState('');
+  const [aiQuota, setAiQuota] = useState('');
+  const [aiRange, setAiRange] = useState('25000');
+  const [aiLimit, setAiLimit] = useState('30');
 
-  const [stateRoundSelect, setStateRoundSelect] = useState('');
-  const [stateCourseSelect, setStateCourseSelect] = useState('');
-  const [stateCategorySelect, setStateCategorySelect] = useState('');
-  const [stateQuotaSelect, setStateQuotaSelect] = useState('');
-  const [stateInstituteSelect, setStateInstituteSelect] = useState('');
-  const [stateRangeSelect, setStateRangeSelect] = useState('25000');
-  const [stateLimitInput, setStateLimitInput] = useState('30');
+  const [stateRound, setStateRound] = useState('');
+  const [stateCourse, setStateCourse] = useState('');
+  const [stateCategory, setStateCategory] = useState('');
+  const [stateQuota, setStateQuota] = useState('');
+  const [stateInstitute, setStateInstitute] = useState('');
+  const [stateRange, setStateRange] = useState('25000');
+  const [stateLimit, setStateLimit] = useState('30');
 
-  const [aiOptions, setAiOptions] = useState<OptionsResponse['data'] | null>(null);
-  const [states, setStates] = useState<string[]>([]);
-
-  const [loading, setLoading] = useState(false);
+  const [aiOptions, setAiOptions] = useState<PredictorOptions>(EMPTY_OPTIONS);
+  const [stateOptions, setStateOptions] = useState<PredictorOptions>(EMPTY_OPTIONS);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [predicting, setPredicting] = useState(false);
+  const [error, setError] = useState('');
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
-  const [bucketFilter, setBucketFilter] = useState<string | null>(null);
-  const [eyebrowText, setEyebrowText] = useState('NEET UG · Unified Predictor');
-  const [subtitleText, setSubtitleText] = useState('Switch between All India MCC and State counsellings.');
-  const [filterSubtitle, setFilterSubtitle] = useState('Select counselling type first');
+  const [bucketFilter, setBucketFilter] = useState<Bucket | null>(null);
 
-  const INDIAN_STATES = [
-    'Andhra Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi NCR',
-    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
-    'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Odisha', 'Puducherry', 'Punjab',
-    'Rajasthan', 'Tamil Nadu', 'Telangana', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
-  ];
+  const selectedOptions = scope === 'ai' ? aiOptions : stateOptions;
+  const selectedRange = scope === 'ai' ? aiRange : stateRange;
+  const selectedLimit = scope === 'ai' ? aiLimit : stateLimit;
+  const scopeTitle = stateNameFromScope(scope);
+  const userValue = inputMode === 'marks' ? marks : rank;
+  const canPredict = userValue.trim().length > 0 && !predicting && !optionsLoading;
+
+  const scopeSubtitle = scope === 'ai'
+    ? 'All India quota prediction using MCC counselling data.'
+    : `${scopeTitle} state counselling prediction with institute-level filters.`;
+
+  const fetchOptions = useCallback(async (targetScope: Scope) => {
+    setOptionsLoading(true);
+    setError('');
+
+    try {
+      const params = new URLSearchParams();
+
+      if (targetScope === 'ai') {
+        if (aiRound) params.set('round_no', aiRound);
+        if (aiCourse) params.set('course_code', aiCourse);
+        if (aiCategory) params.set('candidate_category_code', aiCategory);
+      } else {
+        if (stateRound) params.set('round_no', stateRound);
+        if (stateCourse) params.set('course_code', stateCourse);
+        if (stateCategory) params.set('candidate_category_code', stateCategory);
+        if (stateQuota) params.set('quota_code', stateQuota);
+        if (stateInstitute) params.set('institute_name', stateInstitute);
+      }
+
+      const path = targetScope === 'ai'
+        ? `/ai/options?${params.toString()}`
+        : `/state/${targetScope}/options?${params.toString()}`;
+      const response = await fetch(`${apiBaseUrl()}${path}`);
+      const json = (await response.json()) as OptionsResponse;
+
+      if (!json.success) throw new Error(json.message || 'Could not load predictor filters.');
+      if (targetScope === 'ai') setAiOptions(json.data);
+      else setStateOptions(json.data);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not load predictor filters.');
+    } finally {
+      setOptionsLoading(false);
+    }
+  }, [aiCategory, aiCourse, aiRound, stateCategory, stateCourse, stateInstitute, stateQuota, stateRound]);
 
   useEffect(() => {
-    loadAiOptions();
-  }, []);
-
-  const loadAiOptions = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (aiRoundSelect) params.set('round_no', aiRoundSelect);
-      if (aiCourseSelect) params.set('course_code', aiCourseSelect);
-      if (aiCategorySelect) params.set('candidate_category_code', aiCategorySelect);
-
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
-      const res = await fetch(`${baseUrl}/ai/options?${params.toString()}`);
-      const json = (await res.json()) as OptionsResponse;
-
-      if (!json.success) throw new Error(json.message || 'All India options failed.');
-      setAiOptions(json.data);
-    } catch (error) {
-      console.error(error);
-      alert((error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadStateOptions = async (stateSlug: string) => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (stateRoundSelect) params.set('round_no', stateRoundSelect);
-      if (stateCourseSelect) params.set('course_code', stateCourseSelect);
-      if (stateCategorySelect) params.set('candidate_category_code', stateCategorySelect);
-      if (stateQuotaSelect) params.set('quota_code', stateQuotaSelect);
-      if (stateInstituteSelect) params.set('institute_name', stateInstituteSelect);
-
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
-      const res = await fetch(`${baseUrl}/state/${stateSlug}/options?${params.toString()}`);
-      const json = (await res.json()) as OptionsResponse;
-
-      if (!json.success) throw new Error(json.message || 'State options failed.');
-    } catch (error) {
-      console.error(error);
-      alert((error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const switchScope = (scope: string) => {
-    setCurrentScope(scope);
-    setBucketFilter(null);
-
-    if (scope === 'ai') {
-      setEyebrowText('MCC All India · NEET UG');
-      setSubtitleText('Uses imported MCC R1/R2/R3 All India allotment database.');
-      setFilterSubtitle('Rank + round + category + quota');
-      loadAiOptions();
-    } else {
-      const stateName = scope;
-      setEyebrowText(`${stateName} · NEET UG`);
-      setSubtitleText(`Unified prediction based on ${stateName} allotments.`);
-      setFilterSubtitle('Rank + round + course + category + quota');
-      loadStateOptions(scope);
-    }
-  };
+    fetchOptions(scope);
+  }, [fetchOptions, scope]);
 
   const resetFilters = () => {
-    setMarksInput('');
-    setRankInput('');
+    setMarks('');
+    setRank('');
+    setPrediction(null);
+    setBucketFilter(null);
+    setError('');
 
-    if (currentScope === 'ai') {
-      setAiCourseSelect('');
-      setAiCategorySelect('');
-      setAiQuotaSelect('');
-      setAiRangeSelect('25000');
-      setAiLimitInput('30');
-      setPrediction(null);
-      loadAiOptions();
+    if (scope === 'ai') {
+      setAiRound('');
+      setAiCourse('');
+      setAiCategory('');
+      setAiQuota('');
+      setAiRange('25000');
+      setAiLimit('30');
     } else {
-      setStateRoundSelect('');
-      setStateCourseSelect('');
-      setStateCategorySelect('');
-      setStateQuotaSelect('');
-      setStateInstituteSelect('');
-      setStateRangeSelect('25000');
-      setStateLimitInput('30');
-      setPrediction(null);
-      switchScope(currentScope);
+      setStateRound('');
+      setStateCourse('');
+      setStateCategory('');
+      setStateQuota('');
+      setStateInstitute('');
+      setStateRange('25000');
+      setStateLimit('30');
     }
   };
 
   const predictColleges = async () => {
-    let marks = marksInput;
-    let rank = rankInput;
-
-    if (inputMode === 'marks' && !marks) {
-      alert('Please enter marks.');
+    if (!userValue.trim()) {
+      setError(inputMode === 'marks' ? 'Enter NEET marks before predicting.' : 'Enter AIR rank before predicting.');
       return;
     }
 
-    if (inputMode === 'rank' && !rank) {
-      alert('Please enter rank.');
-      return;
-    }
-
-    setLoading(true);
-    let url = '';
-    let payload: any = {
-      marks: inputMode === 'marks' ? marks : null,
-      rank: inputMode === 'rank' ? rank : null,
-    };
+    setPredicting(true);
+    setError('');
+    setBucketFilter(null);
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+      const basePayload = {
+        marks: inputMode === 'marks' ? marks.trim() : null,
+        rank: inputMode === 'rank' ? rank.trim() : null,
+      };
 
-      if (currentScope === 'ai') {
-        url = `${baseUrl}/ai/predict`;
-        payload = {
-          ...payload,
-          round_no: aiRoundSelect,
-          course_code: aiCourseSelect,
-          candidate_category_code: aiCategorySelect,
-          quota_code: aiQuotaSelect,
-          nearby_range: aiRangeSelect,
-          limit: aiLimitInput,
-        };
-      } else {
-        url = `${baseUrl}/state/${currentScope}/predict`;
-        payload = {
-          ...payload,
-          round_no: stateRoundSelect,
-          course_code: stateCourseSelect,
-          candidate_category_code: stateCategorySelect,
-          quota_code: stateQuotaSelect,
-          institute_name: stateInstituteSelect,
-          nearby_range: stateRangeSelect,
-          limit: stateLimitInput,
-        };
-      }
+      const url = scope === 'ai' ? `${apiBaseUrl()}/ai/predict` : `${apiBaseUrl()}/state/${scope}/predict`;
+      const payload = scope === 'ai'
+        ? {
+            ...basePayload,
+            round_no: aiRound,
+            course_code: aiCourse,
+            candidate_category_code: aiCategory,
+            quota_code: aiQuota,
+            nearby_range: aiRange,
+            limit: aiLimit,
+          }
+        : {
+            ...basePayload,
+            round_no: stateRound,
+            course_code: stateCourse,
+            candidate_category_code: stateCategory,
+            quota_code: stateQuota,
+            institute_name: stateInstitute,
+            nearby_range: stateRange,
+            limit: stateLimit,
+          };
 
-      const res = await fetch(url, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      const json = (await response.json()) as PredictionResponse;
 
-      const json = (await res.json()) as PredictionResponse;
-
-      if (!json.success) {
-        throw new Error(json.message || 'Prediction failed.');
-      }
-
+      if (!json.success) throw new Error(json.message || 'Prediction failed.');
       setPrediction(json);
-      setBucketFilter(null);
-      setLoading(false);
-    } catch (error) {
-      alert((error as Error).message);
-      setLoading(false);
+    } catch (caught) {
+      setPrediction(null);
+      setError(caught instanceof Error ? caught.message : 'Prediction failed. Please adjust filters and try again.');
+    } finally {
+      setPredicting(false);
     }
   };
 
-  const renderLoadingModal = () => (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-[24px] shadow-[0_20px_50px_rgba(15,23,42,0.3)] p-[48px_32px] text-center">
-        <div className="w-[60px] h-[60px] border-[4px] border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-[24px]"></div>
-        <h2 className="m-0 mb-[8px] text-[20px] font-bold text-slate-900">Loading options...</h2>
-        <p className="m-0 text-slate-500 text-[14px]">Please wait while we fetch the filter options</p>
-      </div>
-    </div>
-  );
+  const filteredResults = useMemo(() => {
+    const results = prediction?.data ?? [];
+    return bucketFilter ? results.filter(college => college.bucket === bucketFilter) : results;
+  }, [bucketFilter, prediction]);
 
-  const renderWelcome = () => (
-    <div className="bg-white/96 border border-slate-200 rounded-[24px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[48px_32px] text-center flex flex-col items-center justify-center h-full max-[600px]:p-[48px_18px]">
-      <div className="w-[74px] h-[74px] rounded-[24px] mx-auto mb-[18px] bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-[34px]">
-        🎓
-      </div>
-      <h2 className="m-0 mb-[12px] text-[20px] font-bold text-slate-900">Unified predictor ready</h2>
-      <p className="m-0 text-slate-500 text-[14px] max-w-[340px] leading-[1.5]">
-        Select counselling type: All India MCC or a State. The filter panel will change automatically.
-      </p>
-    </div>
-  );
-
-  const renderLoading = () => (
-    <div className="bg-white/96 border border-slate-200 rounded-[24px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[48px_32px] text-center flex flex-col items-center justify-center h-full max-[600px]:p-[48px_18px]">
-      <div className="w-[42px] h-[42px] border-[4px] border-slate-200 border-t-blue-600 rounded-full animate-spin mb-[24px]"></div>
-      <h2 className="m-0 mb-[12px] text-[20px] font-bold text-slate-900">Loading...</h2>
-      <p className="m-0 text-slate-500 text-[14px] max-w-[340px] leading-[1.5] font-[900]">
-        Generating college-wise prediction from MongoDB...
-      </p>
-    </div>
-  );
-
-  const renderResults = () => {
-    if (!prediction || !prediction.data || !prediction.data.length) {
-      return (
-        <div className="bg-white/96 border border-slate-200 rounded-[24px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[48px_32px] text-center flex flex-col items-center justify-center h-full max-[600px]:p-[48px_18px]">
-          <h2 className="m-0 mb-[12px] text-[20px] font-bold text-slate-900">No college cards found</h2>
-          <p className="m-0 text-slate-500 text-[14px] max-w-[340px] leading-[1.5]">
-            Try increasing rank range or reducing filters.
-          </p>
-        </div>
-      );
-    }
-
-    const data = prediction.data;
-    const summary = prediction.summary || {};
-    const filteredData = bucketFilter ? data.filter((c: any) => c.bucket === bucketFilter) : data;
-
-    return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-5 gap-[12px] mb-[16px] max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1">
-          <button
-            onClick={() => setBucketFilter(null)}
-            className={`cursor-pointer transition-all hover:scale-[1.02] bg-white/96 border ${
-              !bucketFilter ? 'border-slate-900 ring-2 ring-slate-900/10' : 'border-slate-200'
-            } rounded-[18px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[16px] text-center max-[1100px]:col-span-2 max-[600px]:col-span-1`}
-          >
-            <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Cards</span>
-            <strong className="block mt-[5px] text-[24px] text-slate-900">{data.length}</strong>
-          </button>
-          <button
-            onClick={() => setBucketFilter('safe')}
-            className={`cursor-pointer transition-all hover:scale-[1.02] bg-white/96 border ${
-              bucketFilter === 'safe' ? 'border-emerald-500 ring-2 ring-emerald-500/10' : 'border-slate-200'
-            } rounded-[18px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[16px] text-center`}
-          >
-            <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Safe</span>
-            <strong className="block mt-[5px] text-[24px] text-emerald-600">{summary.safe || 0}</strong>
-          </button>
-          <button
-            onClick={() => setBucketFilter('target')}
-            className={`cursor-pointer transition-all hover:scale-[1.02] bg-white/96 border ${
-              bucketFilter === 'target' ? 'border-amber-500 ring-2 ring-amber-500/10' : 'border-slate-200'
-            } rounded-[18px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[16px] text-center`}
-          >
-            <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Target</span>
-            <strong className="block mt-[5px] text-[24px] text-amber-600">{summary.target || 0}</strong>
-          </button>
-          <button
-            onClick={() => setBucketFilter('dream')}
-            className={`cursor-pointer transition-all hover:scale-[1.02] bg-white/96 border ${
-              bucketFilter === 'dream' ? 'border-violet-500 ring-2 ring-violet-500/10' : 'border-slate-200'
-            } rounded-[18px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[16px] text-center`}
-          >
-            <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Dream</span>
-            <strong className="block mt-[5px] text-[24px] text-violet-600">{summary.dream || 0}</strong>
-          </button>
-          <div className="bg-white/96 border border-slate-200 rounded-[18px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] p-[16px] text-center">
-            <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">User rank</span>
-            <strong className="block mt-[5px] text-[24px] text-slate-900">{formatRank(summary.userRank)}</strong>
-          </div>
-        </div>
-
-        <div className="bg-white/80 border border-slate-200 rounded-[18px] p-[13px_16px] flex justify-between gap-[12px] mb-[14px] text-slate-500 font-[800] text-[13px]">
-          <p className="m-0">
-            <b className="text-blue-600 font-[900]">{escapeHtml(summary.title || 'Prediction')}</b> around rank{' '}
-            <b className="text-slate-900 font-[900]">{formatRank(summary.userRank)}</b>{' '}
-            {bucketFilter && <span>(Filtering by <b className="capitalize">{bucketFilter}</b>)</span>}
-          </p>
-          <p className="m-0">Evidence range: ±{formatRank(summary.nearbyRange || summary.rankRange)}</p>
-        </div>
-
-        <div className="grid gap-[14px]">
-          {filteredData.map((college: any, idx: number) => (
-            <CollegeCard key={idx} college={college} summary={summary} mode={prediction.mode} />
-          ))}
-        </div>
-      </div>
-    );
+  const summary = prediction?.summary ?? {};
+  const counts = {
+    all: prediction?.data?.length ?? 0,
+    safe: summary.safe ?? 0,
+    target: summary.target ?? 0,
+    dream: summary.dream ?? 0,
   };
 
   return (
-    <div className="min-h-screen flex flex-col pt-12">
-      {loading && renderLoadingModal()}
-      <header className="px-8 py-4 pb-2 max-[600px]:px-[18px] max-[600px]:py-[14px] max-[600px]:pb-[4px]">
-        <div className="mt-2 flex justify-between items-end gap-[18px]">
-          <div>
-            <h1 className="m-0 text-[34px] tracking-[-.045em] text-slate-900 font-bold">
-              NEET UG <span className="text-blue-600">College Predictor</span>
-            </h1>
-            <p className="m-0 mt-[7px] text-slate-500 text-[14px]">{subtitleText}</p>
-          </div>
-        </div>
-      </header>
-
-      <main className={`flex-1 px-8 py-[18px] pb-8 grid grid-cols-[390px_1fr] gap-[20px] max-w-[1540px] w-full mx-auto min-h-0 max-[1100px]:grid-cols-1 max-[600px]:p-[14px] max-[600px]:pb-[18px] max-[600px]:px-[18px] transition-opacity ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
-        <aside className="bg-white/95 border border-slate-200 rounded-[24px] shadow-[0_10px_28px_rgba(15,23,42,0.06)] overflow-hidden h-[calc(100vh-130px)] flex flex-col sticky top-[18px] max-[1100px]:h-auto max-[1100px]:static">
-          <div className="p-[18px] border-b border-slate-200 bg-slate-50/85 flex justify-between items-center">
-            <div>
-              <h2 className="m-0 text-[15px] font-bold text-slate-900">Refine prediction</h2>
-              <p className="m-0 mt-[3px] text-slate-500 text-[11px]">{filterSubtitle}</p>
+    <div className="no-scrollbar h-screen min-h-screen min-w-[1180px] overflow-hidden overscroll-none bg-background text-foreground pt-20 pb-4">
+      <main className="mx-auto h-[calc(100vh-6rem)] w-full max-w-[1520px] overflow-hidden px-8">
+        {/* <section className="mb-5 grid grid-cols-[minmax(0,1fr)_360px] gap-4">
+          <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <Badge icon={Database}>NEET UG predictor</Badge>
+              <Badge icon={Sparkles}>Desktop workspace</Badge>
             </div>
-            <button
-              onClick={resetFilters}
-              className="bg-transparent border-0 text-slate-500 text-[12px] font-[900] cursor-pointer"
-            >
-              Reset
-            </button>
+            <div className="flex items-end justify-between gap-5">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">College Predictor</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-foreground-muted">
+                  Enter marks or AIR, choose counselling scope, then compare realistic safe, target, and dream options from historical allotment evidence.
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <MiniStat label="Scope" value={scope === 'ai' ? 'AIQ' : 'State'} />
+                <MiniStat label="Range" value={selectedRange === '100000' ? '100K' : `${Number(selectedRange) / 1000}K`} />
+                <MiniStat label="Cards" value={selectedLimit} />
+              </div>
+            </div>
           </div>
 
-          <div className="p-[18px] overflow-y-auto flex-1">
-            {/* Counselling Scope */}
-            <div className="flex items-center gap-[8px] my-[5px] mb-[14px]">
-              <span className="text-slate-400 text-[10px] font-mono font-[900]">00</span>
-              <span className="flex-1 h-[1px] bg-slate-200"></span>
-              <span className="text-[11px] font-[900] uppercase tracking-[.11em] text-slate-900">Counselling scope</span>
-            </div>
-
-            <div className="mb-[14px]">
-              <label className="block mb-[6px] text-slate-500 text-[12px] font-[900]">Choose counselling</label>
-              <select
-                value={currentScope}
-                onChange={e => switchScope(e.target.value)}
-                disabled={loading}
-                className="w-full h-[42px] rounded-[12px] border border-slate-300 bg-white text-slate-900 px-[12px] text-[14px] font-[750] outline-none transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:border-blue-600 focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)] appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20fill=%22none%22%20viewBox=%220%200%2024%2024%22%20stroke=%22%2364748b%22%3E%3Cpath%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%222.5%22%20d=%22M19%209l-7%207-7-7%22%3E%3C/path%3E%3C/svg%3E')] bg-no-repeat bg-[right_12px_center] bg-[length:14px] pr-[36px] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <option value="ai">All India MCC</option>
-                {INDIAN_STATES.map(state => (
-                  <option key={state} value={state.toLowerCase().replace(/\s+/g, '-')}>
-                    {state}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="h-[1px] bg-slate-200 my-[18px]"></div>
-
-            {/* Your Score */}
-            <div className="flex items-center gap-[8px] my-[5px] mb-[14px]">
-              <span className="text-slate-400 text-[10px] font-mono font-[900]">01</span>
-              <span className="flex-1 h-[1px] bg-slate-200"></span>
-              <span className="text-[11px] font-[900] uppercase tracking-[.11em] text-slate-900">Your score</span>
-            </div>
-
-            <div className="grid grid-cols-2 bg-slate-100 rounded-[12px] p-[4px] gap-[4px] mb-[14px]">
-              <button
-                onClick={() => {
-                  setInputMode('marks');
-                  setRankInput('');
-                }}
-                disabled={loading}
-                className={`border-0 rounded-[9px] h-[34px] text-[12px] font-[900] cursor-pointer ${
-                  inputMode === 'marks'
-                    ? 'bg-white text-slate-900 shadow-[0_2px_8px_rgba(15,23,42,0.08)]'
-                    : 'bg-transparent text-slate-500'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                Marks
-              </button>
-              <button
-                onClick={() => {
-                  setInputMode('rank');
-                  setMarksInput('');
-                }}
-                disabled={loading}
-                className={`border-0 rounded-[9px] h-[34px] text-[12px] font-[900] cursor-pointer ${
-                  inputMode === 'rank'
-                    ? 'bg-white text-slate-900 shadow-[0_2px_8px_rgba(15,23,42,0.08)]'
-                    : 'bg-transparent text-slate-500'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                Rank
-              </button>
-            </div>
-
-            {inputMode === 'marks' && (
-              <div className="mb-[14px]">
-                <label className="block mb-[6px] text-slate-500 text-[12px] font-[900]">
-                  Enter marks <span className="text-slate-400 font-normal">approx rank generated</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="720"
-                  value={marksInput}
-                  onChange={e => setMarksInput(e.target.value)}
-                  disabled={loading}
-                  placeholder="e.g. 645"
-                  className="w-full h-[42px] rounded-[12px] border border-slate-300 bg-white text-slate-900 px-[12px] text-[14px] font-[750] outline-none transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:border-blue-600 focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                />
+          <div className="rounded-xl border border-border bg-muted p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <Info size={20} />
               </div>
-            )}
-
-            {inputMode === 'rank' && (
-              <div className="mb-[14px]">
-                <label className="block mb-[6px] text-slate-500 text-[12px] font-[900]">Enter NEET AIR rank</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={rankInput}
-                  onChange={e => setRankInput(e.target.value)}
-                  disabled={loading}
-                  placeholder="e.g. 45000"
-                  className="w-full h-[42px] rounded-[12px] border border-slate-300 bg-white text-slate-900 px-[12px] text-[14px] font-[750] outline-none transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:border-blue-600 focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                />
+              <div>
+                <p className="text-sm font-bold text-foreground">Simple workflow</p>
+                <p className="mt-1 text-xs leading-relaxed text-foreground-muted">
+                  Fill required rank/marks first. Filters are optional and help narrow the evidence.
+                </p>
               </div>
-            )}
+            </div>
+          </div>
+        </section> */}
 
-            <div className="h-[1px] bg-slate-200 my-[18px]"></div>
-
-            {/* AI Filters */}
-            <div id="aiFilters">
-              <div className="flex items-center gap-[8px] my-[5px] mb-[14px]">
-                <span className="text-slate-400 text-[10px] font-mono font-[900]">02</span>
-                <span className="flex-1 h-[1px] bg-slate-200"></span>
-                <span className="text-[11px] font-[900] uppercase tracking-[.11em] text-slate-900">All India filters</span>
-              </div>
-
-              <SelectInput label="Round" value={aiRoundSelect} onChange={setAiRoundSelect} options={aiOptions?.rounds || []} />
-              <SelectInput label="Course" value={aiCourseSelect} onChange={setAiCourseSelect} options={aiOptions?.courses || []} />
-              <SelectInput label="Candidate category" value={aiCategorySelect} onChange={setAiCategorySelect} options={aiOptions?.categories || []} />
-              <SelectInput label="Quota" value={aiQuotaSelect} onChange={setAiQuotaSelect} options={aiOptions?.quotas || []} />
-
-              <div className="mb-[14px]">
-                <label className="block mb-[6px] text-slate-500 text-[12px] font-[900]">Nearby evidence range</label>
-                <select
-                  value={aiRangeSelect}
-                  onChange={e => setAiRangeSelect(e.target.value)}
-                  className="w-full h-[42px] rounded-[12px] border border-slate-300 bg-white text-slate-900 px-[12px] text-[14px] font-[750] outline-none transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:border-blue-600 focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)] appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20fill=%22none%22%20viewBox=%220%200%2024%2024%22%20stroke=%22%2364748b%22%3E%3Cpath%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%222.5%22%20d=%22M19%209l-7%207-7-7%22%3E%3C/path%3E%3C/svg%3E')] bg-no-repeat bg-[right_12px_center] bg-[length:14px] pr-[36px]"
+        <section className="grid h-full min-h-0 grid-cols-[390px_minmax(0,1fr)] gap-4">
+          <aside className="sticky top-20 flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+            <div className="shrink-0 border-b border-border px-5 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle">Controls</p>
+                  <h2 className="mt-1 text-base font-bold text-foreground">Refine prediction</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-xs font-semibold text-foreground-muted transition-colors hover:bg-hover hover:text-foreground"
                 >
-                  <option value="10000">±10K ranks</option>
-                  <option value="25000">±25K ranks</option>
-                  <option value="50000">±50K ranks</option>
-                  <option value="100000">±100K ranks</option>
+                  <RotateCcw size={13} />
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+              <StepHeader number="01" title="Counselling" />
+              <Field label="Choose scope" chevron>
+                <select value={scope} onChange={event => { setScope(event.target.value); setPrediction(null); setBucketFilter(null); }} className={selectClassName}>
+                  <option value="ai">All India MCC</option>
+                  {INDIAN_STATES.map(state => (
+                    <option key={state} value={stateSlug(state)}>{state}</option>
+                  ))}
                 </select>
+              </Field>
+
+              {/* <ScopeSummary title={scopeTitle} subtitle={scopeSubtitle} loading={optionsLoading} /> */}
+
+              <StepHeader number="02" title="Your score" />
+              <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+                <ModeButton active={inputMode === 'marks'} onClick={() => { setInputMode('marks'); setRank(''); }}>Marks</ModeButton>
+                <ModeButton active={inputMode === 'rank'} onClick={() => { setInputMode('rank'); setMarks(''); }}>AIR Rank</ModeButton>
               </div>
 
-              <div className="mb-[14px]">
-                <label className="block mb-[6px] text-slate-500 text-[12px] font-[900]">College card limit</label>
+              {inputMode === 'marks' ? (
+                <Field label="NEET marks" hint="0 to 720">
+                  <input
+                    type="number"
+                    min="0"
+                    max="720"
+                    value={marks}
+                    onChange={event => setMarks(event.target.value)}
+                    placeholder="Example: 645"
+                    className={inputClassName}
+                  />
+                </Field>
+              ) : (
+                <Field label="All India rank" hint="AIR">
+                  <input
+                    type="number"
+                    min="1"
+                    value={rank}
+                    onChange={event => setRank(event.target.value)}
+                    placeholder="Example: 45000"
+                    className={inputClassName}
+                  />
+                </Field>
+              )}
+
+              <StepHeader number="03" title={scope === 'ai' ? 'All India filters' : 'State filters'} />
+              {optionsLoading ? (
+                <FilterSkeleton />
+              ) : (
+                <div>
+                  <SelectField label="Round" value={scope === 'ai' ? aiRound : stateRound} onChange={scope === 'ai' ? setAiRound : setStateRound} options={selectedOptions.rounds} />
+                  <SelectField label="Course" value={scope === 'ai' ? aiCourse : stateCourse} onChange={scope === 'ai' ? setAiCourse : setStateCourse} options={selectedOptions.courses} />
+                  <SelectField label="Candidate category" value={scope === 'ai' ? aiCategory : stateCategory} onChange={scope === 'ai' ? setAiCategory : setStateCategory} options={selectedOptions.categories} />
+                  <SelectField label="Quota" value={scope === 'ai' ? aiQuota : stateQuota} onChange={scope === 'ai' ? setAiQuota : setStateQuota} options={selectedOptions.quotas} />
+                  {scope !== 'ai' && (
+                    <SelectField label="Institute" value={stateInstitute} onChange={setStateInstitute} options={selectedOptions.institutes ?? []} />
+                  )}
+                </div>
+              )}
+
+              <StepHeader number="04" title="Result size" />
+              <Field label="Nearby evidence range" chevron>
+                <select value={scope === 'ai' ? aiRange : stateRange} onChange={event => scope === 'ai' ? setAiRange(event.target.value) : setStateRange(event.target.value)} className={selectClassName}>
+                  {RANGE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </Field>
+              <Field label="College card limit" hint="5 to 80">
                 <input
                   type="number"
                   min="5"
                   max="80"
-                  value={aiLimitInput}
-                  onChange={e => setAiLimitInput(e.target.value)}
-                  className="w-full h-[42px] rounded-[12px] border border-slate-300 bg-white text-slate-900 px-[12px] text-[14px] font-[750] outline-none transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:border-blue-600 focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)]"
+                  value={scope === 'ai' ? aiLimit : stateLimit}
+                  onChange={event => scope === 'ai' ? setAiLimit(event.target.value) : setStateLimit(event.target.value)}
+                  className={inputClassName}
                 />
-              </div>
+              </Field>
             </div>
-          </div>
 
-          <div className="p-[16px] border-t border-slate-200 bg-slate-50/90">
-            <button
-              onClick={predictColleges}
-              disabled={loading}
-              className="w-full border-0 h-[48px] rounded-[14px] bg-blue-600 text-white text-[14px] font-[950] cursor-pointer shadow-[0_10px_22px_rgba(37,99,235,0.23)] hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              ✨ Predict colleges →
-            </button>
-          </div>
-        </aside>
+            <div className="shrink-0 border-t border-border bg-muted px-5 py-4">
+              {error && (
+                <div className="mb-3 flex items-start gap-2 rounded-lg border border-error/20 bg-error-light px-3 py-2 text-xs font-medium text-error">
+                  <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={predictColleges}
+                disabled={!canPredict}
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-disabled disabled:text-foreground-subtle"
+              >
+                {predicting ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                {predicting ? 'Predicting...' : 'Predict colleges'}
+                {!predicting && <ArrowRight size={15} />}
+              </button>
+            </div>
+          </aside>
 
-        <section className="min-w-0">
-          <div className="space-y-4">{loading ? renderLoading() : !prediction ? renderWelcome() : renderResults()}</div>
+          <section className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface p-5 shadow-sm">
+            {!prediction && !predicting && <EmptyState inputMode={inputMode} scopeTitle={scopeTitle} />}
+            {!predicting && prediction && !prediction.data.length && <NoResults />}
+            {!predicting && prediction && prediction.data.length > 0 && (
+              <div className="flex h-full min-h-0 flex-col gap-4">
+                <div className="shrink-0 grid grid-cols-5 gap-3">
+                  <MetricButton label="All cards" value={counts.all} icon={BarChart3} active={!bucketFilter} onClick={() => setBucketFilter(null)} />
+                  <MetricButton label="Safe" value={counts.safe} icon={ShieldCheck} tone="safe" active={bucketFilter === 'safe'} onClick={() => setBucketFilter('safe')} />
+                  <MetricButton label="Target" value={counts.target} icon={Target} tone="target" active={bucketFilter === 'target'} onClick={() => setBucketFilter('target')} />
+                  <MetricButton label="Dream" value={counts.dream} icon={Sparkles} tone="dream" active={bucketFilter === 'dream'} onClick={() => setBucketFilter('dream')} />
+                  <div className="rounded-lg border border-border bg-muted p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle">User rank</p>
+                    <p className="mt-2 text-2xl font-bold tabular-nums text-foreground">{formatRank(summary.userRank)}</p>
+                  </div>
+                </div>
+
+                {/* <div className="shrink-0 flex items-center justify-between gap-4 rounded-lg border border-border bg-muted px-4 py-3">
+                  <div>
+                    <p className="text-sm font-bold text-foreground">{summary.title || `${scopeTitle} prediction`}</p>
+                    <p className="mt-1 text-xs text-foreground-muted">
+                      Showing {filteredResults.length} of {prediction.data.length} colleges
+                      {bucketFilter ? ` in ${bucketLabel(bucketFilter).toLowerCase()} bucket` : ''}.
+                    </p>
+                  </div>
+                  <div className="rounded-md bg-card px-3 py-2 text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle">Evidence range</p>
+                    <p className="mt-1 text-sm font-bold text-foreground">+/- {formatRank(summary.nearbyRange || summary.rankRange)}</p>
+                  </div>
+                </div> */}
+
+                <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+                  <div className="grid gap-3">
+                    {filteredResults.map((college, index) => (
+                      <CollegeCard key={`${college.name ?? 'college'}-${index}`} college={college} summary={summary} mode={prediction.mode} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {predicting && <ResultsLoadingOverlay />}
+          </section>
         </section>
       </main>
     </div>
   );
 }
 
-function SelectInput({
+const inputClassName = 'h-11 w-full rounded-md border border-border bg-input px-3 text-sm font-semibold text-foreground outline-none transition-colors placeholder:text-foreground-subtle focus:border-border-focus disabled:cursor-not-allowed disabled:bg-disabled';
+const selectClassName = `${inputClassName} appearance-none pr-9`;
+
+function StepHeader({ number, title }: { number: string; title: string }) {
+  return (
+    <div className="mb-3 mt-5 first:mt-0 flex items-center gap-2">
+      <span className="font-mono text-[10px] font-bold text-foreground-subtle">{number}</span>
+      <span className="h-px flex-1 bg-border" />
+      <span className="text-[11px] font-bold uppercase tracking-widest text-foreground">{title}</span>
+    </div>
+  );
+}
+
+function Field({ label, hint, chevron = false, children }: { label: string; hint?: string; chevron?: boolean; children: React.ReactNode }) {
+  return (
+    <label className="mb-4 block">
+      <span className="mb-1.5 flex items-center justify-between gap-2 text-xs font-bold text-foreground-muted">
+        <span>{label}</span>
+        {hint && <span className="font-medium text-foreground-subtle">{hint}</span>}
+      </span>
+      <span className="relative block">
+        {children}
+        {chevron && <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-foreground-subtle" />}
+      </span>
+    </label>
+  );
+}
+
+function SelectField({
   label,
   value,
   onChange,
@@ -552,153 +629,334 @@ function SelectInput({
 }: {
   label: string;
   value: string;
-  onChange: (val: string) => void;
-  options: any[];
+  onChange: (value: string) => void;
+  options: Array<Record<string, string>>;
 }) {
   return (
-    <div className="mb-[14px]">
-      <label className="block mb-[6px] text-slate-500 text-[12px] font-[900]">{label}</label>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="w-full h-[42px] rounded-[12px] border border-slate-300 bg-white text-slate-900 px-[12px] text-[14px] font-[750] outline-none transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:border-blue-600 focus:shadow-[0_0_0_4px_rgba(37,99,235,0.1)] appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20fill=%22none%22%20viewBox=%220%200%2024%2024%22%20stroke=%22%2364748b%22%3E%3Cpath%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%222.5%22%20d=%22M19%209l-7%207-7-7%22%3E%3C/path%3E%3C/svg%3E')] bg-no-repeat bg-[right_12px_center] bg-[length:14px] pr-[36px]"
-      >
+    <Field label={label} chevron>
+      <select value={value} onChange={event => onChange(event.target.value)} className={selectClassName}>
         <option value="">All {label}</option>
-        {options.map((opt: any, idx: number) => {
-          let displayValue = '';
-          let optionValue = '';
-
-          if (opt.round_no && opt.label) {
-            // For rounds
-            optionValue = opt.round_no;
-            displayValue = opt.label;
-          } else {
-            // For courses, categories, quotas, institutes
-            const key = Object.keys(opt).find(k => k.includes('code') || k.includes('name'));
-            optionValue = key ? opt[key] : '';
-            displayValue = optionValue;
-          }
-
-          return (
-            <option key={idx} value={optionValue}>
-              {displayValue}
-            </option>
-          );
+        {options.map((option, index) => {
+          const value = optionValue(option);
+          return <option key={`${value}-${index}`} value={value}>{optionLabel(option)}</option>;
         })}
       </select>
+    </Field>
+  );
+}
+
+function ModeButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`h-9 rounded-md text-xs font-bold transition-colors ${
+        active ? 'bg-surface text-foreground shadow-sm' : 'text-foreground-muted hover:text-foreground'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ScopeSummary({ title, subtitle, loading }: { title: string; subtitle: string; loading: boolean }) {
+  return (
+    <div className="mb-5 rounded-lg border border-border bg-muted p-3">
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <GraduationCap size={17} />}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-foreground">{title}</p>
+          <p className="mt-1 text-xs leading-relaxed text-foreground-muted">{subtitle}</p>
+        </div>
+      </div>
     </div>
   );
 }
 
-function CollegeCard({ college, summary, mode }: { college: any; summary: any; mode: string }) {
-  const initials = (college.shortName || college.name || 'C')
-    .split(' ')
-    .filter((w: string) => w)
-    .map((w: string) => w[0])
-    .join('')
-    .slice(0, 3)
-    .toUpperCase();
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-[84px] rounded-lg border border-border bg-muted px-3 py-2">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle">{label}</p>
+      <p className="mt-1 text-sm font-bold text-foreground">{value}</p>
+    </div>
+  );
+}
 
-  const name = college.name || 'Unknown College';
-  const course = college.courseName || college.course || '-';
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8080';
+function Badge({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-bold text-foreground-muted">
+      <Icon size={12} className="text-primary" />
+      {children}
+    </span>
+  );
+}
 
-  let image = college.image || 'linear-gradient(135deg, #2563eb 0%, #172554 100%)';
-  // If image contains /data, extract path and prepend base URL
-  if (college.image && college.image.includes('/data')) {
-    const match = college.image.match(/url\('([^']+)'\)/);
-    if (match && match[1]) {
-      image = `url('${baseUrl}${match[1]}')`;
-    } else if (college.image.startsWith('/data')) {
-      image = `url('${baseUrl}${college.image}')`;
-    }
-  }
+function FilterSkeleton() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 4 }, (_, index) => (
+        <div key={index}>
+          <div className="mb-1.5 h-3 w-24 animate-pulse rounded-sm bg-skeleton" />
+          <div className="h-11 animate-pulse rounded-md bg-skeleton" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  let logoUrl = college.logoUrl;
-  // If logoUrl is relative, prepend base URL
-  if (logoUrl && logoUrl.startsWith('/data')) {
-    logoUrl = `${baseUrl}${logoUrl}`;
-  }
+function ResultsLoadingOverlay() {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface/90 backdrop-blur-sm">
+      <div className="w-[360px] rounded-xl border border-border bg-modal p-6 text-center shadow-lg">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-primary-light text-primary">
+          <Loader2 size={26} className="animate-spin" />
+        </div>
+        <h2 className="mt-4 text-lg font-bold text-foreground">Building your college map</h2>
+        <p className="mt-2 text-sm leading-relaxed text-foreground-muted">
+          Matching your rank with cutoff evidence and counselling filters.
+        </p>
+      </div>
+    </div>
+  );
+}
 
-  const logoColor = college.logoColor || '#2563eb';
+function EmptyState({ inputMode, scopeTitle }: { inputMode: InputMode; scopeTitle: string }) {
+  return (
+    <div className="flex min-h-full items-center justify-center rounded-lg border border-dashed border-border bg-muted p-10 text-center">
+      <div className="max-w-md">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-primary-light text-primary">
+          <Search size={28} />
+        </div>
+        <h2 className="mt-5 text-xl font-bold text-foreground">Ready for a prediction</h2>
+        <p className="mt-2 text-sm leading-relaxed text-foreground-muted">
+          Enter your {inputMode === 'marks' ? 'marks' : 'AIR rank'} and run the predictor for {scopeTitle}. Results will appear here with clear safe, target, and dream buckets.
+        </p>
+        <div className="mt-5 grid grid-cols-3 gap-2 text-left">
+          <HintCard icon={Filter} title="Filters" text="Optional" />
+          <HintCard icon={TrendingUp} title="Range" text="Adjustable" />
+          <HintCard icon={Building2} title="Output" text="College cards" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  const bucketBorders: Record<string, string> = {
-    safe: 'border-emerald-400 shadow-[0_10px_28px_rgba(16,185,129,0.08)]',
-    target: 'border-amber-400 shadow-[0_10px_28px_rgba(245,158,11,0.08)]',
-    dream: 'border-violet-400 shadow-[0_10px_28px_rgba(139,92,246,0.08)]',
-  };
-  const activeBorder = (college?.bucket && bucketBorders[college.bucket]) || 'border-slate-200 shadow-[0_10px_28px_rgba(15,23,42,0.06)]';
+function HintCard({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-surface p-3">
+      <Icon size={16} className="text-primary" />
+      <p className="mt-2 text-xs font-bold text-foreground">{title}</p>
+      <p className="mt-0.5 text-[11px] text-foreground-subtle">{text}</p>
+    </div>
+  );
+}
+
+function ResultsSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-5 gap-3">
+        {Array.from({ length: 5 }, (_, index) => <div key={index} className="h-24 animate-pulse rounded-lg bg-skeleton" />)}
+      </div>
+      {Array.from({ length: 4 }, (_, index) => (
+        <div key={index} className="h-44 animate-pulse rounded-xl bg-skeleton" />
+      ))}
+    </div>
+  );
+}
+
+function NoResults() {
+  return (
+    <div className="flex min-h-full items-center justify-center rounded-lg border border-dashed border-border bg-muted p-10 text-center">
+      <div className="max-w-sm">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-warning-light text-warning">
+          <CircleOff size={24} />
+        </div>
+        <h2 className="mt-4 text-lg font-bold text-foreground">No colleges found</h2>
+        <p className="mt-2 text-sm leading-relaxed text-foreground-muted">
+          Increase the evidence range, remove one or two filters, or switch from institute-specific search to all institutes.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function MetricButton({
+  label,
+  value,
+  icon: Icon,
+  tone,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  icon: LucideIcon;
+  tone?: Bucket;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const meta = tone ? BUCKET_META[tone] : null;
 
   return (
-    <article className={`bg-white/96 border-2 ${activeBorder} rounded-[24px] overflow-hidden transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[0_14px_32px_rgba(15,23,42,0.1)]`}>
-      <div className="flex max-[1100px]:flex-col">
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg border p-4 text-left transition-all hover:-translate-y-0.5 ${
+        active ? 'border-primary bg-primary-light shadow-sm' : 'border-border bg-muted hover:bg-hover'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle">{label}</p>
+        <Icon size={16} className={meta?.text ?? 'text-primary'} />
+      </div>
+      <p className={`mt-2 text-2xl font-bold tabular-nums ${meta?.text ?? 'text-foreground'}`}>{value}</p>
+    </button>
+  );
+}
+
+function CollegeCard({ college, summary, mode }: { college: PredictionCollege; summary: PredictionSummary; mode: string }) {
+  const [pinnedOpen, setPinnedOpen] = useState(false);
+  const initials = getCollegeInitials(college);
+  const name = college.name || 'Unknown College';
+  const course = college.courseName || college.course || '-';
+  const bucket = college.bucket === 'safe' || college.bucket === 'target' || college.bucket === 'dream' ? college.bucket : null;
+  const meta = bucket ? BUCKET_META[bucket] : null;
+  const BucketIcon = meta?.icon ?? CheckCircle2;
+  const baseUrl = apiBaseUrl().replace('/api', '');
+  const image = normalizeAssetUrl(college.image) || 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))';
+  const logoUrl = college.logoUrl?.startsWith('/data') ? `${baseUrl}${college.logoUrl}` : college.logoUrl;
+  const logoColor = college.logoColor || 'var(--color-primary)';
+  const userRank = college.inputRank ?? summary.userRank;
+  const evidence = college.similarCandidates?.slice(0, 3) ?? [];
+
+  return (
+    <article
+      onClick={() => setPinnedOpen(open => !open)}
+      className={`group cursor-pointer rounded-xl border bg-card p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${meta?.border ?? 'border-border'}`}
+    >
+      <div className="grid grid-cols-[148px_minmax(0,1fr)] gap-3">
         <div
-          className="w-[220px] min-h-[275px] max-[1100px]:w-full max-[1100px]:min-h-[165px] text-white shrink-0 relative overflow-hidden bg-cover bg-center cover-pattern"
-          style={{ background: image }}
+          className="relative h-full min-h-[126px] overflow-hidden rounded-lg bg-cover bg-center"
+          style={{ backgroundImage: image }}
         >
-          <div className="absolute inset-0 flex items-center justify-center text-[105px] font-[950] text-white/10 select-none">
-            {escapeHtml(initials[0] || 'C')}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/70" />
+          <div className="absolute left-2 top-2">
+            <span className={`inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold shadow-sm ${meta?.text ?? 'text-foreground'}`}>
+              <BucketIcon size={11} />
+              {bucketLabel(college.bucket)}
+            </span>
           </div>
-
-          <div className="absolute top-[13px] right-[13px] bg-white/95 rounded-full px-[11px] py-[6px] text-[12px] font-[950]" style={{ color: logoColor }}>
-            ● {bucketLabel(college.bucket)}
-          </div>
-
-          <div className="absolute bottom-[14px] left-[14px] right-[14px] flex items-end gap-[10px]">
-            <div
-              className="w-[46px] h-[46px] rounded-[14px] bg-white flex items-center justify-center font-[950] shadow-[0_8px_18px_rgba(0,0,0,0.18)] overflow-hidden"
-              style={{ color: logoColor }}
-            >
-              {logoUrl ? <img src={logoUrl} alt="logo" className="w-full h-full object-contain p-[4px]" /> : escapeHtml(initials)}
+          <div className="absolute bottom-2 left-2 right-2 flex items-end gap-2">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/70 bg-white text-xs font-bold shadow-md" style={{ color: logoColor }}>
+              {logoUrl ? <img src={logoUrl} alt="" className="h-full w-full object-contain p-1.5" /> : initials}
             </div>
-            <div>
-              <p className="m-0 text-[13px] font-[950] drop-shadow-md text-white">{escapeHtml(college.shortName || name)}</p>
-              <small className="text-white/80">{escapeHtml(college.courseCode || college.instituteCode || college.collegeCode || '-')}</small>
+            <div className="min-w-0 text-white">
+              <p className="truncate text-xs font-bold drop-shadow">{college.shortName || initials}</p>
+              <p className="mt-0.5 inline-flex rounded-md bg-black/30 px-1.5 py-0.5 text-[10px] font-bold">
+                {college.courseCode || course}
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="p-[18px] flex-1 min-w-0">
-          <h3 className="m-0 text-[18px] tracking-[-.02em] text-slate-900 font-bold">{escapeHtml(name)}</h3>
+        <div className="min-w-0">
+          <div>
+            <div className="min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="truncate text-base font-bold text-foreground">{name}</h3>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-foreground-muted">
+                    <span>{college.shortName || 'Medical College'}</span>
+                    <span className="text-border-strong">|</span>
+                    <span>{course}</span>
+                    <span className="text-border-strong">|</span>
+                    <span>Rounds {college.rounds || '-'}</span>
+                    {mode !== 'ai' && (
+                      <>
+                        <span className="text-border-strong">|</span>
+                        <span className="inline-flex items-center gap-1"><MapPin size={11} /> {college.state || 'State'}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-1 text-[10px] font-bold text-foreground-subtle">
+                  <ChevronsUpDown size={12} />
+                  {pinnedOpen ? 'Hide' : 'Info'}
+                </div>
+              </div>
 
-          <div className="mt-[7px] flex flex-wrap gap-[8px] text-slate-500 text-[12px] font-[750]">
-            <span>🎓 {escapeHtml(course)}</span>
-            <span>·</span>
-            <span>Rounds: {escapeHtml(college.rounds || '-')}</span>
-            {mode !== 'ai' && <span>·</span>}
-            {mode !== 'ai' && <span>📍 {escapeHtml(college.state || 'State')}</span>}
-          </div>
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                <RankBox label="Your rank" value={formatRank(userRank)} strong />
+                <RankBox label="Opening" value={formatRank(college.openingRank)} />
+                <RankBox label="Closing" value={formatRank(college.closingRank)} />
+                <RankBox label="Gap" value={formatRank(college.rankGap)} tone={meta?.text} />
+              </div>
 
-          <div className="flex flex-wrap gap-[8px] mt-[12px]">
-            <span className="px-[9px] py-[6px] rounded-full text-[11px] font-[950] bg-blue-50 text-blue-700">Quota: {escapeHtml(college.quotaCodes || '-')}</span>
-            <span className="px-[9px] py-[6px] rounded-full text-[11px] font-[950] bg-emerald-50 text-emerald-700">
-              Candidate: {escapeHtml(college.candidateCategoryCodes || '-')}
-            </span>
-            <span className="px-[9px] py-[6px] rounded-full text-[11px] font-[950] bg-purple-50 text-purple-700">
-              Allotted: {escapeHtml(college.allottedCategoryCodes || '-')}
-            </span>
-          </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <InfoPill label="Quota" value={college.quotaCodes || '-'} />
+                <InfoPill label="Candidate" value={college.candidateCategoryCodes || '-'} />
+                <InfoPill label="Allotted" value={college.allottedCategoryCodes || '-'} />
+              </div>
 
-          <div className="grid grid-cols-4 gap-[10px] my-[16px] max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1">
-            <div className="border border-slate-200 rounded-[14px] p-[11px] bg-slate-50 min-w-0">
-              <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Your rank</span>
-              <strong className="block mt-[4px] text-[14px] break-words">{formatRank(summary.userRank)}</strong>
+              <p className="mt-2 text-[10px] font-semibold text-foreground-subtle">
+                Hover or click card to show similar-candidate evidence.
+              </p>
             </div>
-            <div className="border border-slate-200 rounded-[14px] p-[11px] bg-slate-50 min-w-0">
-              <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Opening rank</span>
-              <strong className="block mt-[4px] text-[14px] break-words">{formatRank(college.openingRank)}</strong>
-            </div>
-            <div className="border border-slate-200 rounded-[14px] p-[11px] bg-slate-50 min-w-0">
-              <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Closing rank</span>
-              <strong className="block mt-[4px] text-[14px] break-words">{formatRank(college.closingRank)}</strong>
-            </div>
-            <div className="border border-slate-200 rounded-[14px] p-[11px] bg-slate-50 min-w-0">
-              <span className="block text-[10px] text-slate-500 uppercase tracking-[.08em] font-[950]">Seats</span>
-              <strong className="block mt-[4px] text-[14px] break-words">{escapeHtml(college.seats || '-')}</strong>
+
+            <div
+              className={`mt-0 overflow-hidden rounded-lg border border-border bg-muted transition-all duration-300 ${
+                pinnedOpen ? 'mt-3 max-h-52 opacity-100' : 'max-h-0 opacity-0 group-hover:mt-3 group-hover:max-h-52 group-hover:opacity-100'
+              }`}
+            >
+              <div className="p-2.5">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle">Similar evidence</p>
+                  <span className="rounded-full bg-card px-2 py-0.5 text-[10px] font-bold text-foreground-muted">
+                    {college.similarCandidates?.length ?? 0} rows
+                  </span>
+                </div>
+                {evidence.length ? (
+                  <div className="space-y-1.5">
+                    {evidence.map((candidate, index) => (
+                      <div key={index} className="grid grid-cols-[72px_48px_minmax(0,1fr)_62px] items-center gap-2 rounded-md bg-card px-2 py-1.5 text-[11px]">
+                        <span className="font-mono font-bold text-foreground">{formatRank(candidate.rank_num)}</span>
+                        <span className="font-semibold text-foreground-muted">R{candidate.round_no ?? '-'}</span>
+                        <span className="truncate font-semibold text-foreground-muted">
+                          {candidate.candidate_category_code || '-'} to {candidate.allotted_category_code || '-'}
+                        </span>
+                        <span className="text-right font-mono font-bold text-primary">{formatGap(candidate.rankDist)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex h-[62px] items-center justify-center rounded-md border border-dashed border-border bg-card text-xs font-semibold text-foreground-subtle">
+                    No similar rows
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
     </article>
+  );
+}
+
+function InfoPill({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="rounded-full bg-muted px-3 py-1 text-[11px] font-bold text-foreground-muted">
+      {label}: <span className="text-foreground">{value}</span>
+    </span>
+  );
+}
+
+function RankBox({ label, value, strong = false, tone }: { label: string; value: string; strong?: boolean; tone?: string }) {
+  return (
+    <div className="rounded-md border border-border bg-muted px-2.5 py-2">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle">{label}</p>
+      <p className={`mt-1 text-sm font-bold ${tone ?? (strong ? 'text-primary' : 'text-foreground')}`}>{value}</p>
+    </div>
   );
 }
