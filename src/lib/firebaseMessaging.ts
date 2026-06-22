@@ -7,6 +7,8 @@ const FCM_TOKEN_STORAGE_KEY = 'neetell_fcm_token';
 const FCM_DEVICE_ID_STORAGE_KEY = 'neetell_fcm_device_id';
 const FCM_ENABLED_STORAGE_KEY = 'neetell_fcm_enabled';
 const FCM_PROMPT_SNOOZE_UNTIL_STORAGE_KEY = 'neetell_fcm_prompt_snooze_until';
+const FCM_TOKEN_REFRESHED_AT_STORAGE_KEY = 'neetell_fcm_token_refreshed_at';
+const FCM_TOKEN_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const FCM_SW_PATH = '/firebase-messaging-sw.js';
 
 export type ForegroundMessageHandler = (payload: MessagePayload) => void;
@@ -69,6 +71,24 @@ export function getStoredFirebaseMessagingToken() {
 export function clearStoredFirebaseMessagingToken() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(FCM_TOKEN_STORAGE_KEY);
+  localStorage.removeItem(FCM_TOKEN_REFRESHED_AT_STORAGE_KEY);
+}
+
+export function shouldRefreshFirebaseMessagingToken() {
+  if (typeof window === 'undefined') return false;
+
+  const raw = localStorage.getItem(FCM_TOKEN_REFRESHED_AT_STORAGE_KEY);
+  if (!raw) return true;
+
+  const refreshedAt = Number(raw);
+  if (!Number.isFinite(refreshedAt)) return true;
+
+  return Date.now() - refreshedAt >= FCM_TOKEN_REFRESH_INTERVAL_MS;
+}
+
+export function markFirebaseMessagingTokenRefreshed() {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(FCM_TOKEN_REFRESHED_AT_STORAGE_KEY, String(Date.now()));
 }
 
 export function getOrCreateFcmDeviceId() {

@@ -16,7 +16,7 @@ export default function DesktopCounsellingDashboard() {
   const [inView, setInView] = useState(false);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const activeIndex = Math.max(0, STEPS.findIndex(step => step.active));
-  const mobileProgress = `${((activeIndex + 0.5) / STEPS.length) * 100}%`;
+  const mobileProgress = `${(activeIndex / Math.max(1, STEPS.length - 1)) * 100}%`;
 
   useEffect(() => {
     const node = timelineRef.current;
@@ -57,9 +57,9 @@ export default function DesktopCounsellingDashboard() {
           {/* Mobile Timeline */}
           <div className="sm:hidden">
             <div className="relative space-y-2">
-              <div className="absolute left-[14px] top-4 bottom-4 w-px bg-border" />
+              <div className="absolute left-[24px] top-[26px] bottom-[26px] w-px bg-border" />
               <div
-                className="absolute left-[14px] top-4 w-px rounded-full bg-primary transition-all duration-[2200ms] ease-out"
+                className="absolute left-[24px] top-[26px] w-px rounded-full bg-primary transition-all duration-[2200ms] ease-out"
                 style={{ height: inView ? mobileProgress : 0 }}
               />
               {STEPS.map((step, idx) => {

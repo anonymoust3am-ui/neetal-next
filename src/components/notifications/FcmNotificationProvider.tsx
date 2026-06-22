@@ -17,10 +17,12 @@ import {
   getWebFcmDeviceMetadata,
   getStoredFirebaseMessagingToken,
   isFcmPermissionPromptSnoozed,
+  markFirebaseMessagingTokenRefreshed,
   onFirebaseForegroundMessage,
   registerFirebaseMessagingServiceWorker,
   requestFirebaseMessagingToken,
   setFcmEnabledPreference,
+  shouldRefreshFirebaseMessagingToken,
   snoozeFcmPermissionPrompt,
 } from '@/lib/firebaseMessaging';
 import { useAuth } from '@/contexts/AuthContext';
@@ -237,19 +239,23 @@ export function FcmNotificationProvider({ children }: { children: React.ReactNod
   }, [toast]);
 
   useEffect(() => {
-    if (!user || !firebaseUser || permission !== 'granted' || notificationsEnabled === false) return;
+    if (!user || !firebaseUser || permission !== 'granted' || notificationsEnabled !== true) return;
 
     let cancelled = false;
-    let unsubscribe: (() => void) | undefined;
+
+    if (!shouldRefreshFirebaseMessagingToken()) return;
 
     requestFirebaseMessagingToken()
       .then(async fcmToken => {
         if (fcmToken && !cancelled) {
           const authToken = await firebaseUser.getIdToken();
+          if (cancelled) return;
           await registerFcmToken(authToken, {
             token: fcmToken,
             ...getWebFcmDeviceMetadata(),
           });
+          if (cancelled) return;
+          markFirebaseMessagingTokenRefreshed();
           setFcmEnabledPreference(true);
           setNotificationsEnabled(true);
         }
@@ -257,6 +263,17 @@ export function FcmNotificationProvider({ children }: { children: React.ReactNod
       .catch(error => {
         console.warn('Could not initialize or register Firebase Cloud Messaging.', error);
       });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [firebaseUser, notificationsEnabled, permission, user]);
+
+  useEffect(() => {
+    if (!user || permission !== 'granted' || notificationsEnabled !== true) return;
+
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
 
     onFirebaseForegroundMessage(payload => {
       if (cancelled) return;
@@ -269,7 +286,7 @@ export function FcmNotificationProvider({ children }: { children: React.ReactNod
       cancelled = true;
       unsubscribe?.();
     };
-  }, [firebaseUser, notificationsEnabled, permission, user]);
+  }, [notificationsEnabled, permission, user]);
 
   const handleEnable = async () => {
     setBusy(true);
@@ -285,6 +302,7 @@ export function FcmNotificationProvider({ children }: { children: React.ReactNod
             token,
             ...getWebFcmDeviceMetadata(),
           });
+          markFirebaseMessagingTokenRefreshed();
           setFcmEnabledPreference(true);
           setNotificationsEnabled(true);
           clearFcmPermissionPromptSnooze();

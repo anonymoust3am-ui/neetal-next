@@ -23,6 +23,7 @@ import {
   getStoredFcmDeviceId,
   getStoredFirebaseMessagingToken,
   getWebFcmDeviceMetadata,
+  markFirebaseMessagingTokenRefreshed,
   requestFirebaseMessagingToken,
   setFcmEnabledPreference,
 } from '@/lib/firebaseMessaging';
@@ -233,6 +234,7 @@ export default function ProfilePage() {
         token: fcmToken,
         ...getWebFcmDeviceMetadata(),
       });
+      markFirebaseMessagingTokenRefreshed();
       setBrowserDeviceId(getStoredFcmDeviceId());
       setFcmEnabledPreference(true);
       clearFcmPermissionPromptSnooze();
@@ -775,12 +777,12 @@ export default function ProfilePage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-border bg-card p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-foreground-subtle">Device tracking</p>
-                  <p className="mt-1 text-sm font-semibold text-foreground">Fixed browser device ID</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">Your browser ID</p>
                   <p className="mt-1 break-all font-mono text-[11px] text-foreground-muted">
                     {browserDeviceId ?? 'Not available'}
                   </p>
                 </div>
-                <div className="rounded-xl border border-border bg-card p-4">
+                {/* <div className="rounded-xl border border-border bg-card p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-foreground-subtle">FCM token</p>
                   <p className="mt-1 text-sm font-semibold text-foreground">
                     {getStoredFirebaseMessagingToken() ? 'Stored for this browser' : 'Not registered yet'}
@@ -788,7 +790,7 @@ export default function ProfilePage() {
                   <p className="mt-1 text-xs leading-relaxed text-foreground-muted">
                     Tokens are registered with your account when notifications are enabled and removed when disabled.
                   </p>
-                </div>
+                </div> */}
               </div>
 
               {notificationPermission === 'denied' && (
