@@ -35,6 +35,7 @@ export type AiHistoryDetail = AiHistoryListItem & {
 export type AiChatResponse = {
   success: boolean;
   chatHistoryId?: string;
+  aiCredits?: number;
   type?: 'prediction_answer' | 'general_counselling_answer' | string;
   intent?: string;
   extracted?: Record<string, unknown>;

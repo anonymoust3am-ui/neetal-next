@@ -55,7 +55,7 @@ export const bottomNavItems: BottomNavItem[] = [
     key: 'allotment',
     label: 'Allotment',
     icon: LayoutGrid,
-    href: '/dashboard/resources',
+    href: '/dashboard/allotment',
   },
   {
     key: 'institutes',

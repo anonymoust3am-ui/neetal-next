@@ -197,15 +197,20 @@ export default function AIPage() {
   const [attachedFile, setAttachedFile] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<AiUiMessage | null>(null);
   const [likedMessages, setLikedMessages] = useState<Record<string, boolean>>({});
+  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const hasUserMessages = messages.some(message => message.role === 'user');
   const activeHistory = histories.find(history => history.id === activeChatHistoryId) ?? null;
   const chatTitle = titleFromMessages(messages, activeHistory);
-  const creditUsed = user?.aiCredits ?? 0;
+  const creditUsed = remainingCredits ?? user?.aiCredits ?? 0;
   const creditLimit = user?.aiCreditLimit ?? 0;
   const aiEnabled = user?.isAiEnabled === true;
+
+  useEffect(() => {
+    setRemainingCredits(user?.aiCredits ?? null);
+  }, [user?.aiCredits]);
 
   useEffect(() => {
     const media = window.matchMedia('(min-width: 1024px)');
@@ -362,6 +367,9 @@ export default function AIPage() {
         message: `${replyPrefix}${text}${attachedFile ? `\n\nAttached file noted: ${attachedFile}` : ''}`,
         chatHistoryId: activeChatHistoryId ?? undefined,
       });
+      if (typeof data.aiCredits === 'number') {
+        setRemainingCredits(data.aiCredits);
+      }
 
       setMessages(prev => [
         ...prev,

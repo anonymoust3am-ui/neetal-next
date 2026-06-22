@@ -76,6 +76,7 @@ export function MobileAiChat() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<AiUiMessage | null>(null);
   const [attachedFile, setAttachedFile] = useState<string | null>(null);
+  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -83,9 +84,13 @@ export function MobileAiChat() {
   const userName = useMemo(() => {
     return user?.name?.split(' ')[0] || user?.phone || 'You';
   }, [user]);
-  const creditUsed = user?.aiCredits ?? 0;
+  const creditUsed = remainingCredits ?? user?.aiCredits ?? 0;
   const creditLimit = user?.aiCreditLimit ?? 0;
   const aiEnabled = user?.isAiEnabled === true;
+
+  useEffect(() => {
+    setRemainingCredits(user?.aiCredits ?? null);
+  }, [user?.aiCredits]);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 1023px)');
@@ -242,6 +247,9 @@ export function MobileAiChat() {
         message: `${replyPrefix}${text}${fileLine}`,
         chatHistoryId: activeThreadId || undefined,
       });
+      if (typeof data.aiCredits === 'number') {
+        setRemainingCredits(data.aiCredits);
+      }
 
       setMessages(current => [
         ...current,
