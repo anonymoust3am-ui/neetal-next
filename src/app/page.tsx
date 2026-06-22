@@ -136,7 +136,7 @@ export default function Home() {
         <PricingPlans />
       </section>
       <AppPreview />
-      <FAQSection />
+      {/* <FAQSection /> */}
       <Footer />
       <LandingFloatingActions heroRef={heroRef} />
     </div>
