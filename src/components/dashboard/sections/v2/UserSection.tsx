@@ -1,18 +1,45 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  CheckCircle2, Circle, Stethoscope, ArrowUpRight, UserCircle,
+  Building2, CheckCircle2, Circle, Stethoscope, ArrowUpRight, UserCircle,
 } from 'lucide-react';
 import { useCountUp } from '@/hooks/useCountUp';
 import { useAuth } from '@/contexts/AuthContext';
 import { getChoiceLists } from '@/lib/api';
 
+const TOP_PICKS = [
+  { name: 'AIIMS Bhopal', location: 'Madhya Pradesh', tag: 'Safe', tagCls: 'bg-success-light text-success', rank: 890 },
+  { name: 'JIPMER Puducherry', location: 'Puducherry', tag: 'Target', tagCls: 'bg-primary-light text-primary', rank: 512 },
+  { name: 'Maulana Azad Medical College', location: 'Delhi', tag: 'Target', tagCls: 'bg-primary-light text-primary', rank: 1240 },
+  { name: 'Kasturba Medical College', location: 'Manipal', tag: 'Dream', tagCls: 'bg-secondary-light text-secondary', rank: 290 },
+];
+
 export function UserSection() {
   const { user, firebaseUser } = useAuth();
-  const rank = useCountUp(2341, 1200);
+  const sectionRef = useRef<HTMLDivElement | null>(null);
+  const [sectionInView, setSectionInView] = useState(false);
+  const rank = useCountUp(2341, 1600, sectionInView);
   const [choiceListCount, setChoiceListCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const node = sectionRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setSectionInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.35 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!firebaseUser) return;
@@ -35,7 +62,7 @@ export function UserSection() {
   const categoryBadge  = user?.category ? `${user.category} · AIQ` : 'AIQ';
 
   return (
-    <div className="space-y-4 pt-8">
+    <div ref={sectionRef} className="space-y-4 pt-8">
       {!user?.isProfileComplete && (
         <div className="hidden sm:flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-primary/10 border border-primary/30">
           <div className="flex items-center gap-3 min-w-0">
@@ -132,7 +159,7 @@ export function UserSection() {
               <div className="h-2 overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-primary to-secondary transition-all duration-700"
-                  style={{ width: `${progressPct}%` }}
+                  style={{ width: sectionInView ? `${progressPct}%` : 0 }}
                 />
               </div>
               <div className="mt-3 grid grid-cols-4 gap-1.5">
@@ -174,11 +201,47 @@ export function UserSection() {
                 Predict <ArrowUpRight size={12} />
               </Link>
             </div>
+
+            <div className="mt-3 rounded-2xl border border-border bg-background/70 p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Building2 size={15} className="text-primary" />
+                  <p className="text-xs font-bold text-foreground">Top Picks for You</p>
+                </div>
+                <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-bold text-primary">
+                  {TOP_PICKS.length} colleges
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {TOP_PICKS.slice(0, 3).map((college, index) => (
+                  <div
+                    key={college.name}
+                    className={`flex items-center gap-2 rounded-xl border border-border bg-surface px-2.5 py-2 transition-all duration-700 ${
+                      sectionInView ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+                    }`}
+                    style={{ transitionDelay: sectionInView ? `${index * 90}ms` : '0ms' }}
+                  >
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary-light text-[10px] font-black text-primary">
+                      {index + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[11px] font-bold text-foreground">{college.name}</p>
+                      <p className="text-[9px] font-medium text-foreground-subtle">
+                        {college.location} · Closing rank {college.rank.toLocaleString()}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${college.tagCls}`}>
+                      {college.tag}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-    <div className="hidden sm:block w-full">
+    <div className="hidden sm:grid w-full grid-cols-[minmax(0,1fr)_320px] gap-4 items-stretch">
 
       {/* LEFT — greeting + rank + journey */}
       <div className="relative bg-surface border border-border rounded-2xl p-6 overflow-hidden shadow-sm">
@@ -226,7 +289,7 @@ export function UserSection() {
             <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-primary to-secondary transition-all duration-700"
-                style={{ width: `${progressPct}%` }}
+                style={{ width: sectionInView ? `${progressPct}%` : 0 }}
               />
             </div>
             <div className="grid grid-cols-4 gap-1.5 mt-1">
@@ -257,27 +320,43 @@ export function UserSection() {
         </div>
       </div>
 
-      {/* RIGHT — top picks (dummy) */}
-      {/* <div className="flex flex-col gap-3">
-        <div className="bg-surface border border-border rounded-2xl p-4 shadow-sm">
+      {/* RIGHT - top picks */}
+      <div className="flex flex-col gap-3">
+        <div className="h-full bg-surface border border-border rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-foreground">Top Picks for You</h2>
-            <Link href="/dashboard/recommendations" className="text-xs text-primary font-semibold">View all</Link>
+            <div className="flex items-center gap-2">
+              <Building2 size={16} className="text-primary" />
+              <h2 className="text-sm font-bold text-foreground">Top Picks for You</h2>
+            </div>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary-light text-primary">
+              {TOP_PICKS.length}
+            </span>
           </div>
           {TOP_PICKS.map((c, i) => (
-            <div key={i} className="flex items-center gap-2.5 py-2.5 border-b border-border last:border-0">
+            <div
+              key={i}
+              className={`flex items-center gap-2.5 py-2.5 border-b border-border last:border-0 transition-all duration-700 ${
+                sectionInView ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+              }`}
+              style={{ transitionDelay: sectionInView ? `${i * 90}ms` : '0ms' }}
+            >
               <div className="w-6 h-6 rounded-lg bg-primary-light flex items-center justify-center text-[10px] font-black text-primary shrink-0">
                 {i + 1}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-foreground truncate">{c.name}</p>
-                <p className="text-[10px] text-foreground-subtle">Closing rank {c.rank.toLocaleString()}</p>
+                <p className="text-[10px] text-foreground-subtle">
+                  {c.location} · Closing rank {c.rank.toLocaleString()}
+                </p>
               </div>
               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${c.tagCls}`}>{c.tag}</span>
             </div>
           ))}
+          <Link href="/dashboard/colleges" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+            Explore colleges <ArrowUpRight size={11} />
+          </Link>
         </div>
-      </div> */}
+      </div>
     </div>
     </div>
   );

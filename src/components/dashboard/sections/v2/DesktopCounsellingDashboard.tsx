@@ -1,4 +1,7 @@
-import { CheckCircle2, Circle } from 'lucide-react';
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { CheckCircle2, ChevronDown, Circle } from 'lucide-react';
 
 const STEPS = [
   { done: true,  active: false, label: 'Round 1 Registration',  date: 'Mar 10 – Mar 18', sub: 'Verification & payment completed'       },
@@ -9,12 +12,36 @@ const STEPS = [
 ];
 
 export default function DesktopCounsellingDashboard() {
+  const [expandedStep, setExpandedStep] = useState<number | null>(null);
+  const [inView, setInView] = useState(false);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
+  const activeIndex = Math.max(0, STEPS.findIndex(step => step.active));
+  const mobileProgress = `${((activeIndex + 0.5) / STEPS.length) * 100}%`;
+
+  useEffect(() => {
+    const node = timelineRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.45 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="min-h-auto bg-background pb-8">
       
       {/* Main Content Area */}
       <main className="max-w-[1500px] mx-auto pt-8">
-        <div className="bg-surface border border-border rounded-2xl p-4 sm:p-8 shadow-sm overflow-hidden">
+        <div ref={timelineRef} className="bg-surface border border-border rounded-2xl p-4 sm:p-8 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between gap-3 mb-5 sm:mb-10">
             <div>
               <p className="text-[9px] font-bold uppercase tracking-wider text-primary sm:hidden">
@@ -31,16 +58,21 @@ export default function DesktopCounsellingDashboard() {
           <div className="sm:hidden">
             <div className="relative space-y-2">
               <div className="absolute left-[14px] top-4 bottom-4 w-px bg-border" />
+              <div
+                className="absolute left-[14px] top-4 w-px rounded-full bg-primary transition-all duration-[2200ms] ease-out"
+                style={{ height: inView ? mobileProgress : 0 }}
+              />
               {STEPS.map((step, idx) => {
-                const status = step.done ? 'Done' : step.active ? 'Now' : 'Next';
-                const shortLabel = step.label
-                  .replace('Registration', 'Reg.')
-                  .replace('Allotment', 'Allot.')
-                  .replace('Stray Vacancy', 'Stray');
+                const expanded = expandedStep === idx;
+                const status = step.done ? 'Completed' : step.active ? 'Active now' : 'Upcoming';
                 return (
-                  <div
+                  <button
                     key={idx}
-                    className={`relative flex gap-2.5 rounded-xl border px-2.5 py-2.5 transition-colors ${
+                    type="button"
+                    onClick={() => setExpandedStep(expanded ? null : idx)}
+                    onMouseEnter={() => setExpandedStep(idx)}
+                    aria-expanded={expanded}
+                    className={`relative flex w-full gap-2.5 rounded-xl border px-2.5 py-2.5 text-left transition-colors ${
                       step.active
                         ? 'border-primary/40 bg-primary/5 shadow-sm'
                         : 'border-border bg-background/60'
@@ -65,7 +97,7 @@ export default function DesktopCounsellingDashboard() {
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
                           <p
                             className={`text-xs font-bold leading-tight ${
@@ -76,31 +108,33 @@ export default function DesktopCounsellingDashboard() {
                                 : 'text-foreground-muted'
                             }`}
                           >
-                            {shortLabel}
+                            {step.label}
                           </p>
                           <p className="mt-0.5 text-[10px] font-medium text-foreground-muted">
                             {step.date}
                           </p>
                         </div>
-                        <span
-                          className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                            step.done
-                              ? 'bg-success-light text-success'
-                              : step.active
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted text-foreground-subtle'
-                          }`}
-                        >
-                          {status}
-                        </span>
+                        <ChevronDown
+                          size={14}
+                          className={`shrink-0 text-foreground-subtle transition-transform ${expanded ? 'rotate-180' : ''}`}
+                        />
                       </div>
-                      {step.active && (
-                        <p className="mt-1 text-[10px] leading-snug text-foreground-subtle">
-                          {step.sub}
-                        </p>
+                      {expanded && (
+                        <div className="mt-2 rounded-lg border border-border bg-surface px-2.5 py-2">
+                          <p
+                            className={`text-[10px] font-bold ${
+                              step.done ? 'text-success' : step.active ? 'text-primary' : 'text-foreground-subtle'
+                            }`}
+                          >
+                            {status}
+                          </p>
+                          <p className="mt-1 text-[10px] leading-snug text-foreground-muted">
+                            {step.sub}
+                          </p>
+                        </div>
                       )}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -117,10 +151,16 @@ export default function DesktopCounsellingDashboard() {
                     {/* Connecting Line (spans exactly 50% from current center to next center) */}
                     {!isLast && (
                       <div
-                        className={`absolute top-[13px] left-[50%] w-full h-[2px] z-0 ${
-                          step.done && STEPS[idx + 1]?.done ? 'bg-success' : 'bg-border'
-                        }`}
-                      />
+                        className="absolute top-[13px] left-[50%] h-[2px] w-full z-0 overflow-hidden bg-border"
+                      >
+                        <div
+                          className={`h-full origin-left transition-transform duration-[2200ms] ease-out ${
+                            STEPS[idx + 1]?.done ? 'bg-success' : 'bg-primary'
+                          } ${
+                            idx < activeIndex && inView ? 'scale-x-100' : 'scale-x-0'
+                          }`}
+                        />
+                      </div>
                     )}
 
                     {/* Step Icon */}

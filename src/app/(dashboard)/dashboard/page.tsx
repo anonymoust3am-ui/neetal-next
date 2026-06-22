@@ -12,6 +12,7 @@ import DesktopCounsellingDashboard from '@/components/dashboard/sections/v2/Desk
 import { Hero2Section } from '@/components/dashboard/sections/v2/Hero2Section';
 import { HeroSection } from '@/components/dashboard/sections/HeroSection';
 import { UserSection } from '@/components/dashboard/sections/v2/UserSection';
+import { DashboardSectionReveal } from '@/components/dashboard/DashboardSectionReveal';
 
 export default function DashboardPage() {
   return (
@@ -20,17 +21,25 @@ export default function DashboardPage() {
       <div className="px-6 lg:px-8 py-6 max-w-[1500px] mx-auto space-y-6 pt-18">
 
         {/* <HeroSection /> */}
-        <Hero2Section />
+        <DashboardSectionReveal>
+          <Hero2Section />
+        </DashboardSectionReveal>
 
         {/* <StatsSection /> */}
 
         {/* <InsightsSection /> */}
 
-        <DesktopCounsellingDashboard />
+        <DashboardSectionReveal delay={0.04}>
+          <DesktopCounsellingDashboard />
+        </DashboardSectionReveal>
 
-        <AnnouncementsSection />
+        <DashboardSectionReveal delay={0.06}>
+          <AnnouncementsSection />
+        </DashboardSectionReveal>
 
-        <UserSection />
+        <DashboardSectionReveal amount={0.45}>
+          <UserSection />
+        </DashboardSectionReveal>
 
         {/* <ModulesSection />
 

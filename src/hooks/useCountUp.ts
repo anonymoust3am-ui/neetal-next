@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
-export function useCountUp(target: number, ms = 1000) {
+export function useCountUp(target: number, ms = 1000, enabled = true) {
   const [v, setV] = useState(0);
   const ran = useRef(false);
 
   useEffect(() => {
+    if (!enabled) return;
     if (ran.current) return;
     ran.current = true;
     let start: number | null = null;
@@ -17,7 +18,7 @@ export function useCountUp(target: number, ms = 1000) {
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [target, ms]);
+  }, [target, ms, enabled]);
 
   return v;
 }
