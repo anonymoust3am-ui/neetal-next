@@ -21,6 +21,12 @@ const TOUR_STORAGE_KEY = 'neetell.dashboard.product-tour.v2';
 
 const TOUR_STEPS: TourStep[] = [
   {
+    selector: '[data-tour="bottom-predictor"]',
+    title: 'Start with Predictor',
+    body: 'Enter your rank and discover safe, target, and dream colleges.',
+    placement: 'top',
+  },
+  {
     selector: '[data-tour="top-counselling"]',
     title: 'Counselling selector',
     body: 'Switch between counselling bodies and states from here.',
@@ -60,12 +66,6 @@ const TOUR_STEPS: TourStep[] = [
     selector: '[data-tour="bottom-choices"]',
     title: 'Choice lists',
     body: 'Build and organize your counselling preference lists.',
-    placement: 'top',
-  },
-  {
-    selector: '[data-tour="bottom-predictor"]',
-    title: 'Predictor',
-    body: 'Find safe, target, and dream colleges from your rank.',
     placement: 'top',
   },
   {
