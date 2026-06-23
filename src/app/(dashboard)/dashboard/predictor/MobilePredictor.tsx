@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertCircle,
   ArrowRight,
@@ -8,13 +9,24 @@ import {
   ChevronDown,
   CircleOff,
   Filter,
+  ListPlus,
   Loader2,
+  Plus,
   Search,
   ShieldCheck,
   Sparkles,
   Target,
+  X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  addChoiceListDetail,
+  createChoiceList,
+  getChoiceLists,
+  getCounsellingOptions,
+  type ChoiceListSummary,
+} from '@/lib/api';
 
 type InputMode = 'marks' | 'rank';
 type Bucket = 'safe' | 'target' | 'dream';
@@ -124,8 +136,32 @@ function initials(name?: string) {
   return (name || 'College').split(' ').filter(Boolean).map(word => word[0]).join('').slice(0, 2).toUpperCase();
 }
 
+function firstValue(value?: string) {
+  return value?.split(',').map(part => part.trim()).find(Boolean) ?? '';
+}
+
+function choiceEntryFromCollege(college: PredictionCollege) {
+  const institute = college.name || college.shortName || 'Unknown College';
+  const course = college.courseName || college.course || college.courseCode || 'MBBS';
+  const quota = firstValue(college.quotaCodes) || 'AIQ';
+  const category = firstValue(college.candidateCategoryCodes) || firstValue(college.allottedCategoryCodes) || 'General';
+
+  return {
+    name: `${institute} - ${course}`,
+    institute,
+    course,
+    quota,
+    catagory: category,
+  };
+}
+
+function getDefaultCounsellingName(options: string[]) {
+  if (!options.length) return 'All India MCC';
+  return options.find(option => /all india|mcc|aiq/i.test(option)) ?? options[0];
+}
+
 export default function MobilePredictor() {
-  const [inputMode, setInputMode] = useState<InputMode>('marks');
+  const [inputMode, setInputMode] = useState<InputMode>('rank');
   const [marks, setMarks] = useState('');
   const [rank, setRank] = useState('');
   const [round, setRound] = useState('');
@@ -237,7 +273,7 @@ export default function MobilePredictor() {
           candidate_category_code: category,
           quota_code: quota,
           nearby_range: cappedEvidenceRange(range),
-          limit: '30',
+          limit: '80',
         }),
       });
       const json = (await response.json()) as PredictionResponse;
@@ -343,14 +379,16 @@ export default function MobilePredictor() {
                 <Select label="Course" value={course} onChange={setCourse} options={options.courses} />
                 <Select label="Category" value={category} onChange={setCategory} options={options.categories} />
                 <Select label="Quota" value={quota} onChange={setQuota} options={options.quotas} />
-                <label>
-                  <span className="mb-1 block text-xs font-bold text-foreground-muted">Evidence range</span>
-                  <select value={range} onChange={event => setRange(event.target.value)} className={selectClassName}>
-                    <option value="250">+/- 250 ranks</option>
-                    <option value="500">+/- 500 ranks</option>
-                    <option value="1000">+/- 1K ranks</option>
-                  </select>
-                </label>
+                <StringSelect
+                  label="Evidence range"
+                  value={range}
+                  onChange={setRange}
+                  options={[
+                    { value: '250', label: '+/- 250 ranks' },
+                    { value: '500', label: '+/- 500 ranks' },
+                    { value: '1000', label: '+/- 1K ranks' },
+                  ]}
+                />
               </>
             )}
           </div>
@@ -426,8 +464,6 @@ export default function MobilePredictor() {
   );
 }
 
-const selectClassName = 'h-11 w-full rounded-lg border border-border bg-input px-3 text-sm font-semibold text-foreground outline-none focus:border-border-focus';
-
 function ModeButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" onClick={onClick} className={`h-10 rounded-md text-xs font-bold ${active ? 'bg-surface text-foreground shadow-sm' : 'text-foreground-muted'}`}>
@@ -436,17 +472,95 @@ function ModeButton({ active, onClick, children }: { active: boolean; onClick: (
   );
 }
 
-function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: Array<Record<string, string>> }) {
+function DropdownMenu({ value, placeholder, options, onChange }: {
+  value: string;
+  placeholder: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find(option => option.value === value);
+
+  return (
+    <div
+      className="relative"
+      tabIndex={-1}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen(current => !current)}
+        className="flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-border bg-input px-3 text-left text-sm font-semibold text-foreground outline-none transition focus:border-border-focus"
+      >
+        <span className={`min-w-0 flex-1 truncate ${value ? 'text-foreground' : 'text-foreground-muted'}`}>
+          {selected?.label ?? placeholder}
+        </span>
+        <ChevronDown size={14} className={`shrink-0 text-foreground-subtle transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-[1600] overflow-hidden rounded-lg border border-border bg-card shadow-xl">
+          <div className="max-h-52 overflow-y-auto p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {options.map((option, index) => {
+              const active = option.value === value;
+              return (
+                <button
+                  key={`${option.value}-${index}`}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  className={`mt-1 first:mt-0 flex h-9 w-full items-center rounded-md px-2.5 text-left text-xs font-bold transition ${
+                    active ? 'bg-primary text-primary-foreground' : 'text-foreground-muted hover:bg-hover hover:text-foreground'
+                  }`}
+                  title={option.label}
+                >
+                  <span className="truncate">{option.label}</span>
+                </button>
+              );
+            })}
+            {!options.length && (
+              <div className="rounded-md border border-dashed border-border px-2.5 py-3 text-center text-xs font-semibold text-foreground-subtle">
+                No options available
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StringSelect({ label, value, onChange, options }: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+}) {
   return (
     <label>
       <span className="mb-1 block text-xs font-bold text-foreground-muted">{label}</span>
-      <select value={value} onChange={event => onChange(event.target.value)} className={selectClassName}>
-        <option value="">All {label}</option>
-        {options.map((option, index) => {
-          const value = optionValue(option);
-          return <option key={`${value}-${index}`} value={value}>{optionLabel(option)}</option>;
-        })}
-      </select>
+      <DropdownMenu value={value} placeholder={`All ${label}`} options={options} onChange={onChange} />
+    </label>
+  );
+}
+
+function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: Array<Record<string, string>> }) {
+  const allLabel = `All ${label}`;
+  return (
+    <label>
+      <span className="mb-1 block text-xs font-bold text-foreground-muted">{label}</span>
+      <DropdownMenu
+        value={value}
+        placeholder={allLabel}
+        options={[
+          { value: '', label: allLabel },
+          ...options.map(option => ({ value: optionValue(option), label: optionLabel(option) })),
+        ]}
+        onChange={onChange}
+      />
     </label>
   );
 }
@@ -475,6 +589,7 @@ function BucketButton({ label, value, active, onClick, icon: Icon }: { label: st
 
 function MobileCollegeCard({ college, summary }: { college: PredictionCollege; summary: PredictionSummary }) {
   const [open, setOpen] = useState(false);
+  const [showChoiceModal, setShowChoiceModal] = useState(false);
   const cover = normalizeAssetUrl(college.image) || 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))';
   const baseUrl = apiBaseUrl().replace('/api', '');
   const logoUrl = college.logoUrl?.startsWith('/data') ? `${baseUrl}${college.logoUrl}` : college.logoUrl;
@@ -508,6 +623,14 @@ function MobileCollegeCard({ college, summary }: { college: PredictionCollege; s
           <Pill label="Candidate" value={college.candidateCategoryCodes || '-'} />
           <Pill label="Allotted" value={college.allottedCategoryCodes || '-'} />
         </div>
+        <button
+          type="button"
+          onClick={() => setShowChoiceModal(true)}
+          className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-xs font-bold text-primary-foreground shadow-sm"
+        >
+          <ListPlus size={14} />
+          Add to choice list
+        </button>
         <button type="button" onClick={() => setOpen(value => !value)} className="mt-3 flex w-full items-center justify-between rounded-lg bg-muted px-3 py-2 text-xs font-bold text-foreground">
           Similar evidence
           <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -526,7 +649,204 @@ function MobileCollegeCard({ college, summary }: { college: PredictionCollege; s
           </div>
         )}
       </div>
+      {showChoiceModal && typeof document !== 'undefined' && createPortal(
+        <MobileChoiceModal college={college} onClose={() => setShowChoiceModal(false)} />,
+        document.body,
+      )}
     </article>
+  );
+}
+
+function MobileChoiceModal({ college, onClose }: { college: PredictionCollege; onClose: () => void }) {
+  const { firebaseUser } = useAuth();
+  const [lists, setLists] = useState<ChoiceListSummary[]>([]);
+  const [counsellingOptions, setCounsellingOptions] = useState<string[]>([]);
+  const [counselling, setCounselling] = useState('');
+  const [selectedListId, setSelectedListId] = useState('');
+  const [createNew, setCreateNew] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const entry = choiceEntryFromCollege(college);
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      if (!firebaseUser) {
+        setError('Please login again.');
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError('');
+      try {
+        const token = await firebaseUser.getIdToken();
+        const [choiceRes, counsellingRes] = await Promise.all([
+          getChoiceLists(token, { limit: 100 }),
+          getCounsellingOptions(),
+        ]);
+        if (!mounted) return;
+        const options = counsellingRes.flatMap(option => option.bodies.map(body => body.name));
+        const defaultCounselling = getDefaultCounsellingName(options);
+        const normalizedOptions = defaultCounselling && !options.includes(defaultCounselling)
+          ? [defaultCounselling, ...options]
+          : options;
+        const filtered = choiceRes.choiceLists.filter(list => list.caunselling === defaultCounselling);
+        setLists(choiceRes.choiceLists);
+        setCounsellingOptions(normalizedOptions);
+        setCounselling(defaultCounselling);
+        setSelectedListId(filtered[0]?.id ?? choiceRes.choiceLists[0]?.id ?? '');
+        setCreateNew(choiceRes.choiceLists.length === 0);
+      } catch (caught) {
+        if (mounted) setError(caught instanceof Error ? caught.message : 'Could not load lists.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, [firebaseUser]);
+
+  const matchingLists = useMemo(() => lists.filter(list => list.caunselling === counselling), [counselling, lists]);
+  const visibleLists = useMemo(() => matchingLists.length ? matchingLists : lists, [lists, matchingLists]);
+  const selectedList = visibleLists.find(list => list.id === selectedListId);
+
+  useEffect(() => {
+    if (!visibleLists.length) {
+      setSelectedListId('');
+      return;
+    }
+    if (!visibleLists.some(list => list.id === selectedListId)) {
+      setSelectedListId(visibleLists[0].id);
+    }
+  }, [selectedListId, visibleLists]);
+
+  async function submit() {
+    if (!firebaseUser) {
+      setError('Please login again.');
+      return;
+    }
+    if (!counselling) {
+      setError('Select counselling.');
+      return;
+    }
+    if (createNew && !newListName.trim()) {
+      setError('Enter list name.');
+      return;
+    }
+    if (!createNew && !selectedListId) {
+      setError('Select a list or create new.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      const token = await firebaseUser.getIdToken();
+      const list = createNew
+        ? await createChoiceList(token, { name: newListName.trim(), caunselling: counselling })
+        : selectedList;
+      if (!list?.id) throw new Error('Choice list not found.');
+      await addChoiceListDetail(token, list.id, {
+        ...entry,
+        caunselling: counselling,
+        insertAt: createNew ? 0 : selectedList?.detailsCount ?? 0,
+      });
+      onClose();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not add college.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-background/75 px-4 py-4 backdrop-blur-sm">
+      <div className="w-full max-w-[22rem] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Choice list</p>
+            <h2 className="mt-1 text-sm font-black text-foreground">Add college</h2>
+            <p className="mt-1 truncate text-xs font-semibold text-foreground-muted">{entry.institute}</p>
+          </div>
+          <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-foreground-subtle">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="max-h-[calc(100dvh-8rem)] space-y-3 overflow-y-auto p-4">
+          <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-muted p-1.5 text-[10px] font-bold text-foreground-muted">
+            <span className="truncate rounded-lg bg-card px-2 py-1.5">{entry.course}</span>
+            <span className="truncate rounded-lg bg-card px-2 py-1.5">{entry.quota}</span>
+            <span className="truncate rounded-lg bg-card px-2 py-1.5">{entry.catagory}</span>
+          </div>
+
+          {loading ? (
+            <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-border bg-muted text-xs font-bold text-foreground-muted">
+              <Loader2 size={15} className="mr-2 animate-spin" />
+              Loading lists
+            </div>
+          ) : (
+            <>
+              {error && <div className="rounded-lg bg-error-light px-3 py-2 text-xs font-bold text-error">{error}</div>}
+              <StringSelect
+                label="Counselling"
+                value={counselling}
+                onChange={(value) => {
+                  setCounselling(value);
+                  setError('');
+                }}
+                options={counsellingOptions.map(option => ({ value: option, label: option }))}
+              />
+
+              <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-muted p-1.5">
+                <button type="button" onClick={() => setCreateNew(false)} className={`h-9 rounded-lg text-xs font-bold ${!createNew ? 'bg-card text-foreground shadow-sm' : 'text-foreground-muted'}`}>Existing</button>
+                <button type="button" onClick={() => setCreateNew(true)} className={`h-9 rounded-lg text-xs font-bold ${createNew ? 'bg-card text-foreground shadow-sm' : 'text-foreground-muted'}`}>New list</button>
+              </div>
+
+              {createNew ? (
+                <label>
+                  <span className="mb-1 block text-xs font-bold text-foreground-muted">List name</span>
+                  <input
+                    value={newListName}
+                    onChange={(event) => {
+                      setNewListName(event.target.value);
+                      setError('');
+                    }}
+                    placeholder="AIQ Round 1"
+                    className="h-11 w-full rounded-lg border border-border bg-input px-3 text-sm font-semibold text-foreground outline-none focus:border-border-focus"
+                  />
+                </label>
+              ) : (
+                <StringSelect
+                  label="Choice list"
+                  value={selectedListId}
+                  onChange={(value) => {
+                    setSelectedListId(value);
+                    setError('');
+                  }}
+                  options={visibleLists.map(list => ({
+                    value: list.id,
+                    label: `${list.name} (${list.detailsCount})`,
+                  }))}
+                />
+              )}
+
+              <button
+                type="button"
+                onClick={submit}
+                disabled={saving}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground disabled:opacity-70"
+              >
+                {saving ? <Loader2 size={15} className="animate-spin" /> : createNew ? <Plus size={15} /> : <ListPlus size={15} />}
+                {saving ? 'Adding...' : 'Add to list'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
