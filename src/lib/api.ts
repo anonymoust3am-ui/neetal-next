@@ -78,6 +78,9 @@ export interface UserProfile {
   gender?: string | null;
   category?: string | null;
   dob?: string | null;
+  prefExam?: string | null;
+  rank?: number | null;
+  score?: number | null;
   profilePic?: string | null;
   alternatePhone?: string | null;
   theme?: 'light' | 'dark';
@@ -102,6 +105,9 @@ export interface CompleteProfileBody {
   gender?: string;
   category?: string;
   dob?: string;
+  prefExam?: string;
+  rank?: number;
+  score?: number;
   profilePic?: string | File;
   alternatePhone?: string;
   theme?: 'light' | 'dark';
@@ -117,6 +123,9 @@ export interface UpdateProfileBody {
   state?: string;
   city?: string;
   category?: string;
+  prefExam?: string;
+  rank?: number;
+  score?: number;
   theme?: 'light' | 'dark';
 }
 
