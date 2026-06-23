@@ -131,10 +131,9 @@ const INDIAN_STATES = [
 ];
 
 const RANGE_OPTIONS = [
-  { value: '10000', label: '+/- 10K ranks' },
-  { value: '25000', label: '+/- 25K ranks' },
-  { value: '50000', label: '+/- 50K ranks' },
-  { value: '100000', label: '+/- 100K ranks' },
+  { value: '250', label: '+/- 250 ranks' },
+  { value: '500', label: '+/- 500 ranks' },
+  { value: '1000', label: '+/- 1K ranks' },
 ];
 
 const BUCKET_META: Record<Bucket, { label: string; icon: LucideIcon; tone: string; text: string; border: string }> = {
@@ -184,6 +183,12 @@ function formatGap(value: unknown) {
   return formatted === '-' ? '-' : `+${formatted}`;
 }
 
+function cappedEvidenceRange(value: string) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return '1000';
+  return String(Math.min(parsed, 1000));
+}
+
 function bucketLabel(bucket?: string) {
   if (bucket === 'safe' || bucket === 'target' || bucket === 'dream') return BUCKET_META[bucket].label;
   return 'Review';
@@ -230,7 +235,7 @@ export default function PredictorPage() {
   const [aiCourse, setAiCourse] = useState('');
   const [aiCategory, setAiCategory] = useState('');
   const [aiQuota, setAiQuota] = useState('');
-  const [aiRange, setAiRange] = useState('25000');
+  const [aiRange, setAiRange] = useState('1000');
   const [aiLimit, setAiLimit] = useState('30');
 
   const [stateRound, setStateRound] = useState('');
@@ -238,7 +243,7 @@ export default function PredictorPage() {
   const [stateCategory, setStateCategory] = useState('');
   const [stateQuota, setStateQuota] = useState('');
   const [stateInstitute, setStateInstitute] = useState('');
-  const [stateRange, setStateRange] = useState('25000');
+  const [stateRange, setStateRange] = useState('1000');
   const [stateLimit, setStateLimit] = useState('30');
 
   const [aiOptions, setAiOptions] = useState<PredictorOptions>(EMPTY_OPTIONS);
@@ -311,7 +316,7 @@ export default function PredictorPage() {
       setAiCourse('');
       setAiCategory('');
       setAiQuota('');
-      setAiRange('25000');
+      setAiRange('1000');
       setAiLimit('30');
     } else {
       setStateRound('');
@@ -319,7 +324,7 @@ export default function PredictorPage() {
       setStateCategory('');
       setStateQuota('');
       setStateInstitute('');
-      setStateRange('25000');
+      setStateRange('1000');
       setStateLimit('30');
     }
   };
@@ -348,7 +353,7 @@ export default function PredictorPage() {
             course_code: aiCourse,
             candidate_category_code: aiCategory,
             quota_code: aiQuota,
-            nearby_range: aiRange,
+            nearby_range: cappedEvidenceRange(aiRange),
             limit: aiLimit,
           }
         : {
@@ -358,7 +363,7 @@ export default function PredictorPage() {
             candidate_category_code: stateCategory,
             quota_code: stateQuota,
             institute_name: stateInstitute,
-            nearby_range: stateRange,
+            nearby_range: cappedEvidenceRange(stateRange),
             limit: stateLimit,
           };
 

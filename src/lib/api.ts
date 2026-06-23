@@ -16,7 +16,7 @@ export function resolveApiAssetUrl(path?: string | null) {
     ? rawPath
     : `data/${rawPath}`;
   const assetPath = cleanPath.startsWith('images/') ? `data/${cleanPath}` : cleanPath;
-  return `${base}/${assetPath}`;
+  return `${base}/api/${assetPath}`;
 }
 
 // ─── Core fetch wrapper ────────────────────────────────────────────────────

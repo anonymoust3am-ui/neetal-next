@@ -93,6 +93,12 @@ function formatGap(value: unknown) {
   return formatted === '-' ? '-' : `+${formatted}`;
 }
 
+function cappedEvidenceRange(value: string) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return '1000';
+  return String(Math.min(parsed, 1000));
+}
+
 function optionValue(option: Record<string, string>) {
   return option.round_no ?? option.course_code ?? option.candidate_category_code ?? option.quota_code ?? '';
 }
@@ -126,7 +132,7 @@ export default function MobilePredictor() {
   const [course, setCourse] = useState('');
   const [category, setCategory] = useState('');
   const [quota, setQuota] = useState('');
-  const [range, setRange] = useState('25000');
+  const [range, setRange] = useState('1000');
   const [showFilters, setShowFilters] = useState(false);
   const [options, setOptions] = useState<PredictorOptions>(EMPTY_OPTIONS);
   const [optionsLoading, setOptionsLoading] = useState(false);
@@ -230,7 +236,7 @@ export default function MobilePredictor() {
           course_code: course,
           candidate_category_code: category,
           quota_code: quota,
-          nearby_range: range,
+          nearby_range: cappedEvidenceRange(range),
           limit: '30',
         }),
       });
@@ -340,10 +346,9 @@ export default function MobilePredictor() {
                 <label>
                   <span className="mb-1 block text-xs font-bold text-foreground-muted">Evidence range</span>
                   <select value={range} onChange={event => setRange(event.target.value)} className={selectClassName}>
-                    <option value="10000">+/- 10K ranks</option>
-                    <option value="25000">+/- 25K ranks</option>
-                    <option value="50000">+/- 50K ranks</option>
-                    <option value="100000">+/- 100K ranks</option>
+                    <option value="250">+/- 250 ranks</option>
+                    <option value="500">+/- 500 ranks</option>
+                    <option value="1000">+/- 1K ranks</option>
                   </select>
                 </label>
               </>
