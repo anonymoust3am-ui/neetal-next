@@ -4,19 +4,39 @@ export const API_BASE_URL = API;
 
 export function resolveApiAssetUrl(path?: string | null) {
   if (!path) return undefined;
-  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  if (/^(data:|blob:)/i.test(path)) return path;
 
   let base = API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+  let rawPath = path.trim();
+  let suffix = '';
+
   try {
     base = new URL(API_BASE_URL).origin;
   } catch {}
 
-  const rawPath = path.replace(/^\/+/, '');
-  const cleanPath = rawPath.startsWith('data/') || rawPath.startsWith('images/')
-    ? rawPath
-    : `data/${rawPath}`;
-  const assetPath = cleanPath.startsWith('images/') ? `data/${cleanPath}` : cleanPath;
-  return `${base}/api/${assetPath}`;
+  try {
+    const url = new URL(rawPath);
+    base = url.origin;
+    rawPath = url.pathname;
+    suffix = `${url.search}${url.hash}`;
+  } catch {
+    const suffixMatch = rawPath.match(/([?#].*)$/);
+    if (suffixMatch) {
+      suffix = suffixMatch[1];
+      rawPath = rawPath.slice(0, -suffix.length);
+    }
+  }
+
+  let cleanPath = rawPath
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/^(?:(?:api\/)?data\/)+/i, 'data/')
+    .replace(/^api\//i, '');
+
+  if (cleanPath.startsWith('images/')) cleanPath = `data/${cleanPath}`;
+  if (!cleanPath.startsWith('data/')) cleanPath = `data/${cleanPath}`;
+
+  return `${base}/api/${cleanPath}${suffix}`;
 }
 
 // ─── Core fetch wrapper ────────────────────────────────────────────────────
