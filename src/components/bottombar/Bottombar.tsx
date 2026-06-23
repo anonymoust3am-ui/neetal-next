@@ -212,6 +212,7 @@ export function BottomNav() {
 
             return (
               <Link
+                data-tour={`bottom-${item.key}`}
                 key={item.key}
                 href={item.href}
                 className="relative flex flex-col items-center justify-center flex-1 h-full pb-2 select-none group"
@@ -284,6 +285,7 @@ export function BottomNav() {
 
             return (
               <Link
+                data-tour={`bottom-${item.key}`}
                 key={item.key}
                 href={item.href}
                 className="group relative flex flex-row items-center z-30 overflow-hidden"

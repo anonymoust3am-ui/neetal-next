@@ -88,6 +88,7 @@ function ProfileMenu() {
   return (
     <div ref={ref} className="relative">
       <button
+        data-tour="top-profile"
         onClick={() => setOpen(v => !v)}
         className={cn(
           'flex items-center gap-0.5 md:gap-1.5 p-1 md:px-1.5 md:py-1.5 rounded-xl transition-colors',
@@ -152,9 +153,10 @@ function ProfileMenu() {
 }
 
 /* ── Simple nav link (Hidden on Mobile) ─────────────────────────── */
-function NavLink({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) {
+function NavLink({ href, icon: Icon, label, tourId }: { href: string; icon: React.ElementType; label: string; tourId?: string }) {
   return (
     <Link
+      data-tour={tourId}
       href={href}
       className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] transition-colors"
     >
@@ -176,7 +178,7 @@ function SearchBar() {
   };
 
   return (
-    <div className="hidden md:flex flex-1 justify-center px-4">
+    <div data-tour="top-search" className="hidden md:flex flex-1 justify-center px-4">
       <div className="relative w-full max-w-md">
         <button
           onClick={submit}
@@ -246,7 +248,7 @@ export function DashboardHeader() {
 
       {/* ── CENTER AREA: Main Dropdown Navigation ── */}
       {/* Takes the left-aligned anchor on mobile for maximum neatness */}
-      <div className="flex items-center justify-start md:px-3 md:border-r md:border-[var(--color-border)] h-full">
+      <div data-tour="top-counselling" className="flex items-center justify-start md:px-3 md:border-r md:border-[var(--color-border)] h-full">
         <CounsellingDropdown />
       </div>
 
@@ -257,10 +259,11 @@ export function DashboardHeader() {
       <div className="flex items-center gap-1.5 shrink-0 md:ml-auto md:px-3">
         
         {/* Nav links (Blogs, news, etc) */}
-        <NavLink href="/dashboard/news" icon={Newspaper} label="Blogs & News" />
+        <NavLink href="/dashboard/news" icon={Newspaper} label="Blogs & News" tourId="top-news" />
 
         {/* Notification bell (Responsive sizing) */}
         <Link
+          data-tour="top-notifications"
           href="/dashboard/notifications"
           title="Updates & Notices"
           className="relative p-1.5 md:p-2 rounded-xl hover:bg-[var(--color-bg-hover)] text-[var(--color-icon-secondary)] hover:text-[var(--color-icon-primary)] transition-colors"
@@ -281,7 +284,7 @@ export function DashboardHeader() {
         <div className="w-px h-5 md:h-6 bg-[var(--color-border)] mx-0.5 md:mx-1" />
 
         {/* Primary Expert CTA Action Button (Desktop Only) */}
-        <button className="hidden md:flex items-center gap-1.5 bg-primary text-white text-xs font-semibold
+        <button data-tour="top-expert" className="hidden md:flex items-center gap-1.5 bg-primary text-white text-xs font-semibold
           px-3.5 py-2 rounded-xl hover:bg-[var(--color-primary-hover)] shadow-sm transition-colors">
           <Sparkles size={13} />
           Talk to Expert
