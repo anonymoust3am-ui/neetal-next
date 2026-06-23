@@ -55,6 +55,12 @@ function cn(...cls: (string | false | null | undefined)[]) {
   return cls.filter(Boolean).join(' ');
 }
 
+function getAllotmentCellValue(row: Record<string, any>, header: Header) {
+  const label = `${header.key} ${header.name}`.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  if (label.includes('ai_rank')) return row.ai_rank;
+  return row[header.key];
+}
+
 type PaginationItem = number | 'ellipsis';
 
 function paginationItems(page: number, totalPages: number): PaginationItem[] {
@@ -376,7 +382,7 @@ export default function ResourcesPage() {
                   >
                     {headers.map(h => (
                       <td key={h.key} className="px-4 py-3.5 text-foreground-muted">
-                        <CellValue header={h} value={row[h.key]} candidateFlags={candidateFlags} />
+                        <CellValue header={h} value={getAllotmentCellValue(row, h)} candidateFlags={candidateFlags} />
                       </td>
                     ))}
                   </tr>
