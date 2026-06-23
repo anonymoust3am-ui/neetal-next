@@ -263,15 +263,34 @@ export function BottomNav() {
       <GlassFilter />
 
       <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[1200] flex justify-center w-full px-4 pointer-events-none">
-        <nav
-          className="pointer-events-auto relative flex items-center gap-1 overflow-hidden"
+        <div
+          className="pointer-events-auto relative rounded-[35px] p-[2px]"
           style={{
-            padding: 7,
-            borderRadius: 32,
-            boxShadow: theme.shadow,
-            transitionTimingFunction: 'cubic-bezier(0.175,0.885,0.32,2.2)',
+            boxShadow: '0 0 22px color-mix(in srgb, var(--color-primary) 18%, transparent)',
           }}
         >
+          <div
+            className="pointer-events-none absolute inset-0 rounded-[35px]"
+            style={{
+              padding: 2,
+              background:
+                'linear-gradient(120deg, #f97316, #ffffff, #fb923c, #ffffff, #f97316)',
+              backgroundSize: '260% 260%',
+              animation: 'bottomNavGradientProgress 7s linear infinite',
+              WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+              WebkitMaskComposite: 'xor',
+              maskComposite: 'exclude',
+            }}
+          />
+          <nav
+            className="relative flex items-center gap-1 overflow-hidden"
+            style={{
+              padding: 7,
+              borderRadius: 32,
+              boxShadow: theme.shadow,
+              transitionTimingFunction: 'cubic-bezier(0.175,0.885,0.32,2.2)',
+            }}
+          >
           <GlassLayers borderRadius={32} />
 
           {bottomNavItems.map((item) => {
@@ -396,8 +415,19 @@ export function BottomNav() {
               </Link>
             );
           })}
-        </nav>
+          </nav>
+        </div>
       </div>
+      <style jsx>{`
+        @keyframes bottomNavGradientProgress {
+          0% {
+            background-position: 0% 50%;
+          }
+          100% {
+            background-position: 260% 50%;
+          }
+        }
+      `}</style>
     </>
   );
 }

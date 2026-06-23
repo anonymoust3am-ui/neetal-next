@@ -488,8 +488,8 @@ export default function PredictorPage() {
         </section> */}
 
         <section className="grid h-full min-h-0 grid-cols-[390px_minmax(0,1fr)] gap-4">
-          <aside className="sticky top-20 flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-            <div className="shrink-0 border-b border-border px-5 py-4">
+          <aside className="sticky top-20 flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-primary/20 bg-surface shadow-sm shadow-primary/5">
+            <div className="shrink-0 border-b border-primary/15 px-5 py-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle">Controls</p>
@@ -589,7 +589,7 @@ export default function PredictorPage() {
               </Field> */}
             </div>
 
-            <div className="shrink-0 border-t border-border bg-muted px-5 py-4">
+            <div className="shrink-0 border-t border-primary/15 bg-muted px-5 py-4">
               {error && (
                 <div className="mb-3 flex items-start gap-2 rounded-lg border border-error/20 bg-error-light px-3 py-2 text-xs font-medium text-error">
                   <AlertCircle size={14} className="mt-0.5 shrink-0" />
@@ -609,7 +609,7 @@ export default function PredictorPage() {
             </div>
           </aside>
 
-          <section className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-surface p-5 shadow-sm">
+          <section className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-secondary/20 bg-surface p-5 shadow-sm shadow-secondary/5">
             {!prediction && !predicting && <EmptyState inputMode={inputMode} scopeTitle={scopeTitle} />}
             {!predicting && prediction && !prediction.data.length && <NoResults />}
             {!predicting && prediction && prediction.data.length > 0 && (
@@ -619,7 +619,7 @@ export default function PredictorPage() {
                   <MetricButton label="Safe" value={counts.safe} icon={ShieldCheck} tone="safe" active={bucketFilter === 'safe'} onClick={() => setBucketFilter('safe')} />
                   <MetricButton label="Target" value={counts.target} icon={Target} tone="target" active={bucketFilter === 'target'} onClick={() => setBucketFilter('target')} />
                   <MetricButton label="Dream" value={counts.dream} icon={Sparkles} tone="dream" active={bucketFilter === 'dream'} onClick={() => setBucketFilter('dream')} />
-                  <div className="rounded-lg border border-border bg-muted p-4">
+                  <div className="rounded-lg border border-primary/20 bg-muted p-4">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle">User rank</p>
                     <p className="mt-2 text-2xl font-bold tabular-nums text-foreground">{formatRank(summary.userRank)}</p>
                   </div>
@@ -662,8 +662,8 @@ const inputClassName = 'h-11 w-full rounded-md border border-border bg-input px-
 function StepHeader({ number, title }: { number: string; title: string }) {
   return (
     <div className="mb-3 mt-5 first:mt-0 flex items-center gap-2">
-      <span className="font-mono text-[10px] font-bold text-foreground-subtle">{number}</span>
-      <span className="h-px flex-1 bg-border" />
+      <span className="font-mono text-[10px] font-bold text-primary">{number}</span>
+      <span className="h-px flex-1 bg-primary/15" />
       <span className="text-[11px] font-bold uppercase tracking-widest text-foreground">{title}</span>
     </div>
   );
@@ -953,7 +953,7 @@ function MetricButton({
       type="button"
       onClick={onClick}
       className={`rounded-lg border p-4 text-left transition-all hover:-translate-y-0.5 ${
-        active ? 'border-primary bg-primary-light shadow-sm' : 'border-border bg-muted hover:bg-hover'
+        active ? 'border-primary bg-primary-light shadow-sm' : 'border-primary/15 bg-muted hover:border-primary/30 hover:bg-hover'
       }`}
     >
       <div className="flex items-center justify-between gap-3">
@@ -984,7 +984,7 @@ function CollegeCard({ college, summary, mode }: { college: PredictionCollege; s
   return (
     <article
       onClick={() => setPinnedOpen(open => !open)}
-      className={`group cursor-pointer rounded-xl border bg-card p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${meta?.border ?? 'border-border'}`}
+      className={`group cursor-pointer rounded-xl border bg-card p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${meta?.border ?? 'border-primary/15 hover:border-primary/30'}`}
     >
       <div className="grid grid-cols-[148px_minmax(0,1fr)] gap-3">
         <div
@@ -1378,7 +1378,7 @@ function InfoPill({ label, value }: { label: string; value: string }) {
 
 function RankBox({ label, value, strong = false, tone }: { label: string; value: string; strong?: boolean; tone?: string }) {
   return (
-    <div className="rounded-md border border-border bg-muted px-2.5 py-2">
+    <div className="rounded-md border border-secondary/15 bg-muted px-2.5 py-2">
       <p className="text-[10px] font-bold uppercase tracking-widest text-foreground-subtle">{label}</p>
       <p className={`mt-1 text-sm font-bold ${tone ?? (strong ? 'text-primary' : 'text-foreground')}`}>{value}</p>
     </div>
