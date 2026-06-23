@@ -17,7 +17,7 @@ type TargetRect = {
   height: number;
 };
 
-const TOUR_STORAGE_KEY = 'neetell.dashboard.product-tour.v1';
+const TOUR_STORAGE_KEY = 'neetell.dashboard.product-tour.v2';
 
 const TOUR_STEPS: TourStep[] = [
   {
@@ -100,10 +100,6 @@ const TOUR_STEPS: TourStep[] = [
   },
 ];
 
-function isDesktop() {
-  return typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches;
-}
-
 function getPaddedRect(element: Element): TargetRect {
   const rect = element.getBoundingClientRect();
   const pad = 6;
@@ -116,7 +112,7 @@ function getPaddedRect(element: Element): TargetRect {
 }
 
 function getTooltipPosition(rect: TargetRect, placement: TourStep['placement']) {
-  const width = 280;
+  const width = Math.min(280, window.innerWidth - 32);
   const margin = 12;
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
@@ -188,7 +184,6 @@ export function DashboardProductTour() {
   }, [active, step]);
 
   useEffect(() => {
-    if (!isDesktop()) return;
     if (localStorage.getItem(TOUR_STORAGE_KEY)) return;
 
     const timer = window.setTimeout(() => setActive(true), 900);

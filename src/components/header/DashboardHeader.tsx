@@ -274,6 +274,7 @@ export function DashboardHeader() {
 
         {/* Small Expert Icon Button for Mobile */}
         <button 
+          data-tour="top-expert"
           title="Talk to Expert"
           className="block md:hidden p-1.5 rounded-xl bg-[var(--color-primary-light)] text-primary hover:bg-primary/20 transition-colors"
         >
