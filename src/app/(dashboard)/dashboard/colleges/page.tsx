@@ -31,6 +31,60 @@ interface FilterData {
   universities: { id: number; name: string }[];
 }
 
+type ApiRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): ApiRecord | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as ApiRecord
+    : null;
+}
+
+function asInstituteArray(value: unknown): Institute[] | null {
+  return Array.isArray(value) ? value as Institute[] : null;
+}
+
+function asNumber(value: unknown): number | null {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function normalizeInstituteResponse(json: unknown) {
+  const root = asRecord(json);
+  const data = asRecord(root?.data);
+  const pagination = asRecord(data?.pagination) ?? asRecord(root?.pagination) ?? asRecord(data?.meta) ?? asRecord(root?.meta);
+
+  const institutes =
+    asInstituteArray(data?.institutes) ??
+    asInstituteArray(root?.institutes) ??
+    asInstituteArray(data?.data) ??
+    asInstituteArray(root?.data) ??
+    [];
+
+  const total =
+    asNumber(data?.total) ??
+    asNumber(root?.total) ??
+    asNumber(pagination?.total) ??
+    asNumber(pagination?.totalItems) ??
+    asNumber(pagination?.totalCount) ??
+    asNumber(pagination?.count);
+
+  const pageSize =
+    asNumber(data?.page_size) ??
+    asNumber(root?.page_size) ??
+    asNumber(data?.pageSize) ??
+    asNumber(root?.pageSize) ??
+    asNumber(pagination?.page_size) ??
+    asNumber(pagination?.pageSize) ??
+    asNumber(pagination?.limit);
+
+  const page =
+    asNumber(data?.page) ??
+    asNumber(root?.page) ??
+    asNumber(pagination?.page);
+
+  return { institutes, total, pageSize, page };
+}
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function fmtFee(n: number) {
   if (!n) return 'N/A';
@@ -405,6 +459,7 @@ export default function CollegesPage() {
   const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [total,      setTotal]      = useState(0);
   const [page,       setPage]       = useState(1);
+  const [pageSize,   setPageSize]   = useState(50);
   const [loading,    setLoading]    = useState(false);
   const [search,     setSearch]     = useState(initialQ);
   const [dSearch,    setDSearch]    = useState(initialQ);
@@ -416,8 +471,7 @@ export default function CollegesPage() {
   const lastScrollYRef = useRef(0);
   const scrollStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const PAGE_SIZE  = 50;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   // sync when URL ?q= changes (e.g. new header search while already on this page)
   useEffect(() => {
@@ -447,13 +501,18 @@ export default function CollegesPage() {
     if (state)   p.set('states', state);
     if (instType) p.set('institute_type', instType);
     if (uniId)   p.set('university_id', String(uniId));
-    p.set('page', String(page));
+    p.set('offset', String((page - 1) * pageSize));
     fetch(`${API}/institutes?${p}`)
       .then(r => r.json())
-      .then(j => { setInstitutes(j.data?.institutes ?? []); setTotal(j.data?.total ?? 0); })
+      .then(j => {
+        const normalized = normalizeInstituteResponse(j);
+        setInstitutes(normalized.institutes);
+        setTotal(previous => normalized.total ?? previous);
+        if (normalized.pageSize && normalized.pageSize > 0) setPageSize(normalized.pageSize);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [state, instType, uniId, page]);
+  }, [state, instType, uniId, page, pageSize]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { setPage(1); }, [state, instType, uniId]);

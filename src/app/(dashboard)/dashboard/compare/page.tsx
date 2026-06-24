@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 
 const INST_API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-const RESULTS_CAP = 60;
 const LOAD_ALL_BATCH = 6;
 const DEFAULT_PAGE_SIZE = 50;
 
@@ -520,7 +519,6 @@ export default function ComparePage() {
     c => c.name.toLowerCase().includes(search.toLowerCase()) &&
       !slots.some(s => s?.id === c.id)
   );
-  const visibleResults = filtered.slice(0, RESULTS_CAP);
   const allLoaded = totalPages !== null && page >= totalPages;
 
   function closeModal() {
@@ -822,9 +820,9 @@ export default function ComparePage() {
                   <Loader2 size={16} className="animate-spin" />
                   <span className="text-sm">Loading institutes…</span>
                 </div>
-              ) : visibleResults.length > 0 ? (
+              ) : filtered.length > 0 ? (
                 <>
-                  {visibleResults.map(c => {
+                  {filtered.map(c => {
                     const style = ts(c.type);
                     return (
                       <button
@@ -844,11 +842,6 @@ export default function ComparePage() {
                       </button>
                     );
                   })}
-                  {filtered.length > RESULTS_CAP && (
-                    <p className="text-center text-[11px] text-foreground-subtle py-2">
-                      Showing first {RESULTS_CAP} of {filtered.length} matches — refine your search or filters to narrow it down.
-                    </p>
-                  )}
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
